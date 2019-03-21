@@ -7,7 +7,7 @@ import time
 GPU0 = '/gpu:0'
 RESOLUTION = 64
 
-class Shape_complete():
+class ShapeCompleter():
     def __init__(self, model_path, verbose = False):
         '''
         Constructor of the Shape_complete class. Load the model from 'model_path'.

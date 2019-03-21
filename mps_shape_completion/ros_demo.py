@@ -4,6 +4,7 @@ from std_msgs.msg import ByteMultiArray, MultiArrayDimension
 from rospy.numpy_msg import numpy_msg
 
 import rospy
+from shape_utils import vox_to_msg
 
 import numpy as np
 import time
@@ -42,18 +43,14 @@ def demo():
     with open(base_path + '/demo/non_occupy.binvox', 'rb') as f:
         non = binvox_rw.read_as_3d_array(f).data
     
-    msg = ByteMultiArray()
-    msg.data = (occ.astype(int) - non.astype(int)).flatten().tolist()
-    msg.layout.dim.append(MultiArrayDimension(label='x', size=DIM, stride=DIM*DIM*DIM))
-    msg.layout.dim.append(MultiArrayDimension(label='y', size=DIM, stride=DIM*DIM))
-    msg.layout.dim.append(MultiArrayDimension(label='z', size=DIM, stride=DIM))
+
 
     rospy.init_node('shape_demo_loader')
     pub = rospy.Publisher('local_occupancy', numpy_msg(ByteMultiArray), queue_size=10)
     rospy.Subscriber("local_occupancy_predicted", numpy_msg(ByteMultiArray), callback)
 
     time.sleep(1)
-    pub.publish(msg)
+    pub.publish(vox_to_msg(occ))
     rospy.spin()
 
 
