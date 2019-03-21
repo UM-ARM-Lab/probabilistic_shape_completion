@@ -51,6 +51,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   
   <depend>rospy</depend>
+  <depend>rostest</depend>
   <depend>mps_shape_completion_msg</depend>
 
 
