@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 
-PKG = 'mps_voxels'
-import roslib; roslib.load_manifest(PKG)
-
 from std_msgs.msg import ByteMultiArray, MultiArrayDimension
 from rospy.numpy_msg import numpy_msg
 
