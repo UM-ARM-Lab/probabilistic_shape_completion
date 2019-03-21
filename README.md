@@ -15,7 +15,7 @@ The code is developed and tested on
 - [`ROS`](http://wiki.ros.org/kinetic) kinetic
 
 1. Clone this repo into a catkin workspace. Rebuild and resource.
-2. Download the pretrained model into the `train_mod` folder from from [link](https://drive.google.com/file/d/1Kmij09eHVE3ab5s7Vnp-fI-qOCLei4u0/view?usp=sharing)
+2. Download the pretrained model into the `train_mod` folder from [this link](https://drive.google.com/file/d/1Kmij09eHVE3ab5s7Vnp-fI-qOCLei4u0/view?usp=sharing)
 2. View the input files: `./viewvox demo/occupy.binvox`
 3. Start a roscore: `roscore`
 4. In another terminal start the shape_completion_node `rosrun mps_shape_completion shape_completion_node.py`
