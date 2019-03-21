@@ -6,7 +6,7 @@ This has been used in the "Moving Piles of Stuff" project.
 ## Setup
 
 ### Prerequisites
-The codes are tested on
+The code is developed and tested on
 - [`CUDA`](https://developer.nvidia.com/cuda-toolkit) 9.0 
 - [`cuDNN`](https://developer.nvidia.com/rdp/cudnn-archive) 7.0.5
 - [`Python`](https://www.python.org) 2.7.12
