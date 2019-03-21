@@ -1,0 +1,22 @@
+sudo: required
+
+services:
+  - docker
+
+env: SH="docker exec -t ubuntu-test bash -c"
+
+before_install:
+  - docker build -t shape_completion ./mps_shape_completion/docker
+  - docker run -d --name "ubuntu-test" -v $(pwd):~/catkin_ws/src/mps_shape_completion -w ~/catkin_ws shape_completion tail -f /dev/null
+  - docker ps
+
+install:
+  - $SH "pyclean ."
+  - $SH "catkin_make"
+  - $SH "source devel/setup.bash"
+  
+script:
+  - $SH "catkin_make run_tests && catkin_test_results"
+
+after_script:
+  - docker images
