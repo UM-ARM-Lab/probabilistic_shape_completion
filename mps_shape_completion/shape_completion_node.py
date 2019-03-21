@@ -6,6 +6,7 @@ from mps_shape_completion_msgs.srv import CompleteShape, CompleteShapeRequest, C
 from rospy.numpy_msg import numpy_msg
 
 import rospy
+import rospkg
 
 from datetime import datetime
 import numpy as np
@@ -57,7 +58,8 @@ def callback(msg, args):
 def listener():
     rospy.init_node('shape_completer')
 
-    sc = Shape_complete(verbose=True)
+    model_path = rospkg.RosPack().get_path('mps_shape_completion') + "/train_mod/"
+    sc = Shape_complete(model_path, verbose=True)
 
     server = rospy.Service('complete_shape', CompleteShape, lambda msg: service_callback(msg, sc))
 

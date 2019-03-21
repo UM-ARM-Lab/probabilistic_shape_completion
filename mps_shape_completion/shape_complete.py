@@ -5,11 +5,10 @@ import tensorflow as tf
 import time
 # config
 GPU0 = '/gpu:0'
-model_path = './shape_complete/train_mod/'
 RESOLUTION = 64
 
 class Shape_complete():
-    def __init__(self, verbose = False):
+    def __init__(self, model_path, verbose = False):
         '''
         Constructor of the Shape_complete class. Load the model from 'model_path'.
         INPUT: verbose: print messages for debug
