@@ -1,8 +1,30 @@
 # Shape-completion
 
-The current model can be downloaded from [link](https://drive.google.com/file/d/1Kmij09eHVE3ab5s7Vnp-fI-qOCLei4u0/view?usp=sharing). Please put it in `train_mod` folder.
+MPS Shape Completion is a neural network that takes in a grid of visible occupied voxels and outputs a grid of voxels the NN believes are occupied, thus "completing the shape". 
+This has been used in the "Moving Piles of Stuff" project.
 
-## Introduction
+## Setup
+
+### Prerequisites
+The codes are tested on
+- [`CUDA`](https://developer.nvidia.com/cuda-toolkit) 9.0 
+- [`cuDNN`](https://developer.nvidia.com/rdp/cudnn-archive) 7.0.5
+- [`Python`](https://www.python.org) 2.7.12
+- [`TensorFlow`](https://github.com/tensorflow/tensorflow) 1.7.0
+- [`numpy`](http://www.numpy.org/) 1.14.2
+- [`ROS`](http://wiki.ros.org/kinetic) kinetic
+
+1. Clone this repo into a catkin workspace. Rebuild and resource.
+2. Download the pretrained model into the `train_mod` folder from from [link](https://drive.google.com/file/d/1Kmij09eHVE3ab5s7Vnp-fI-qOCLei4u0/view?usp=sharing)
+2. View the input files: `./viewvox demo/occupy.binvox`
+3. Start a roscore: `roscore`
+4. In another terminal start the shape_completion_node `rosrun mps_shape_completion shape_completion_node.py`
+The model should load. This may take a minute.
+5. In another terminal window run the ros demo: `rosrun mps_shape_completion ros_demo.py`
+The output should be saved to `demo/output.binvox`
+6. View the output: `./viewvox demo/output.binvox`
+
+## Overview
 - `shape_completion.py`: provides a class that uses the trained model to do shape completion.
 - `train_mod/`: contains the model.
 - `demo/`: contains sample input in the shape_completion demo. 
@@ -12,15 +34,3 @@ The current model can be downloaded from [link](https://drive.google.com/file/d/
 - The current model is trained on a subset of objects in ycb dataset and shapenet:
 
 ![](https://github.com/UM-ARM-Lab/Shape-completion/blob/master/train_mod/training_set.png)
-
-
-
-## Prerequisites
-The codes are tested on
-- [`CUDA`](https://developer.nvidia.com/cuda-toolkit) 9.0 
-- [`cuDNN`](https://developer.nvidia.com/rdp/cudnn-archive) 7.0.5
-- [`Python`](https://www.python.org) 2.7.12
-- [`TensorFlow`](https://github.com/tensorflow/tensorflow) 1.7.0
-- [`numpy`](http://www.numpy.org/) 1.14.2
-
-
