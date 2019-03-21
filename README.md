@@ -3,6 +3,8 @@
 MPS Shape Completion is a neural network that takes in a grid of visible occupied voxels and outputs a grid of voxels the NN believes are occupied, thus "completing the shape". 
 This has been used in the "Moving Piles of Stuff" project.
 
+[![Build Status](https://travis-ci.com/UM-ARM-Lab/mps_shape_completion.svg?branch=master)](https://travis-ci.com/UM-ARM-Lab/mps_shape_completion)
+
 ## Setup
 
 ### Prerequisites
