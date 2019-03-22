@@ -1,3 +1,0 @@
-<launch>
-  <node pkg="mps_shape_completion" type="shape_completion_node.py" name="shape_completer"/>
-</launch>
