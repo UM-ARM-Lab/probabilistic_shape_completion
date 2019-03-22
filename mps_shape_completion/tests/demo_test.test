@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="mps_shape_completion" type="shape_completion_node.py" name="shape_completer"/>
+  <node pkg="mps_shape_completion" type="ros_demo.py" name="ros_demo_script" output="screen"/>
+  <test test-name="test_demo_script" pkg="mps_shape_completion" type="demo_test.py" time-limit="300.0"/>
+</launch>

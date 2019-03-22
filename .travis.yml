@@ -1,0 +1,22 @@
+sudo: required
+
+services:
+  - docker
+
+env: SH="docker exec -t ubuntu-test bash -c"
+
+before_install:
+  - cd mps_shape_completion; ./download_model.sh; cd ..
+  - docker build -t shape_completion ./mps_shape_completion/docker
+  - docker run --name "ubuntu-test" -d -v $(pwd):/root/catkin_ws/src/mps_shape_completion -w /root/catkin_ws shape_completion tail -f /dev/null
+
+  - docker ps
+
+install:
+  - $SH "./src/mps_shape_completion/mps_shape_completion/docker/setup.sh"
+  
+script:
+  - $SH "./src/mps_shape_completion/mps_shape_completion/docker/test.sh"
+
+after_script:
+  - docker images
