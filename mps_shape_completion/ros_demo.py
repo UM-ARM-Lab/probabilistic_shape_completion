@@ -11,7 +11,6 @@ import time
 import binvox_rw
 import rospkg
 
-DIM = 64
 base_path = ''
 
 
@@ -46,10 +45,14 @@ def demo():
 
 
     rospy.init_node('shape_demo_loader')
+
+    rospy.wait_for_service('complete_shape')
+
     pub = rospy.Publisher('local_occupancy', numpy_msg(ByteMultiArray), queue_size=10)
     rospy.Subscriber("local_occupancy_predicted", numpy_msg(ByteMultiArray), callback)
 
     time.sleep(1)
+    print("Requesting shape completion")
     pub.publish(vox_to_msg(occ))
     rospy.spin()
 
