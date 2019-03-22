@@ -6,3 +6,6 @@ wget --save-cookies cookies.txt 'https://drive.google.com/uc?export=download&id=
 
 wget --load-cookies cookies.txt -O $filename \
      'https://drive.google.com/uc?export=download&id='$fileid'&confirm='$(<confirm.txt)
+
+rm confirm.txt
+rm cookies.txt
