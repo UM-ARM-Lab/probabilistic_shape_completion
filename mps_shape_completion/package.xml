@@ -52,7 +52,7 @@
   
   <depend>rospy</depend>
   <depend>rostest</depend>
-  <depend>mps_shape_completion_msg</depend>
+  <depend>mps_shape_completion_msgs</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
