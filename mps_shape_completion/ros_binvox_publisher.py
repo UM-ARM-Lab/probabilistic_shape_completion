@@ -33,23 +33,12 @@ def demo():
     # Read demo binvox as (64*64*64) array
     with open(base_path + '/demo/occupy.binvox', 'rb') as f:
         occ = binvox_rw.read_as_3d_array(f).data
+
+    #Currently unoccupied is unused in this file
     with open(base_path + '/demo/non_occupy.binvox', 'rb') as f:
         non = binvox_rw.read_as_3d_array(f).data
-    
 
-
-
-
-    # rospy.wait_for_service('complete_shape')
-
-
-    # rospy.Subscriber("local_occupancy_predicted", numpy_msg(Float32MultiArray), callback)
-
-    # time.sleep(1)
-    # print("Requesting shape completion")
-    # pub.publish(vox_to_msg(occ))
-    # rospy.spin()
-
+        
     pub = rospy.Publisher('demo_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
     while not rospy.is_shutdown():
         pub.publish(vox_to_msg(occ))
