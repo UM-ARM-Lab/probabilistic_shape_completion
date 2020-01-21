@@ -1,5 +1,5 @@
 #/bin/bash
 
-. /opt/ros/kinetic/setup.bash
+. /opt/ros/melodic/setup.bash
 pyclean .
 catkin_make
