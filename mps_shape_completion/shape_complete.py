@@ -51,9 +51,9 @@ class ShapeCompleter():
             y_pred = self.sess.run(self.Y_pred, feed_dict={self.X_occ: occ, self.X_non: non})
 
         # Thresholding. Threshold sets to be 0.5
-        th = 0.5
-        y_pred[y_pred >= th] = 1
-        y_pred[y_pred < th] = 0
+        # th = 0.5
+        # y_pred[y_pred >= th] = 1
+        # y_pred[y_pred < th] = 0
 
         if out_dim == 4:
             if save:
@@ -161,6 +161,11 @@ def demo():
 
     # Complete shape
     out = sc.complete(occ=occ,non=non,verbose=False)
+
+    # Thresholding. Threshold sets to be 0.5
+    th = 0.5
+    out[out >= th] = 1
+    out[out < th] = 0
 
     # Save to file for demo
     vox = binvox_rw.Voxels(out, [64,64,64], [0,0,0], 1, 'xyz')

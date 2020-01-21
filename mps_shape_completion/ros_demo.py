@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from std_msgs.msg import ByteMultiArray, MultiArrayDimension
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension
 from rospy.numpy_msg import numpy_msg
 
 import rospy
@@ -18,7 +18,7 @@ def callback(msg):
     global base_path
     arr = np.reshape(msg.data, tuple(d.size for d in msg.layout.dim))
     print rospy.get_name(), "I heard %s"%str(arr)
-    occ = arr > 0
+    occ = arr > 0.5
     # Save to file for demo
     vox = binvox_rw.Voxels(occ, occ.shape, [0,0,0], 1, 'xyz')
     with open(base_path + '/demo/output.binvox','wb') as f:
@@ -48,8 +48,8 @@ def demo():
 
     rospy.wait_for_service('complete_shape')
 
-    pub = rospy.Publisher('local_occupancy', numpy_msg(ByteMultiArray), queue_size=10)
-    rospy.Subscriber("local_occupancy_predicted", numpy_msg(ByteMultiArray), callback)
+    pub = rospy.Publisher('local_occupancy', numpy_msg(Float32MultiArray), queue_size=10)
+    rospy.Subscriber("local_occupancy_predicted", numpy_msg(Float32MultiArray), callback)
 
     time.sleep(1)
     print("Requesting shape completion")

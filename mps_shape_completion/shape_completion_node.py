@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from shape_complete import ShapeCompleter
-from std_msgs.msg import ByteMultiArray, MultiArrayDimension
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension
 from mps_shape_completion_msgs.srv import CompleteShape, CompleteShapeRequest, CompleteShapeResponse
 from rospy.numpy_msg import numpy_msg
 
@@ -17,8 +17,8 @@ def service_callback(req, args):
 
     arr = msg_to_vox(req.observation)
 
-    occ = arr > 0
-    non = arr < 0
+    occ = arr >= 0.5
+    non = arr < 0.5
 
     time_stamp = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S-%f")[:-3]
     sc.save_input(occ, non, '.', time_stamp)
@@ -56,8 +56,8 @@ def listener():
 
     server = rospy.Service('complete_shape', CompleteShape, lambda msg: service_callback(msg, sc))
 
-    pub = rospy.Publisher('local_occupancy_predicted', numpy_msg(ByteMultiArray), queue_size=10)
-    rospy.Subscriber("local_occupancy", numpy_msg(ByteMultiArray), callback, (sc, pub))
+    pub = rospy.Publisher('local_occupancy_predicted', numpy_msg(Float32MultiArray), queue_size=10)
+    rospy.Subscriber("local_occupancy", numpy_msg(Float32MultiArray), callback, (sc, pub))
     rospy.spin()
 
 

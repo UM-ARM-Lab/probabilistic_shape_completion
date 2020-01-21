@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-from std_msgs.msg import ByteMultiArray, MultiArrayDimension
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension
 import numpy as np
 
 DIM = 64
 
+
 def vox_to_msg(voxel_grid):
-    out_msg = ByteMultiArray()
-    out_msg.data = voxel_grid.flatten().tolist()
+    out_msg = Float32MultiArray()
+    out_msg.data = voxel_grid.astype(np.float32).flatten().tolist()
     out_msg.layout.dim.append(MultiArrayDimension(label='x', size=DIM, stride=DIM*DIM*DIM))
     out_msg.layout.dim.append(MultiArrayDimension(label='y', size=DIM, stride=DIM*DIM))
     out_msg.layout.dim.append(MultiArrayDimension(label='z', size=DIM, stride=DIM))

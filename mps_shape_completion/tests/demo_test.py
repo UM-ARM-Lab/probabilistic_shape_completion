@@ -4,7 +4,7 @@ import unittest
 import rostest
 import rospy
 from rospy.numpy_msg import numpy_msg
-from std_msgs.msg import ByteMultiArray
+from std_msgs.msg import Float32MultiArray
 import os
 import rospkg
 

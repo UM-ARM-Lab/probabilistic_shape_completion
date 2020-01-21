@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from std_msgs.msg import ByteMultiArray, MultiArrayDimension
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension
 from rospy.numpy_msg import numpy_msg
 
 import rospy
@@ -46,7 +46,7 @@ def listener():
     rospy.init_node('voxel_grid_saver', anonymous=True)
     default_topic_name = "local_occupancy_predicted"
     file_prefix = rospy.resolve_name(default_topic_name)[1:]
-    sub = rospy.Subscriber(default_topic_name, numpy_msg(ByteMultiArray), callback, callback_args=file_prefix)
+    sub = rospy.Subscriber(default_topic_name, numpy_msg(Float32MultiArray), callback, callback_args=file_prefix)
 
     rospy.spin()
 
