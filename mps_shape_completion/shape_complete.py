@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import time
 # config
 GPU0 = '/gpu:0'
@@ -13,6 +13,7 @@ class ShapeCompleter():
         Constructor of the Shape_complete class. Load the model from 'model_path'.
         INPUT: verbose: print messages for debug
         '''
+        tf.disable_v2_behavior()
         if not verbose:
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
             tf.logging.set_verbosity(tf.logging.FATAL)

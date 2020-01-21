@@ -58,6 +58,7 @@ def listener():
 
     pub = rospy.Publisher('local_occupancy_predicted', numpy_msg(Float32MultiArray), queue_size=10)
     rospy.Subscriber("local_occupancy", numpy_msg(Float32MultiArray), callback, (sc, pub))
+    rospy.loginfo("Shape completer ready")
     rospy.spin()
 
 
