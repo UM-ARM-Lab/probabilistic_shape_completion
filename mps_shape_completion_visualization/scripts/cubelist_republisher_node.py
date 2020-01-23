@@ -31,7 +31,7 @@ def callback(msg):
     occ_stamped.occupancy = msg
     occ_stamped.header.frame_id = rospy.get_param('~frame_id', "base_frame")
     occ_stamped.header.stamp = rospy.get_rostime()
-    occ_stamped.scale = rospy.get_param('~scale', 0.1)
+    occ_stamped.scale = rospy.get_param('~scale', 0.01)
     
     pub.publish(occupancyStamped_to_cubelist(occ_stamped, color))
     
