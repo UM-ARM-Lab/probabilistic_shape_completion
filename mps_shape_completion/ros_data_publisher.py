@@ -10,6 +10,8 @@ from rospy.numpy_msg import numpy_msg
 import rospy
 from shape_utils import vox_to_msg
 
+from shape_complete import ShapeCompleter
+
 import numpy as np
 import binvox_rw
 import rospkg
@@ -27,27 +29,50 @@ def demo():
 
     rospy.init_node('shape_demo_loader')
 
-    pub = rospy.Publisher('demo_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
+    model_path = rospkg.RosPack().get_path('mps_shape_completion') + "/train_mod/"
+    sc = ShapeCompleter(model_path, verbose=True)
 
+
+    gt_pub = rospy.Publisher('gt_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
+    occ_input_pub = rospy.Publisher('occ_input_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
+    completion_pub = rospy.Publisher('predicted_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
+
+    ycb_obj = "025_mug"
+    
     # base_path = rospkg.RosPack().get_path('mps_shape_completion')
-    base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/003_cracker_box/gt/"
-    base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/025_mug/gt/"
+    base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/"
+    gt_path = base_path + ycb_obj + "/gt/"
+    occ_path = base_path + ycb_obj + "/train_x_occ/"
+    non_occ_path = base_path + ycb_obj + "/non_occupy/"
     # base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/025_mug/non_occupy/"
 
     
-    files = [f for f in os.listdir(base_path)]
+    files = [f for f in os.listdir(occ_path)]
     files.sort()
 
     for filename in files:
         if rospy.is_shutdown():
             break
+
+        prefix = filename.split("occupy")[0]
             
-        with open(os.path.join(base_path,filename)) as f:
-            vox = binvox_rw.read_as_3d_array(f).data
+        with open(os.path.join(gt_path,prefix + "gt.binvox")) as f:
+            gt_vox = binvox_rw.read_as_3d_array(f).data
+        gt_pub.publish(vox_to_msg(gt_vox))
 
         
-        pub.publish(vox_to_msg(vox))    
-        rospy.sleep(0.5)
+        with open(os.path.join(occ_path,prefix + "occupy.binvox")) as f:
+            occ_vox = binvox_rw.read_as_3d_array(f).data
+        occ_input_pub.publish(vox_to_msg(occ_vox))
+
+        with open(os.path.join(non_occ_path,prefix + "non_occupy.binvox")) as f:
+            non_occ_vox = binvox_rw.read_as_3d_array(f).data
+
+        out = sc.complete(occ=occ_vox, non=non_occ_vox, verbose=False, save=False)
+        completion_pub.publish(vox_to_msg(out))
+
+        
+        rospy.sleep(2)
 
 
 if __name__ == '__main__':
