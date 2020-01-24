@@ -7,12 +7,18 @@ This has been used in the "Moving Piles of Stuff" project.
 
 ## Setup
 
+There are multiple directories.
+ - `shape_completion_training`: Generating, training, evaluating the shape completion model
+ - `mps_shape_completion`: ROS interface for running shape completion inference
+ - `mps_shape_completion_msgs`: ROS message types
+ - `mps_shape_completion_visualization`: ROS/RViz tools for viewing voxelgrids
+
 ### Prerequisites
 The code is developed and tested on
-- [`CUDA`](https://developer.nvidia.com/cuda-toolkit) 9.0 
-- [`cuDNN`](https://developer.nvidia.com/rdp/cudnn-archive) 7.0.5
+- [`CUDA`](https://developer.nvidia.com/cuda-toolkit) 10.0 
+- [`cuDNN`](https://developer.nvidia.com/rdp/cudnn-archive) 7.??
 - [`Python`](https://www.python.org) 2.7.12
-- [`TensorFlow`](https://github.com/tensorflow/tensorflow) 1.7.0, 1.15.0
+- [`TensorFlow`](https://github.com/tensorflow/tensorflow) 2.0
 - [`numpy`](http://www.numpy.org/) 1.14.2
 - [`ROS`](http://wiki.ros.org/kinetic) kinetic
 
