@@ -37,7 +37,10 @@ def demo():
     occ_input_pub = rospy.Publisher('occ_input_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
     completion_pub = rospy.Publisher('predicted_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
 
-    ycb_obj = "025_mug"
+    # ycb_obj = "025_mug"
+    # ycb_obj = "019_pitcher_base"
+    # ycb_obj = "007_tuna_fish_can"
+    ycb_obj = "shapenet_002_mug"
     
     # base_path = rospkg.RosPack().get_path('mps_shape_completion')
     base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/"
@@ -55,20 +58,23 @@ def demo():
             break
 
         prefix = filename.split("occupy")[0]
+        print(prefix)
             
         with open(os.path.join(gt_path,prefix + "gt.binvox")) as f:
             gt_vox = binvox_rw.read_as_3d_array(f).data
-        gt_pub.publish(vox_to_msg(gt_vox))
+
 
         
         with open(os.path.join(occ_path,prefix + "occupy.binvox")) as f:
             occ_vox = binvox_rw.read_as_3d_array(f).data
-        occ_input_pub.publish(vox_to_msg(occ_vox))
+
 
         with open(os.path.join(non_occ_path,prefix + "non_occupy.binvox")) as f:
             non_occ_vox = binvox_rw.read_as_3d_array(f).data
 
         out = sc.complete(occ=occ_vox, non=non_occ_vox, verbose=False, save=False)
+        gt_pub.publish(vox_to_msg(gt_vox))
+        occ_input_pub.publish(vox_to_msg(occ_vox))
         completion_pub.publish(vox_to_msg(out))
 
         

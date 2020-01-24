@@ -20,9 +20,10 @@ class ShapeCompleter():
         else:
             t_prepare_begin = time.time()
 
-        self.sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
-        self.saver = tf.train.import_meta_graph( model_path + 'model.cptk.meta', clear_devices=True)
-        self.saver.restore(self.sess, model_path+'model.cptk')
+        with tf.device('/cpu:0'):
+            self.sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+            self.saver = tf.train.import_meta_graph( model_path + 'model.cptk.meta', clear_devices=True)
+            self.saver.restore(self.sess, model_path+'model.cptk')
         if verbose:
             print ('model restored!')
 
