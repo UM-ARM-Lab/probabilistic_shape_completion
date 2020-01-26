@@ -54,9 +54,17 @@ namespace mps_shape_completion_visualization
                                                    "Color to draw the acceleration arrows.",
                                                    this, SLOT( updateColorAndAlpha() ));
 
-        alpha_property_ = new rviz::FloatProperty( "Alpha", 1.0,
+        alpha_property_ = new rviz::FloatProperty( "Alpha Multiple", 1.0,
                                                    "0 is fully transparent, 1.0 is fully opaque.",
                                                    this, SLOT( updateColorAndAlpha() ));
+
+
+        binary_display_property_ = new rviz::BoolProperty("Binary Display", true,
+                                                            "If checked, all voxels will have the same alpha", this, SLOT(updateColorAndAlpha() ));
+
+        cutoff_property_ = new rviz::FloatProperty("Threshold", 0.5,
+                                                   "Voxels with values less than this will not be displayed",
+                                                   this, SLOT(updateColorAndAlpha() ));
 
 
     }
@@ -74,18 +82,17 @@ namespace mps_shape_completion_visualization
     void VoxelGridDisplay::onInitialize()
     {
         MFDClass::onInitialize();
-        visuals_.rset_capacity(1);
+        visual_.reset(new VoxelGridVisual( context_->getSceneManager(), scene_node_ ));
+        updateColorAndAlpha();
     }
 
     VoxelGridDisplay::~VoxelGridDisplay()
     {
     }
 
-// Clear the visuals by deleting their objects.
     void VoxelGridDisplay::reset()
     {
         MFDClass::reset();
-        visuals_.clear();
     }
 
 // Set the current color and alpha values for each visual.
@@ -93,11 +100,11 @@ namespace mps_shape_completion_visualization
     {
         float alpha = alpha_property_->getFloat();
         Ogre::ColourValue color = color_property_->getOgreColor();
-
-        for( size_t i = 0; i < visuals_.size(); i++ )
-        {
-            visuals_[ i ]->setColor( color.r, color.g, color.b, alpha );
-        }
+        visual_->setBinaryDisplay(binary_display_property_->getBool());
+        visual_->setColor( color.r, color.g, color.b, alpha );
+        std::cout << "Getting cutoff property: " << cutoff_property_->getFloat() << "\n";
+        visual_->setThreshold(cutoff_property_->getFloat());
+        visual_->updatePointCloud();
     }
 
 
@@ -118,29 +125,16 @@ namespace mps_shape_completion_visualization
             return;
         }
 
-        // We are keeping a circular buffer of visual pointers.  This gets
-        // the next one, or creates and stores it if the buffer is not full
-        boost::shared_ptr<VoxelGridVisual> visual;
-        if( visuals_.full() )
-        {
-            visual = visuals_.front();
-        }
-        else
-        {
-            visual.reset(new VoxelGridVisual( context_->getSceneManager(), scene_node_ ));
-        }
 
         // Now set or update the contents of the chosen visual.
-        visual->setMessage( msg );
-        visual->setFramePosition( position );
-        visual->setFrameOrientation( orientation );
+        visual_->setMessage( msg );
+        visual_->setFramePosition( position );
+        visual_->setFrameOrientation( orientation );
 
-        float alpha = alpha_property_->getFloat();
-        Ogre::ColourValue color = color_property_->getOgreColor();
-        visual->setColor( color.r, color.g, color.b, alpha );
+        // float alpha = alpha_property_->getFloat();
+        // Ogre::ColourValue color = color_property_->getOgreColor();
+        // visual_->setColor( color.r, color.g, color.b, alpha );
 
-        // And send it to the end of the circular buffer
-        visuals_.push_back(visual);
     }
 
 

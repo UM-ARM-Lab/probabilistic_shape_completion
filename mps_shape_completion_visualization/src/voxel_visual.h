@@ -31,6 +31,7 @@
 #define VOXEL_VISUAL_H
 
 #include <mps_shape_completion_msgs/OccupancyStamped.h>
+#include <rviz/ogre_helpers/point_cloud.h>
 
 namespace Ogre
 {
@@ -38,10 +39,11 @@ class Vector3;
 class Quaternion;
 }
 
-namespace rviz
-{
-class PointCloud;
-}
+/* namespace rviz */
+/* { */
+/* class PointCloud; */
+/* class PointCloud::Point; */
+/* } */
 
 namespace mps_shape_completion_visualization
 {
@@ -78,7 +80,16 @@ public:
   // parameters and therefore don't come from the Imu message.
   void setColor( float r, float g, float b, float a );
 
+  void setBinaryDisplay(bool use_global_alpha);
+  void setThreshold(float threshold);
+
+  //Rerenders the point cloud from the list of points and UI-selected properties
+  void updatePointCloud();
+
 private:
+
+  mps_shape_completion_msgs::OccupancyStamped latest_msg;
+  
   // The object implementing the actual arrow shape
   boost::shared_ptr<rviz::PointCloud> voxel_grid_;
 
@@ -89,6 +100,11 @@ private:
   // The SceneManager, kept here only so the destructor can ask it to
   // destroy the ``frame_node_``.
   Ogre::SceneManager* scene_manager_;
+
+  float r_, g_, b_, a_;
+  bool binary_display_;
+  float threshold_;
+  
 };
 // END_TUTORIAL
 

@@ -99,11 +99,13 @@ private:
 
   // Storage for the list of visuals.  It is a circular buffer where
   // data gets popped from the front (oldest) and pushed to the back (newest)
-  boost::circular_buffer<boost::shared_ptr<VoxelGridVisual> > visuals_;
+  boost::shared_ptr<VoxelGridVisual > visual_;
 
   // User-editable property variables.
   rviz::ColorProperty* color_property_;
   rviz::FloatProperty* alpha_property_;
+  rviz::BoolProperty* binary_display_property_;
+  rviz::FloatProperty* cutoff_property_;
 };
 // END_TUTORIAL
 

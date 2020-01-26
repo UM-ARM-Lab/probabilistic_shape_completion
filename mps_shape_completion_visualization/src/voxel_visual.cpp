@@ -69,44 +69,34 @@ namespace mps_shape_completion_visualization
 
     void VoxelGridVisual::setMessage( const mps_shape_completion_msgs::OccupancyStamped::ConstPtr& msg)
     {
-        // const geometry_msgs::Vector3& a = msg->linear_acceleration;
+        latest_msg = *msg;
+        updatePointCloud();
+    }
 
-        // Convert the geometry_msgs::Vector3 to an Ogre::Vector3.
-        // Ogre::Vector3 acc( a.x, a.y, a.z );
-        // Ogre::Vector3 acc(1.0, 1.0, 1.0);
-
-        // Find the magnitude of the acceleration vector.
-        // float length = acc.length();
-        // float length = 1.0;
-
-        // Scale the arrow's thickness in each dimension along with its length.
-        // Ogre::Vector3 scale( length, length, length );
-        // acceleration_arrow_->setScale( scale );
-
-        // Set the orientation of the arrow to match the direction of the
-        // acceleration vector.
-        // acceleration_arrow_->setDirection( acc );
-
+    void VoxelGridVisual::updatePointCloud()
+    {
+        if(latest_msg.occupancy.layout.dim.size() == 0)
+        {
+            return;
+        }
         
-
-        voxel_grid_->clear();
-        
-        double scale = msg->scale;
+        double scale = latest_msg.scale;
         voxel_grid_->setDimensions(scale, scale, scale);
 
+
+        const std::vector<float> data = latest_msg.occupancy.data;
+        const std::vector<std_msgs::MultiArrayDimension> dims = latest_msg.occupancy.layout.dim;
+        int data_offset = latest_msg.occupancy.layout.data_offset;
+
         std::vector< rviz::PointCloud::Point> points;
-        const std::vector<float> data = msg->occupancy.data;
-        const std::vector<std_msgs::MultiArrayDimension> dims = msg->occupancy.layout.dim;
-        int data_offset = msg->occupancy.layout.data_offset;
-            
         for(int i=0; i<dims[0].size; i++)
         {
             for(int j=0; j<dims[1].size; j++)
             {
                 for(int k=0; k<dims[2].size; k++)
                 {
-                    double val = data[data_offset + dims[1].stride * i + dims[2].stride * j + k];
-                    if(val < 0.5)
+                    float val = data[data_offset + dims[1].stride * i + dims[2].stride * j + k];
+                    if(val < threshold_)
                     {
                         continue;
                     }
@@ -116,15 +106,39 @@ namespace mps_shape_completion_visualization
                     p.position.y = scale/2 + j*scale;
                     p.position.z = scale/2 + k*scale;
 
-                    p.setColor(0.0, 1.0, 0.0, 1.0);
+                    if(p.position.x > 0.2)
+                    {
+                        val = 0.1;
+                    }
+
+
+                    if(binary_display_)
+                    {
+                        val = 1.0;
+                    }
+
+                    p.setColor(r_, g_, b_, val*a_);
                     
                     points.push_back(p);
                 }
             }
         }
+        
+        voxel_grid_->clear();
+
+        //this has a per-point setting, but setting it
+        bool use_per_point = !(a_ >= 1.0 && binary_display_);
+        voxel_grid_->setAlpha(a_, use_per_point); 
+        
         voxel_grid_->addPoints(&points.front(), points.size());
-        std::cout << "Added " << points.size() << " points\n";
+
+        std::cout << "Added " << points.size() << " points.\n";
+        std::cout << "Use global alpha is " << binary_display_ << "\n";
+        std::cout << "global alpha is " << a_ << "\n";
+        std::cout << "threshold is " << threshold_ << "\n";
     }
+
+
 
 // Position and orientation are passed through to the SceneNode.
     void VoxelGridVisual::setFramePosition( const Ogre::Vector3& position )
@@ -140,7 +154,21 @@ namespace mps_shape_completion_visualization
 // Color is passed through to the Arrow object.
     void VoxelGridVisual::setColor( float r, float g, float b, float a )
     {
+        r_ = r;
+        g_ = g;
+        b_ = b;
+        a_ = a;
         // voxel_grid_->setColor( r, g, b, a );
+    }
+
+    void VoxelGridVisual::setBinaryDisplay(bool binary_display)
+    {
+        binary_display_ = binary_display;
+    }
+
+    void VoxelGridVisual::setThreshold(float threshold)
+    {
+        threshold_ = threshold;
     }
 // END_TUTORIAL
 
