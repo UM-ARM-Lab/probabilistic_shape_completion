@@ -7,7 +7,7 @@ RUN apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E
 
 RUN apt-get -yq update && \
     DEBIAN_FRONTEND=noninteractive apt-get -yqq install \
-    ros-melodic-ros-base \
+    ros-melodic-desktop \
     gcovr \
     ccache && \
     rm -rf /var/lib/apt/lists/*

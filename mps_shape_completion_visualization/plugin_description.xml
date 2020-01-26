@@ -1,0 +1,24 @@
+<library path="lib/libmps_shape_completion_visualization">
+  <!-- <class name="mps_shape_completion_visualization/Teleop" -->
+  <!--        type="mps_shape_completion_visualization::TeleopPanel" -->
+  <!--        base_class_type="rviz::Panel"> -->
+  <!--   <description> -->
+  <!--     A panel widget allowing simple diff-drive style robot base control. -->
+  <!--   </description> -->
+  <!-- </class> -->
+  <class name="mps_shape_completion_visualization/VoxelGrid"
+         type="mps_shape_completion_visualization::VoxelGridDisplay"
+         base_class_type="rviz::Display">
+    <description>
+      Displays a Voxel Grid
+    </description>
+    <message_type>mps_shape_completion_msgs/OccupancyStamped</message_type>
+  </class>
+  <!-- <class name="mps_shape_completion_visualization/PlantFlag" -->
+  <!--        type="mps_shape_completion_visualization::PlantFlagTool" -->
+  <!--        base_class_type="rviz::Tool"> -->
+  <!--   <description> -->
+  <!--     Tool for planting flags on the ground plane in rviz. -->
+  <!--   </description> -->
+  <!-- </class> -->
+</library>
