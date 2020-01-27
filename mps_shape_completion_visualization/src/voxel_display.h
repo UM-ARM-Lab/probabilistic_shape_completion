@@ -1,32 +1,3 @@
-/*
- * Copyright (c) 2012, Willow Garage, Inc.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Willow Garage, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived from
- *       this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
-
 #ifndef VOXEL_DISPLAY_H
 #define VOXEL_DISPLAY_H
 
@@ -52,23 +23,6 @@ namespace mps_shape_completion_visualization
 
 class VoxelGridVisual;
 
-// BEGIN_TUTORIAL
-// Here we declare our new subclass of rviz::Display.  Every display
-// which can be listed in the "Displays" panel is a subclass of
-// rviz::Display.
-//
-// ImuDisplay will show a 3D arrow showing the direction and magnitude
-// of the IMU acceleration vector.  The base of the arrow will be at
-// the frame listed in the header of the Imu message, and the
-// direction of the arrow will be relative to the orientation of that
-// frame.  It will also optionally show a history of recent
-// acceleration vectors, which will be stored in a circular buffer.
-//
-// The ImuDisplay class itself just implements the circular buffer,
-// editable parameters, and Display subclass machinery.  The visuals
-// themselves are represented by a separate class, ImuVisual.  The
-// idiom for the visuals is that when the objects exist, they appear
-// in the scene, and when they are deleted, they disappear.
 class VoxelGridDisplay: public rviz::MessageFilterDisplay<mps_shape_completion_msgs::OccupancyStamped>
 {
 Q_OBJECT
@@ -93,8 +47,9 @@ protected:
 private Q_SLOTS:
   void updateColorAndAlpha();
 
-  // Function to handle an incoming ROS message.
+
 private:
+  // Function to handle an incoming ROS message.
   void processMessage( const mps_shape_completion_msgs::OccupancyStamped::ConstPtr& msg);
 
   // Storage for the list of visuals.  It is a circular buffer where
@@ -107,9 +62,7 @@ private:
   rviz::BoolProperty* binary_display_property_;
   rviz::FloatProperty* cutoff_property_;
 };
-// END_TUTORIAL
 
 } // end namespace mps_shape_completion_visualization
 
 #endif // VOXEL_DISPLAY_H
-// %EndTag(FULL_SOURCE)%
