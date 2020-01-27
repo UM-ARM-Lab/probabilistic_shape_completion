@@ -5,6 +5,7 @@ Cycles through and publishes data for visualization
 """
 
 from std_msgs.msg import Float32MultiArray, MultiArrayDimension
+from mps_shape_completion_msgs.msg import OccupancyStamped
 from rospy.numpy_msg import numpy_msg
 
 import rospy
@@ -33,9 +34,10 @@ def demo():
     sc = ShapeCompleter(model_path, verbose=True)
 
 
-    gt_pub = rospy.Publisher('gt_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
-    occ_input_pub = rospy.Publisher('occ_input_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
-    completion_pub = rospy.Publisher('predicted_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
+    gt_pub = rospy.Publisher('gt_voxel_grid_stamped', OccupancyStamped, queue_size=10)
+    occ_input_pub = rospy.Publisher('occ_input_voxel_grid_stamped', OccupancyStamped, queue_size=10)
+    # completion_raw_pub = rospy.Publisher('predicted_voxel_grid', numpy_msg(Float32MultiArray), queue_size=10)
+    completion_pub = rospy.Publisher('predicted_voxel_grid_stamped', OccupancyStamped, queue_size=10)
 
     # ycb_obj = "025_mug"
     # ycb_obj = "019_pitcher_base"
@@ -73,12 +75,31 @@ def demo():
             non_occ_vox = binvox_rw.read_as_3d_array(f).data
 
         out = sc.complete(occ=occ_vox, non=non_occ_vox, verbose=False, save=False)
-        gt_pub.publish(vox_to_msg(gt_vox))
-        occ_input_pub.publish(vox_to_msg(occ_vox))
-        completion_pub.publish(vox_to_msg(out))
+
+        gt_msg = OccupancyStamped()
+        gt_msg.header.frame_id = "base_frame"
+        gt_msg.occupancy = vox_to_msg(gt_vox)
+        gt_msg.scale = 0.01
+        gt_pub.publish(gt_msg)
+
+        input_msg = OccupancyStamped()
+        input_msg.header.frame_id = "base_frame"
+        input_msg.occupancy = vox_to_msg(occ_vox)
+        input_msg.scale = 0.01
+        occ_input_pub.publish(input_msg)
+                
+        # occ_input_pub.publish(vox_to_msg(occ_vox))
+
+        # completion_raw_pub.publish(vox_to_msg(out))
+
+        c_msg = OccupancyStamped()
+        c_msg.header.frame_id = "base_frame"
+        c_msg.occupancy = vox_to_msg(out)
+        c_msg.scale = 0.01
+        completion_pub.publish(c_msg)
 
         
-        rospy.sleep(2)
+        rospy.sleep(0.5)
 
 
 if __name__ == '__main__':
