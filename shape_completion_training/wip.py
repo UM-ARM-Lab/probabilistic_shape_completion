@@ -11,4 +11,10 @@ if __name__ == "__main__":
     # load_data()
     # sn = SimpleNetwork()
     sn = AutoEncoder()
-    sn.train_and_test(load_data())
+    # sn.train_and_test(load_data())
+    data = load_data()
+    sn.evaluate(data)
+    sn.restore()
+    sn.evaluate(data)
+    sn.evaluate(data)
+

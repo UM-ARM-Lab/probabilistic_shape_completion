@@ -70,7 +70,15 @@ class AutoEncoder:
     def __init__(self):
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
+
+        self.checkpoint_path = "training_checkpoints/cp.ckpt"
+        self.model = None
+        
         self.build_autoencoder_network()
+
+    def restore(self):
+        # self.model = tf.keras.models.load_model(self.checkpoint_path)
+        self.model.load_weights(self.checkpoint_path)
 
 
     def build_autoencoder_network(self):
@@ -123,7 +131,13 @@ class AutoEncoder:
         
     def train(self, dataset):
         self.count_params()
-        self.model.fit(dataset.repeat(10), epochs=10)
+
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+                                                         save_weights_only=False,
+                                                         verbose=1)
+        
+        self.model.fit(dataset.repeat(10), epochs=10,
+                       callbacks=[cp_callback])
 
     def train_and_test(self, dataset):
         dataset.shuffle(10000)
@@ -132,6 +146,9 @@ class AutoEncoder:
         test_ds = dataset.take(100)
         # IPython.embed()
         self.train(train_ds.batch(16))
+
+    def evaluate(self, dataset):
+        self.model.evaluate(dataset.batch(16))
         
 
 
