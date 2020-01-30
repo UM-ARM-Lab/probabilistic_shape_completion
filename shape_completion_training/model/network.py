@@ -71,14 +71,15 @@ class AutoEncoder:
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
-        self.checkpoint_path = "training_checkpoints/cp.ckpt"
+        self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/cp.ckpt")
+        self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
         self.model = None
         
         self.build_autoencoder_network()
 
     def restore(self):
         # self.model = tf.keras.models.load_model(self.checkpoint_path)
-        self.model.load_weights(self.checkpoint_path)
+        self.model.load_weights(self.restore_path)
 
 
     def build_autoencoder_network(self):
