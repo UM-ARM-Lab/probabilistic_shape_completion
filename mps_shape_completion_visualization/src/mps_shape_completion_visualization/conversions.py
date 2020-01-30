@@ -3,8 +3,28 @@ from mps_shape_completion_msgs.msg import OccupancyStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
+from std_msgs.msg import Float32MultiArray, MultiArrayDimension
+import numpy as np
 
 
+def vox_to_float_array(voxel_grid, dim):
+    out_msg = Float32MultiArray()
+    out_msg.data = voxel_grid.astype(np.float32).flatten().tolist()
+    out_msg.layout.dim.append(MultiArrayDimension(label='x', size=dim, stride=dim*dim*dim))
+    out_msg.layout.dim.append(MultiArrayDimension(label='y', size=dim, stride=dim*dim))
+    out_msg.layout.dim.append(MultiArrayDimension(label='z', size=dim, stride=dim))
+    return out_msg
+
+
+def msg_to_vox(msg):
+    return np.reshape(msg.data, tuple(d.size for d in msg.layout.dim))
+
+def vox_to_occupancy_stamped(voxel_grid, dim, scale, frame_id):
+    msg = OccupancyStamped()
+    msg.header.frame_id = frame_id
+    msg.occupancy = vox_to_float_array(voxel_grid, dim)
+    msg.scale = scale
+    return msg
 
 
 
