@@ -10,7 +10,7 @@ import IPython
 
 cur_path = os.path.dirname(__file__)
 shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2")
-shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_tfrecords/")
+shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_downsampled_tfrecords/")
 
 obj = "025_mug"
 base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/"
@@ -57,21 +57,30 @@ def load_data(from_record=False):
     write_to_tfrecord(ds, record_name)
     return ds
 
+
+def maxpool_np(array3d, scale):
+    a, b, c = array3d.shape
+    s = scale
+    return array3d.reshape(a/s, s, b/s, s, c/s, s).max(axis=(1,3,5))
+
+
 def write_shapenet_to_tfrecord():
     shape_ids = [f for f in os.listdir(shapenet_load_path)
                  if os.path.isdir(join(shapenet_load_path, f))]
     shape_ids.sort()
 
 
-    for i in range(18, len(shape_ids)): #Replase with iteration over folders
+    for i in range(0, len(shape_ids)): #Replase with iteration over folders
         shape_id = shape_ids[i]
 
-        print()
-        print("{}/{}: Loading {}".format(i, len(shape_ids), shape_id))
         
         fdr = join(shapenet_load_path, shape_id)
 
         data = []
+
+        print("")
+        print("{}/{}: Loading {}. ({} models)".format(i, len(shape_ids), shape_id, len(os.listdir(fdr))))
+
         
         for obj in os.listdir(fdr):
             obj_fp = join(fdr, obj, "models", "model_normalized.solid.binvox")
@@ -83,14 +92,15 @@ def write_shapenet_to_tfrecord():
             
             with open(obj_fp) as f:
                 gt_vox = binvox_rw.read_as_3d_array(f).data
-            
+
+            gt_vox = maxpool_np(gt_vox, 2)
+            # IPython.embed()
             data.append(gt_vox)
 
         data = np.array(data)
         data = np.expand_dims(data, axis=4)
 
         ds = tf.data.Dataset.from_tensor_slices((data, data))
-        IPython.embed()
 
         print("      Writing {}".format(shape_id))
         write_to_tfrecord(ds, join(shapenet_record_path, shape_id + ".tfrecord"))
@@ -99,12 +109,15 @@ def load_shapenet(shapes = "all"):
     if shapes == "all":
         shapes = [f[:-9] for f in os.listdir(shapenet_record_path)
                   if f.endswith(".tfrecord")]
+        shapes.sort()
+
 
     ds = None
     for shape in shapes:
+
         fp = join(shapenet_record_path, shape + ".tfrecord")
         if ds:
-            ds.concatenate(read_from_record(fp))
+            ds = ds.concatenate(read_from_record(fp))
         else:
             ds = read_from_record(fp)
     return ds
@@ -137,7 +150,6 @@ def write_to_tfrecord(dataset, record_file):
             
 
 def read_from_record(record_file):
-    print("hi")
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
     voxelgrid_description = {
