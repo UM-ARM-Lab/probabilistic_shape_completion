@@ -1,4 +1,5 @@
 training_checkpoints/*
 restore/*
+restore*
 data/*
 tmp_data/*

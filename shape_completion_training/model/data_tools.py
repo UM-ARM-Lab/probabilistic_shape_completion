@@ -8,6 +8,11 @@ import numpy as np
 import IPython
 
 
+shape_map = {"airplane":"02691156",
+             "mug":"03797390"}
+
+
+
 cur_path = os.path.dirname(__file__)
 shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2")
 shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_downsampled_tfrecords/")
@@ -24,10 +29,11 @@ record_name = "./tmp_data/" + obj + ".tfrecord"
 
 
 
+def shapenet_labels(human_names):
+    return [shape_map[hn] for hn in human_names]
 
 
-
-"Loads data from file. From a TF_Record, if asked"
+"""Loads data from file. From a TF_Record, if asked"""
 def load_data(from_record=False):
 
 
@@ -64,19 +70,35 @@ def maxpool_np(array3d, scale):
     return array3d.reshape(a/s, s, b/s, s, c/s, s).max(axis=(1,3,5))
 
 
-def write_shapenet_to_tfrecord():
-    shape_ids = [f for f in os.listdir(shapenet_load_path)
-                 if os.path.isdir(join(shapenet_load_path, f))]
-    shape_ids.sort()
+
+def get_simulated_input(gt):
+    known_free = []
+    known_occ = []
+
+    known_occ = gt
+    known_free = 1.0 - gt
+    
+    return {"known_free": known_free, "known_occ": known_occ, "gt":gt}
+
+
+"""
+Processes shapenet files and saves necessary data in tfrecords
+
+params:
+shape_ids: a list of strings of shapenet object categories, or "all"
+"""
+def write_shapenet_to_tfrecord(shape_ids = "all"):
+    if shape_ids == "all":
+        
+        shape_ids = [f for f in os.listdir(shapenet_load_path)
+                     if os.path.isdir(join(shapenet_load_path, f))]
+        shape_ids.sort()
 
 
     for i in range(0, len(shape_ids)): #Replase with iteration over folders
         shape_id = shape_ids[i]
-
-        
         fdr = join(shapenet_load_path, shape_id)
-
-        data = []
+        gt = []
 
         print("")
         print("{}/{}: Loading {}. ({} models)".format(i, len(shape_ids), shape_id, len(os.listdir(fdr))))
@@ -95,12 +117,14 @@ def write_shapenet_to_tfrecord():
 
             gt_vox = maxpool_np(gt_vox, 2)
             # IPython.embed()
-            data.append(gt_vox)
+            gt.append(gt_vox*1.0)
 
-        data = np.array(data)
-        data = np.expand_dims(data, axis=4)
+        gt = np.array(gt, dtype=np.float32)
+        gt = np.expand_dims(gt, axis=4)
 
-        ds = tf.data.Dataset.from_tensor_slices((data, data))
+        
+
+        ds = tf.data.Dataset.from_tensor_slices(get_simulated_input(gt))
 
         print("      Writing {}".format(shape_id))
         write_to_tfrecord(ds, join(shapenet_record_path, shape_id + ".tfrecord"))
@@ -135,9 +159,11 @@ def write_to_tfrecord(dataset, record_file):
     with tf.io.TFRecordWriter(record_file) as writer:
         for elem in dataset:
             # IPython.embed()
-            # IPython.embed()
+            
             feature={
-                'voxelgrid': _bytes_feature(tf.io.serialize_tensor(elem[0]).numpy())
+                'gt': _bytes_feature(tf.io.serialize_tensor(elem['gt']).numpy()),
+                'known_occ': _bytes_feature(tf.io.serialize_tensor(elem['known_occ']).numpy()),
+                'known_free': _bytes_feature(tf.io.serialize_tensor(elem['known_free']).numpy()),
                 }
             # IPython.embed()
             features = tf.train.Features(feature=feature)
@@ -153,24 +179,32 @@ def read_from_record(record_file):
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
     voxelgrid_description = {
-        'voxelgrid': tf.io.FixedLenFeature([], tf.string)
+        'gt': tf.io.FixedLenFeature([], tf.string),
+        'known_occ': tf.io.FixedLenFeature([], tf.string),
+        'known_free': tf.io.FixedLenFeature([], tf.string),
     }
 
 
     def _get_shape(_raw_dataset):
         e = next(_raw_dataset.__iter__())
         example = tf.io.parse_single_example(e, voxelgrid_description)
-        t = tf.io.parse_tensor(example['voxelgrid'], tf.bool)
+        t = tf.io.parse_tensor(example['gt'], tf.float32)
         return t.shape
+    # IPython.embed()
     shape = _get_shape(raw_dataset)
         
 
     def _parse_voxelgrid_function(example_proto):
         # Parse the input tf.Example proto using the dictionary above.
         example = tf.io.parse_single_example(example_proto, voxelgrid_description)
-        t = tf.io.parse_tensor(example['voxelgrid'], tf.bool)
-        t.set_shape(shape)
-        return (t,t)
+        gt = tf.io.parse_tensor(example['gt'], tf.float32)
+        known_occ = tf.io.parse_tensor(example['known_occ'], tf.float32)
+        known_free = tf.io.parse_tensor(example['known_free'], tf.float32)
+        gt.set_shape(shape)
+        known_occ.set_shape(shape)
+        known_free.set_shape(shape)
+        return ({'gt': gt, 'known_occ': known_occ, 'known_free': known_free}, gt)
+        # return (known_occ, gt)
 
 
     parsed_dataset = raw_dataset.map(_parse_voxelgrid_function)

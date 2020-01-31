@@ -66,40 +66,30 @@ class SimpleNetwork:
         print(test_out)
 
 
-class AutoEncoder:
+class AutoEncoder(tf.keras.Model):
     def __init__(self):
-        self.side_length = 64
-        self.num_voxels = self.side_length ** 3
+        super(AutoEncoder, self).__init__()
+        self.setup_model()
 
-        self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/cp.ckpt")
-        self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
-        self.model = None
-        
-        self.build_autoencoder_network()
+    def setup_model(self):
+        # self.flatten = tf.keras.layers.Flatten()
+        # self.unflatten = tf.keras.layers.Reshape((64, 64, 64, 1))
 
-    def restore(self):
-        # self.model = tf.keras.models.load_model(self.checkpoint_path)
-        self.model.load_weights(self.restore_path)
-
-
-    def build_autoencoder_network(self):
-        ip = (self.side_length, self.side_length, self.side_length, 1)
-        self.model = tf.keras.Sequential([
-            # tf.keras.layers.Flatten(),
-            # tf.keras.layers.Dense(self.num_voxels, activation='softmax')
-            tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same"),
+        ip = (64, 64, 64, 2)
+        self.autoencoder_layers = [
+            tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same", name="known_occ"),
             tf.keras.layers.Activation(tf.nn.relu),
             tf.keras.layers.MaxPool3D((2,2,2)),
 
-            tf.keras.layers.Conv3D(128, (2,2,2), input_shape=ip, padding="same"),
+            tf.keras.layers.Conv3D(128, (2,2,2), padding="same"),
             tf.keras.layers.Activation(tf.nn.relu),
             tf.keras.layers.MaxPool3D((2,2,2)),
 
-            tf.keras.layers.Conv3D(256, (2,2,2), input_shape=ip, padding="same"),
+            tf.keras.layers.Conv3D(256, (2,2,2), padding="same"),
             tf.keras.layers.Activation(tf.nn.relu),
             tf.keras.layers.MaxPool3D((2,2,2)),
 
-            tf.keras.layers.Conv3D(512, (2,2,2), input_shape=ip, padding="same"),
+            tf.keras.layers.Conv3D(512, (2,2,2), padding="same"),
             tf.keras.layers.Activation(tf.nn.relu),
             tf.keras.layers.MaxPool3D((2,2,2)),
 
@@ -116,9 +106,87 @@ class AutoEncoder:
             tf.keras.layers.Activation(tf.nn.relu),
             tf.keras.layers.Conv3DTranspose(64, (2,2,2,), strides=2),
             tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.Conv3DTranspose(1, (2,2,2,), strides=2),
+            tf.keras.layers.Conv3DTranspose(1, (2,2,2,), strides=2, name="gt")
+        ]
 
-        ])
+
+    def call(self, inputs):
+        known_occ = inputs['known_occ']
+        known_free = inputs['known_free']
+
+        x = tf.keras.layers.concatenate([known_occ, known_free], axis=4)
+
+        for layer in self.autoencoder_layers:
+            x = layer(x)
+        
+        return x
+
+class AutoEncoderWrapper:
+    def __init__(self):
+        self.side_length = 64
+        self.num_voxels = self.side_length ** 3
+
+        self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/cp.ckpt")
+        self.restore_path = os.path.join(os.path.dirname(__file__), "../restore_shapenet_mug/cp.ckpt")
+        # self.restore_path = os.path.join(os.path.dirname(__file__), "../restore_025mug/cp.ckpt")
+        self.model = None
+        
+        # self.build_autoencoder_network()
+
+        self.model = AutoEncoder()
+        # self.model.build(input_shape=(self.side_length, self.side_length, self.side_length, 1))
+        self.model.compile(optimizer='adam',
+                           # loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+                           loss=tf.keras.losses.MSE, 
+                           metrics=[tf.keras.metrics.MeanAbsoluteError()])
+
+    def restore(self):
+        # self.model = tf.keras.models.load_model(self.checkpoint_path)
+        self.model.load_weights(self.restore_path)
+
+
+    def build_autoencoder_network(self):
+        ip = (self.side_length, self.side_length, self.side_length, 1)
+        self.model = tf.keras.Sequential([
+            # tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same"),
+            # tf.keras.layers.Activation(tf.nn.relu),
+            # tf.keras.layers.MaxPool3D((2,2,2)),
+            
+            tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same", name="known_occ"),
+            tf.keras.layers.Activation(tf.nn.relu),
+            tf.keras.layers.MaxPool3D((2,2,2)),
+
+            tf.keras.layers.Conv3D(128, (2,2,2), padding="same"),
+            tf.keras.layers.Activation(tf.nn.relu),
+            tf.keras.layers.MaxPool3D((2,2,2)),
+
+            tf.keras.layers.Conv3D(256, (2,2,2), padding="same"),
+            tf.keras.layers.Activation(tf.nn.relu),
+            tf.keras.layers.MaxPool3D((2,2,2)),
+
+            tf.keras.layers.Conv3D(512, (2,2,2), padding="same"),
+            tf.keras.layers.Activation(tf.nn.relu),
+            tf.keras.layers.MaxPool3D((2,2,2)),
+
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(2000, activation='relu'),
+            
+            tf.keras.layers.Dense(32768, activation='relu'),
+            tf.keras.layers.Reshape((4,4,4,512)),
+            
+
+            tf.keras.layers.Conv3DTranspose(256, (2,2,2,), strides=2),
+            tf.keras.layers.Activation(tf.nn.relu),
+            tf.keras.layers.Conv3DTranspose(128, (2,2,2,), strides=2),
+            tf.keras.layers.Activation(tf.nn.relu),
+            tf.keras.layers.Conv3DTranspose(64, (2,2,2,), strides=2),
+            tf.keras.layers.Activation(tf.nn.relu),
+            tf.keras.layers.Conv3DTranspose(1, (2,2,2,), strides=2, name="gt"),
+            # tf.keras.layers.Activation(tf.nn.relu),
+            # tf.keras.layers.Conv3DTranspose(1, (2,2,2,), strides=2),
+
+        ]
+        )
 
         self.model.compile(optimizer='adam',
                            # loss=tf.keras.losses.SparseCategoricalCrossentropy(),
@@ -131,22 +199,25 @@ class AutoEncoder:
         self.model.summary()
         
     def train(self, dataset):
-        self.count_params()
+        # self.count_params()
 
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
-                                                         save_weights_only=False,
+                                                         save_weights_only=True,
                                                          verbose=1)
         
-        self.model.fit(dataset.repeat(10), epochs=10,
+        self.model.fit(dataset,
+                       epochs=10,
                        callbacks=[cp_callback])
 
     def train_and_test(self, dataset):
         dataset.shuffle(10000)
 
-        train_ds = dataset.skip(100)
-        test_ds = dataset.take(100)
+        train_ds = dataset.repeat(10)
+        # train_ds = dataset.skip(100)
+        # test_ds = dataset.take(100)
         # IPython.embed()
         self.train(train_ds.batch(16))
+        self.count_params()
 
     def evaluate(self, dataset):
         self.model.evaluate(dataset.batch(16))
