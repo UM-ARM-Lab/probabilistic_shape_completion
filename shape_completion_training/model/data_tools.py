@@ -14,8 +14,9 @@ shape_map = {"airplane":"02691156",
 
 
 cur_path = os.path.dirname(__file__)
-shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2")
-shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_downsampled_tfrecords/")
+shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
+# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/")
+shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2/tfrecords/")
 
 obj = "025_mug"
 base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/"
@@ -31,6 +32,7 @@ record_name = "./tmp_data/" + obj + ".tfrecord"
 
 def shapenet_labels(human_names):
     return [shape_map[hn] for hn in human_names]
+
 
 
 """Loads data from file. From a TF_Record, if asked"""
@@ -97,27 +99,32 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
 
     for i in range(0, len(shape_ids)): #Replase with iteration over folders
         shape_id = shape_ids[i]
-        fdr = join(shapenet_load_path, shape_id)
+        shape_path = join(shapenet_load_path, shape_id)
         gt = []
 
         print("")
-        print("{}/{}: Loading {}. ({} models)".format(i, len(shape_ids), shape_id, len(os.listdir(fdr))))
+        print("{}/{}: Loading {}. ({} models)".format(i, len(shape_ids), shape_id, len(os.listdir(shape_path))))
 
         
-        for obj in os.listdir(fdr):
-            obj_fp = join(fdr, obj, "models", "model_normalized.solid.binvox")
+        for obj in os.listdir(shape_path):
+            obj_fp = join(shape_path, obj, "models")
+            print("    Processing {}".format(obj))
 
-            if not os.path.isfile(obj_fp):
-                print("File not found: {}".format(obj_fp))
-                print("Skipping")
-                continue
+            for augmentation in [f for f in os.listdir(obj_fp)
+                                 if f.startswith("model_augmented")
+                                 if f.endswith(".binvox")]:
+                aug_fp = join(obj_fp, augmentation)
+
+                
+                if not os.path.isfile(aug_fp):
+                    print("File not found: {}".format(aug_fp))
+                    print("Skipping")
+                    continue
             
-            with open(obj_fp) as f:
-                gt_vox = binvox_rw.read_as_3d_array(f).data
-
-            gt_vox = maxpool_np(gt_vox, 2)
-            # IPython.embed()
-            gt.append(gt_vox*1.0)
+                with open(aug_fp) as f:
+                    gt_vox = binvox_rw.read_as_3d_array(f).data
+                    # gt_vox = maxpool_np(gt_vox, 2)
+                    gt.append(gt_vox*1.0)
 
         gt = np.array(gt, dtype=np.float32)
         gt = np.expand_dims(gt, axis=4)

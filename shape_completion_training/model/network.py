@@ -212,6 +212,7 @@ class AutoEncoderWrapper:
     def train_and_test(self, dataset):
         dataset.shuffle(10000)
 
+        # train_ds = dataset
         train_ds = dataset.repeat(10)
         # train_ds = dataset.skip(100)
         # test_ds = dataset.take(100)
