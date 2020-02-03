@@ -13,7 +13,18 @@ import docker
 import IPython
 import subprocess
 
+"""
+NOTE:
+If running over ssh, need to start a virtual screen
+https://www.patrickmin.com/binvox/
 
+Xvfb :99 -screen 0 640x480x24 &
+export DISPLAY=:99
+
+
+Then run binvox with the -pb option 
+
+"""
 
 
 def augment_object(object_path):
@@ -61,11 +72,11 @@ Runs binvox on the input obj file
 def binvox_object_file(fp):
 
     #TODO Hardcoded binvox path
-    # binvox_str = "~/useful_scripts/binvox -aw -dc -pb -down -down -dmin 2 {}".format(fp)
+    binvox_str = "~/useful_scripts/binvox -aw -dc -pb -down -down -dmin 2 {}".format(fp)
 
     #Fast but inaccurate
     # binvox_str = "~/useful_scripts/binvox -e -pb -down -down -dmin 2 {}".format(fp)
-    binvox_str = "~/useful_scripts/cuda_voxelizer -s 64 -f {}".format(fp)
+    # binvox_str = "~/useful_scripts/cuda_voxelizer -s 64 -f {}".format(fp)
 
     
     # IPython.embed()
