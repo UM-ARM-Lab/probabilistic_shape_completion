@@ -1,8 +1,14 @@
 #!/usr/bin/env python
 
 import rospy
+import tf2_ros
+import tf_conversions
+import geometry_msgs.msg
 from mps_shape_completion_msgs.msg import OccupancyStamped
 from mps_shape_completion_visualization import conversions
+
+
+
 import numpy as np
 
 import sys
@@ -16,12 +22,15 @@ from shape_completion_training.model import obj_tools
 from shape_completion_training import binvox_rw
 import IPython
 
+
+
 # DIM = 64
 
 gt_pub = None
 known_occ_pub = None
 known_free_pub = None
 completion_pub = None
+mismatch_pub = None
 
 
 
@@ -30,14 +39,18 @@ def to_msg(voxel_grid):
     return conversions.vox_to_occupancy_stamped(voxel_grid,
                                                 dim = voxel_grid.shape[1],
                                                 scale=0.01,
-                                                frame_id = "base_frame")
+                                                frame_id = "object")
 
 
 def view_single_binvox():
     gt_pub = rospy.Publisher('gt_voxel_grid', OccupancyStamped, queue_size=1)
-    fp = "/home/bsaund/catkin_ws/src/mps_shape_completion/shape_completion_training/data/ShapeNetCore.v2_augmented/03797390/a1d293f5cc20d01ad7f470ee20dce9e0/models"
-    fn = "model_normalized.obj_64.binvox"
-    # fn = "model_normalized.solid.binvox"
+    fp = "/home/bsaund/catkin_ws/src/mps_shape_completion/shape_completion_training/data/ShapeNetCore.v2_augmented/03797390"
+    # fp = os.path.join(fp, "a1d293f5cc20d01ad7f470ee20dce9e0")
+    fp = os.path.join(fp, "214dbcace712e49de195a69ef7c885a4")
+    fp = os.path.join(fp, "models")
+    # fn = "model_normalized.obj_64.binvox"
+    # fn = "model_normalized.binvox"
+    fn = "model_normalized.solid.binvox"
 
     fp = os.path.join(fp, fn)
 
@@ -90,6 +103,8 @@ def publish_shapenet_tfrecords():
     
     for elem, _ in data:
         known_occ_pub.publish(to_msg(elem["gt"].numpy()))
+        print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
+                                            elem['id'].numpy()))
         rospy.sleep(0.2)
 
 
@@ -121,6 +136,11 @@ def publish():
         known_occ_pub.publish(to_msg(elem_expanded['known_occ']))
         known_free_pub.publish(to_msg(elem_expanded['known_free']))
         completion_pub.publish(to_msg(inference))
+
+        mismatch = np.abs(elem['gt'].numpy() - inference)
+        mismatch_pub.publish(to_msg(mismatch))
+        # IPython.embed()
+
         rospy.sleep(0.5)
 
 
@@ -191,14 +211,28 @@ if __name__=="__main__":
     known_occ_pub = rospy.Publisher('known_occ_voxel_grid', OccupancyStamped, queue_size=1)
     known_free_pub = rospy.Publisher('known_free_voxel_grid', OccupancyStamped, queue_size=1)
     completion_pub = rospy.Publisher('predicted_voxel_grid', OccupancyStamped, queue_size=1)
+    mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
 
-    rospy.sleep(1)    
+    br = tf2_ros.TransformBroadcaster()
+    t = geometry_msgs.msg.TransformStamped()
+    t.header.stamp = rospy.Time.now()
+    t.header.frame_id = "world"
+    t.child_frame_id = "object"
+    q = tf_conversions.transformations.quaternion_from_euler(1.57,0,0)
+    t.transform.rotation.x = q[0]
+    t.transform.rotation.y = q[1]
+    t.transform.rotation.z = q[2]
+    t.transform.rotation.w = q[3]
 
 
-    # view_single_binvox()
+    rospy.sleep(1)
+    br.sendTransform(t)
+
+
+    view_single_binvox()
     # publish_test_img()
     # publish_shapenet_tfrecords()
-    publish()
+    # publish()
     # layer_by_layer()
     # data_tools.write_shapenet_to_tfrecord()
     # data_tools.load_shapenet()
