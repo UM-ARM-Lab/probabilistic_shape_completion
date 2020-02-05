@@ -128,6 +128,7 @@ class AutoEncoderWrapper:
 
         self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/cp.ckpt")
         self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
+        self.restore_path = self.checkpoint_path
         # self.restore_path = os.path.join(os.path.dirname(__file__), "../restore_025mug/cp.ckpt")
         self.model = None
         

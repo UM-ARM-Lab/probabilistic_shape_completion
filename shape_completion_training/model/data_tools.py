@@ -84,16 +84,21 @@ def get_simulated_input(gt):
 
 
 def load_gt_voxels(filepath, augmentation):
-    binvox_fp = join(filepath, 'model_augmented_' + augmentation + '.binvox')
-    cuda_binvox_fp = join(filepath, 'model_augmented_' + augmentation + '.obj_64.binvox')
-    
-    with open(binvox_fp) as f:
-        gt_vox = binvox_rw.read_as_3d_array(f).data
 
-    with open(cuda_binvox_fp) as f:
-        cuda_gt_vox = binvox_rw.read_as_3d_array(f).data
 
-    combined = gt_vox * 1.0 + cuda_gt_vox * 1.0
+    binvox_wire_fp = join(filepath, 'model_augmented_' + augmentation + '.wire.binvox')    
+    with open(binvox_wire_fp) as f:
+        wire_vox = binvox_rw.read_as_3d_array(f).data
+
+    binvox_mesh_fp = join(filepath, 'model_augmented_' + augmentation + '.mesh.binvox')    
+    with open(binvox_mesh_fp) as f:
+        mesh_vox = binvox_rw.read_as_3d_array(f).data
+
+    # cuda_binvox_fp = join(filepath, 'model_augmented_' + augmentation + '.obj_64.binvox')
+    # with open(cuda_binvox_fp) as f:
+    #     cuda_gt_vox = binvox_rw.read_as_3d_array(f).data
+
+    combined = wire_vox * 1.0 + mesh_vox * 1.0
     return np.clip(combined, 0, 1)
 
 
@@ -119,7 +124,7 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
         data = {'id':[], 'shape_category':[]}
 
         print("")
-        print("{}/{}: Loading {}. ({} models)".format(i, len(shape_ids), shape_id, len(os.listdir(shape_path))))
+        print("{}/{}: Loading {}. ({} models)".format(i+1, len(shape_ids), shape_id, len(os.listdir(shape_path))))
 
         for obj in os.listdir(shape_path):
             obj_fp = join(shape_path, obj, "models")
