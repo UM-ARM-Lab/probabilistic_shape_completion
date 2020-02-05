@@ -49,8 +49,8 @@ def view_single_binvox():
     fp = os.path.join(fp, "214dbcace712e49de195a69ef7c885a4")
     fp = os.path.join(fp, "models")
     # fn = "model_normalized.obj_64.binvox"
-    # fn = "model_normalized.binvox"
-    fn = "model_normalized.solid.binvox"
+    fn = "model_normalized.binvox"
+    # fn = "model_normalized.solid.binvox"
 
     fp = os.path.join(fp, fn)
 
@@ -59,14 +59,18 @@ def view_single_binvox():
         gt_vox = binvox_rw.read_as_3d_array(f).data
 
     gt_pub.publish(to_msg(gt_vox))
-    rospy.sleep(1)
+    rospy.sleep(10)
 
 
 def publish_test_img():
 
     mug_fp = "/home/bsaund/catkin_ws/src/mps_shape_completion/shape_completion_training/data/ShapeNetCore.v2_augmented/03797390/"
+
+
+    shapes = os.listdir(mug_fp)
+    shapes = ['214dbcace712e49de195a69ef7c885a4']
     
-    for shape in os.listdir(mug_fp):
+    for shape in shapes:
         shape_fp = os.path.join(mug_fp, shape, "models")
         print ("Displaying {}".format(shape))
 
@@ -77,23 +81,23 @@ def publish_test_img():
         gt_pub.publish(to_msg(gt_vox))
         rospy.sleep(1)
 
-        aug = [f for f in os.listdir(shape_fp) if f.startswith("model_augmented")]
-        aug.sort()
+        augs = [f for f in os.listdir(shape_fp) if f.startswith("model_augmented")]
+        augs.sort()
         # IPython.embed()
-        for f in aug:
+        for aug in augs:
 
             if rospy.is_shutdown():
                 return
         
-            ko_fp = os.path.join(shape_fp, f)
+            ko_fp = os.path.join(shape_fp, aug)
             with open(ko_fp) as f:
                 ko_vox = binvox_rw.read_as_3d_array(f).data
     
 
             known_occ_pub.publish(to_msg(ko_vox))
 
-            print("Publishing new voxel grid")
-            rospy.sleep(.1)
+            print("Publishing {}".format(aug))
+            rospy.sleep(.5)
 
 
 def publish_shapenet_tfrecords():
@@ -102,13 +106,13 @@ def publish_shapenet_tfrecords():
     print(sum(1 for _ in data))
     
     for elem, _ in data:
-        known_occ_pub.publish(to_msg(elem["gt"].numpy()))
+        gt_pub.publish(to_msg(elem["gt"].numpy()))
         print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
                                             elem['id'].numpy()))
         rospy.sleep(0.2)
 
 
-def publish():
+def publish_completion():
 
     print("Loading...")
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
@@ -229,10 +233,10 @@ if __name__=="__main__":
     br.sendTransform(t)
 
 
-    view_single_binvox()
-    # publish_test_img()
+    # view_single_binvox()
+    publish_test_img()
     # publish_shapenet_tfrecords()
-    # publish()
+    # publish_completion()
     # layer_by_layer()
     # data_tools.write_shapenet_to_tfrecord()
     # data_tools.load_shapenet()
