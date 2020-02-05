@@ -47,3 +47,11 @@ In normal operation just start a `shape_completion_node.py`. Requests are made e
 - The current model is trained on a subset of objects in ycb dataset and shapenet:
 
 ![](https://github.com/UM-ARM-Lab/Shape-completion/blob/master/train_mod/training_set.png)
+
+
+# Installation
+1. Download shapenet and put in the `shape_completion_training/data` folder. Unzip.
+2. Install pyassimp `pip install pyassimp=4.1.3`
+     https://github.com/assimp/assimp/issues/2343
+3. Run `augment_shapenet.py`.
+
