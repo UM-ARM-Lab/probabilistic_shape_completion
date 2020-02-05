@@ -127,7 +127,9 @@ def publish_completion():
         if rospy.is_shutdown():
             return
         
-        print("Publishing")
+        # print("Publishing")
+        print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
+                                            elem['id'].numpy()))
         dim = elem['gt'].shape[0]
 
 
@@ -234,9 +236,9 @@ if __name__=="__main__":
 
 
     # view_single_binvox()
-    publish_test_img()
+    # publish_test_img()
     # publish_shapenet_tfrecords()
-    # publish_completion()
+    publish_completion()
     # layer_by_layer()
     # data_tools.write_shapenet_to_tfrecord()
     # data_tools.load_shapenet()
