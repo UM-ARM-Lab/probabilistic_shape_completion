@@ -167,16 +167,19 @@ class AutoEncoderWrapper:
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
                                                          save_weights_only=True,
                                                          verbose=1)
+        log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         
         self.model.fit(dataset.batch(16),
-                       epochs=10,
-                       callbacks=[cp_callback])
+                       epochs=100,
+                       callbacks=[cp_callback, tensorboard_callback])
 
     def train_and_test(self, dataset):
         # dataset.shuffle(10000)
 
         # train_ds = dataset
-        train_ds = dataset.repeat(10)
+        # train_ds = dataset.repeat(10)
         # train_ds = dataset.skip(100)
         # test_ds = dataset.take(100)
         # IPython.embed()
