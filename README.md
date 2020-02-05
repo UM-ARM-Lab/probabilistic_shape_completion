@@ -53,5 +53,12 @@ In normal operation just start a `shape_completion_node.py`. Requests are made e
 1. Download shapenet and put in the `shape_completion_training/data` folder. Unzip.
 2. Install pyassimp `pip install pyassimp=4.1.3`
      https://github.com/assimp/assimp/issues/2343
+3. Install binvox
+4. If running over ssh, set external display for binvox.
+``` 
+Xvfb :99 -screen 0 640x480x24 &
+export DISPLAY=:99
+```
+
 3. Run `augment_shapenet.py`.
 
