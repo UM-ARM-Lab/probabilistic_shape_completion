@@ -12,7 +12,9 @@ from model import data_tools
 import IPython
 import subprocess
 from itertools import izip_longest
-from threading import Thread
+import multiprocessing as mp
+import Queue
+import time
 
 """
 NOTE:
@@ -39,29 +41,32 @@ def augment_category(object_path, num_threads = 1):
     shape_ids.sort()
 
 
-    # i = 0
-    # for group in grouper(num_threads, shape_ids):
-    #     # IPython.embed()
-    #     threads = []
-    #     for shape in group:
-    #         i+= 1
-    #         fp = join(object_path, shape, "models")
-    #         print("{:03d}/{} Augmenting {}".format(i, len(shape_ids), shape))
-    #         thread = Thread(target = augment_shape, args = (fp, ))
-    #         thread.start()
-    #         threads.append(thread)
-    #     for thread in threads:
-    #         thread.join()
-    
-    
-    i=0;
-    for shape in shape_ids:
-        i+=1
+    q = mp.Queue()
+    for elem in zip(range(1, len(shape_ids)+1), shape_ids):
+        q.put(elem)
 
-        print("{:03d}/{} Augmenting {}".format(i, len(shape_ids), shape))
+
+    print("Augmenting shapes using {} threads".format(num_threads))
+    threads = []
+    for _ in range(num_threads):
+        p = mp.Process(target = augment_shape_worker, args=(q, object_path, len(shape_ids), ))
+        p.start()
+        threads.append(p)
+    for p in threads:
+        p.join()
         
-        fp = join(object_path, shape, "models")
-        augment_shape(fp, num_threads)
+
+
+def augment_shape_worker(queue, object_path, total):
+    while True:
+        try:
+            count, shape_id = queue.get(False)
+        except Queue.Empty:
+            return
+        
+        print("{:03d}/{} Augmenting {}".format(count, total, shape_id))
+        fp = join(object_path, shape_id, "models")
+        augment_shape(fp)
 
 
 """
@@ -70,7 +75,7 @@ Augments the model at the filepath
 filepath should end with the "models" folder
 Augmentation involves rotatin the model and converting all rotations to .binvox files
 """
-def augment_shape(filepath, num_threads):
+def augment_shape(filepath):
     fp = filepath
 
     if fp is None:
@@ -89,9 +94,8 @@ def augment_shape(filepath, num_threads):
                            if f.startswith('model_augmented')
                            if f.endswith('.obj')]
 
-    threaded_binvox_object_files(fp, augmented_obj_files, num_threads)
-    # for f in augmented_obj_files:
-    #     binvox_object_file(join(fp, f))
+    for f in augmented_obj_files:
+        binvox_object_file(join(fp, f))
 
     #Cleanup large model files
     old_files = [f for f in os.listdir(fp)
@@ -99,16 +103,6 @@ def augment_shape(filepath, num_threads):
                  if not f.endswith(".binvox")]
     for f in old_files:
         os.remove(join(fp, f))
-
-def threaded_binvox_object_files(fp, augmented_obj_files, num_threads):
-    for group in grouper(num_threads, augmented_obj_files):
-        threads = []
-        for aug_obj in group:
-            thread = Thread(target=binvox_object_file, args=(join(fp, aug_obj), ))
-            thread.start()
-            threads.append(thread)
-        for thread in threads:
-            thread.join()
 
         
 
@@ -139,14 +133,16 @@ def binvox_object_file(fp):
 
 
 if __name__=="__main__":
-    gt_obj_fp = "/home/bsaund/catkin_ws/src/mps_shape_completion/shape_completion_training/data/ShapeNetCore.v2_augmented/03797390/a1d293f5cc20d01ad7f470ee20dce9e0/models/model_normalized.obj"
-
+    num_threads = 28
 
     sn_path = join(data_tools.cur_path, "../data/ShapeNetCore.v2_augmented")
     sn_path = join(sn_path, data_tools.shape_map['mug'])
 
-
-    augment_category(sn_path, 18)
+    start_time = time.time()
+    
+    augment_category(sn_path, num_threads)
+    print("")
+    print("Augmenting with {} threads took {} seconds".format(num_threads, time.time() - start_time))
 
 
 
