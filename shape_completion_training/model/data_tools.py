@@ -1,11 +1,16 @@
 #! /usr/bin/env python
+from __future__ import print_function
+
 import os
 from os.path import join
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from shape_completion_training import binvox_rw
 import numpy as np
+import sys
+
 import IPython
+
 
 
 shape_map = {"airplane":"02691156",
@@ -125,10 +130,11 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
 
         print("")
         print("{}/{}: Loading {}. ({} models)".format(i+1, len(shape_ids), shape_id, len(os.listdir(shape_path))))
-
-        for obj in os.listdir(shape_path):
+        objs = os.listdir(shape_path)
+        for i, obj in zip(range(len(objs)), objs):
             obj_fp = join(shape_path, obj, "models")
-            print("    Processing {}".format(obj))
+            print("    {}/{} Processing {}".format(i+1, len(objs), obj), end="")
+            sys.stdout.flush()
 
             
             augs = [f[len('model_augmented_'):].split('.')[0]
@@ -143,6 +149,8 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
                 gt.append(gt_vox)
                 data['shape_category'].append(shape_id)
                 data['id'].append(obj)
+            sys.stdout.write('\033[2K\033[1G')
+
                     
                 # gt_vox = np.array(gt_vox, dtype=np.float32)
         gt = np.array(gt, dtype=np.float32)
@@ -153,6 +161,7 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
         # IPython.embed()
         
         print("      Writing {}".format(shape_id))
+        sys.stdout.flush()
         write_to_tfrecord(ds, join(shapenet_record_path, shape_id + ".tfrecord"))
 
 def load_shapenet(shapes = "all"):
