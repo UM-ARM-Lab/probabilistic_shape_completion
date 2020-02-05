@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+from __future__ import print_function
 
 import sys
 import os
@@ -45,13 +46,16 @@ def augment_category(object_path, num_threads = 1):
     for elem in zip(range(1, len(shape_ids)+1), shape_ids):
         q.put(elem)
 
-
+    print("")
     print("Augmenting shapes using {} threads".format(num_threads))
+    print("Progress may appear eratic due to threading")
+    print("")
     threads = []
     for _ in range(num_threads):
         p = mp.Process(target = augment_shape_worker, args=(q, object_path, len(shape_ids), ))
         p.start()
         threads.append(p)
+        time.sleep(0.01) #Sleep time to avoid race conditions while writing to stdout
     for p in threads:
         p.join()
         
@@ -63,8 +67,10 @@ def augment_shape_worker(queue, object_path, total):
             count, shape_id = queue.get(False)
         except Queue.Empty:
             return
-        
-        print("{:03d}/{} Augmenting {}".format(count, total, shape_id))
+
+        sys.stdout.write('\033[2K\033[1G')
+        print("{:03d}/{} Augmenting {}".format(count, total, shape_id), end="")
+        sys.stdout.flush()
         fp = join(object_path, shape_id, "models")
         augment_shape(fp)
 
