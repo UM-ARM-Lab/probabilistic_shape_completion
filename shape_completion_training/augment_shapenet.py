@@ -9,7 +9,6 @@ sys.path.append(sc_path)
 
 from model import obj_tools
 from model import data_tools
-import docker
 import IPython
 import subprocess
 
