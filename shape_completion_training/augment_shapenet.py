@@ -29,11 +29,13 @@ Then run binvox with the -pb option
 
 def augment_object(object_path):
 
-    shapes = ['a1d293f5cc20d01ad7f470ee20dce9e0']
+    # shapes = ['a1d293f5cc20d01ad7f470ee20dce9e0']
+    # shapes = ['214dbcace712e49de195a69ef7c885a4']
+    shapes = os.listdir(object_path)
+
+
 
     i=0;
-
-    shapes = os.listdir(object_path)
     for shape in shapes:
     # for shape in shapes:
         i+=1
@@ -72,17 +74,22 @@ Runs binvox on the input obj file
 def binvox_object_file(fp):
 
     #TODO Hardcoded binvox path
-    binvox_str = "~/useful_scripts/binvox -aw -dc -pb -down -down -dmin 2 {}".format(fp)
+    binvox_str = "~/useful_scripts/binvox -dc -pb -down -down -dmin 2 {}".format(fp)
 
     #Fast but inaccurate
-    # binvox_str = "~/useful_scripts/binvox -e -pb -down -down -dmin 2 {}".format(fp)
-    # binvox_str = "~/useful_scripts/cuda_voxelizer -s 64 -f {}".format(fp)
+    wire_binvox_str = "~/useful_scripts/binvox -e -pb -down -down -dmin 1 {}".format(fp)
+    cuda_binvox_str = "~/useful_scripts/cuda_voxelizer -s 64 -f {}".format(fp)
 
+    fp_base = fp[:-4]
     
-    # IPython.embed()
-
     with open(os.devnull, 'w') as FNULL:
         subprocess.call(binvox_str, shell=True, stdout=FNULL)
+        os.rename(fp_base + ".binvox", fp_base + ".mesh.binvox")
+        
+        subprocess.call(wire_binvox_str, shell=True, stdout=FNULL)
+        os.rename(fp_base + ".binvox", fp_base + ".wire.binvox")
+        
+        # subprocess.call(cuda_binvox_str, shell=True, stdout=FNULL)
 
         
 

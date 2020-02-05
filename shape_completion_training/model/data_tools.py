@@ -15,8 +15,8 @@ shape_map = {"airplane":"02691156",
 
 cur_path = os.path.dirname(__file__)
 shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
-# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/")
-shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2/tfrecords/")
+shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/")
+# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2/tfrecords/")
 
 obj = "025_mug"
 base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/"
@@ -83,6 +83,21 @@ def get_simulated_input(gt):
     return {"known_free": known_free, "known_occ": known_occ, "gt":gt}
 
 
+def load_gt_voxels(filepath, augmentation):
+    binvox_fp = join(filepath, 'model_augmented_' + augmentation + '.binvox')
+    cuda_binvox_fp = join(filepath, 'model_augmented_' + augmentation + '.obj_64.binvox')
+    
+    with open(binvox_fp) as f:
+        gt_vox = binvox_rw.read_as_3d_array(f).data
+
+    with open(cuda_binvox_fp) as f:
+        cuda_gt_vox = binvox_rw.read_as_3d_array(f).data
+
+    combined = gt_vox * 1.0 + cuda_gt_vox * 1.0
+    return np.clip(combined, 0, 1)
+
+
+
 """
 Processes shapenet files and saves necessary data in tfrecords
 
@@ -101,38 +116,37 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
         shape_id = shape_ids[i]
         shape_path = join(shapenet_load_path, shape_id)
         gt = []
+        data = {'id':[], 'shape_category':[]}
 
         print("")
         print("{}/{}: Loading {}. ({} models)".format(i, len(shape_ids), shape_id, len(os.listdir(shape_path))))
 
-        
         for obj in os.listdir(shape_path):
             obj_fp = join(shape_path, obj, "models")
             print("    Processing {}".format(obj))
 
-            for augmentation in [f for f in os.listdir(obj_fp)
-                                 if f.startswith("model_augmented")
-                                 if f.endswith(".binvox")]:
-                aug_fp = join(obj_fp, augmentation)
-
-                
-                if not os.path.isfile(aug_fp):
-                    print("File not found: {}".format(aug_fp))
-                    print("Skipping")
-                    continue
             
-                with open(aug_fp) as f:
-                    gt_vox = binvox_rw.read_as_3d_array(f).data
-                    # gt_vox = maxpool_np(gt_vox, 2)
-                    gt.append(gt_vox*1.0)
-
+            augs = [f[len('model_augmented_'):].split('.')[0]
+                    for f in os.listdir(obj_fp)
+                    if f.startswith("model_augmented")
+                    if f.endswith(".binvox")]
+            augs = list(set(augs))
+            augs.sort()
+            for augmentation in augs:
+                gt_vox = load_gt_voxels(obj_fp, augmentation)
+                
+                gt.append(gt_vox)
+                data['shape_category'].append(shape_id)
+                data['id'].append(obj)
+                    
+                # gt_vox = np.array(gt_vox, dtype=np.float32)
         gt = np.array(gt, dtype=np.float32)
         gt = np.expand_dims(gt, axis=4)
+        data.update(get_simulated_input(gt))
 
+        ds = tf.data.Dataset.from_tensor_slices(data)
+        # IPython.embed()
         
-
-        ds = tf.data.Dataset.from_tensor_slices(get_simulated_input(gt))
-
         print("      Writing {}".format(shape_id))
         write_to_tfrecord(ds, join(shapenet_record_path, shape_id + ".tfrecord"))
 
@@ -158,19 +172,19 @@ def load_shapenet(shapes = "all"):
 def write_to_tfrecord(dataset, record_file):
     def _bytes_feature(value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+    
+    """Returns a float_list from a float / double."""
     def _float_feature(value):
-        """Returns a float_list from a float / double."""
-        # IPython.embed()
         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
     with tf.io.TFRecordWriter(record_file) as writer:
         for elem in dataset:
-            # IPython.embed()
-            
             feature={
                 'gt': _bytes_feature(tf.io.serialize_tensor(elem['gt']).numpy()),
                 'known_occ': _bytes_feature(tf.io.serialize_tensor(elem['known_occ']).numpy()),
                 'known_free': _bytes_feature(tf.io.serialize_tensor(elem['known_free']).numpy()),
+                'shape_category': _bytes_feature(elem['shape_category'].numpy()),
+                'id': _bytes_feature(elem['id'].numpy()),
                 }
             # IPython.embed()
             features = tf.train.Features(feature=feature)
@@ -189,6 +203,8 @@ def read_from_record(record_file):
         'gt': tf.io.FixedLenFeature([], tf.string),
         'known_occ': tf.io.FixedLenFeature([], tf.string),
         'known_free': tf.io.FixedLenFeature([], tf.string),
+        'shape_category': tf.io.FixedLenFeature([], tf.string, default_value=''),
+        'id': tf.io.FixedLenFeature([], tf.string, default_value=''),
     }
 
 
@@ -207,10 +223,14 @@ def read_from_record(record_file):
         gt = tf.io.parse_tensor(example['gt'], tf.float32)
         known_occ = tf.io.parse_tensor(example['known_occ'], tf.float32)
         known_free = tf.io.parse_tensor(example['known_free'], tf.float32)
+        category = example['shape_category']
+        id = example['id']
         gt.set_shape(shape)
         known_occ.set_shape(shape)
         known_free.set_shape(shape)
-        return ({'gt': gt, 'known_occ': known_occ, 'known_free': known_free}, gt)
+        return ({'gt': gt, 'known_occ': known_occ, 'known_free': known_free,
+                 'shape_category': category, 'id': id},
+                gt)
         # return (known_occ, gt)
 
 

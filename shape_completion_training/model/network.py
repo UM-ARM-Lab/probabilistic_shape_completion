@@ -77,7 +77,7 @@ class AutoEncoder(tf.keras.Model):
 
         ip = (64, 64, 64, 2)
         self.autoencoder_layers = [
-            tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same", name="known_occ"),
+            tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same"),
             tf.keras.layers.Activation(tf.nn.relu),
             tf.keras.layers.MaxPool3D((2,2,2)),
 
