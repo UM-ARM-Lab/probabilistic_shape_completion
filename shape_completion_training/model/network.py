@@ -12,7 +12,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import data_tools
 import IPython
-from datetime import datetime
+import datetime
 import progressbar
 
 
@@ -81,6 +81,12 @@ class AutoEncoderWrapper:
         self.num_voxels = self.side_length ** 3
 
         self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/")
+        current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        train_log_dir = 'logs/gradient_tape/' + current_time + '/train'
+        test_log_dir = 'logs/gradient_tape/' + current_time + '/test'
+        self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
+
         # self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
 
         self.strategy = tf.distribute.MirroredStrategy()
@@ -92,6 +98,7 @@ class AutoEncoderWrapper:
 
         self.num_batches = None
         self.restore()
+        
 
     def restore(self):
         status = self.ckpt.restore(self.manager.latest_checkpoint)
@@ -111,6 +118,11 @@ class AutoEncoderWrapper:
 
     @tf.function
     def train_step(self, batch):
+        def reduce_from_gpu(val):
+            v2 = self.strategy.reduce(tf.distribute.ReduceOp.SUM, val, axis=0)
+            return tf.reduce_mean(v2) * (1.0 / self.batch_size)
+            
+        
         def step_fn(batch):
             with tf.GradientTape() as tape:
                 output = self.model(batch)
@@ -118,15 +130,22 @@ class AutoEncoderWrapper:
                 # loss = tf.reduce_mean(tf.mse(output - example['gt']))
                 # mse = tf.keras.losses.MSE(batch['gt'], output)
                 mse = tf.losses.mean_squared_error(batch['gt'], output)
+                acc = tf.abs(batch['gt']- output)
                 loss = tf.reduce_sum(mse) * (1.0 / self.batch_size)
                 variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)
                 self.opt.apply_gradients(list(zip(gradients, variables)))
-                return mse
-        per_example_losses = self.strategy.experimental_run_v2(step_fn, args=(batch, ))
-        sum_loss = self.strategy.reduce(tf.distribute.ReduceOp.SUM, per_example_losses, axis=0)
-        return tf.reduce_mean(sum_loss) * (1.0 / self.batch_size)
+                return mse, acc
+        mse, acc = self.strategy.experimental_run_v2(step_fn, args=(batch, ))
+        mse = reduce_from_gpu(mse)
+        acc = reduce_from_gpu(acc)
+        return {'mse':mse, 'acc':acc, 'loss':mse}
 
+
+    def write_summary(self, summary_dict):
+        with self.train_summary_writer.as_default():
+            for k in summary_dict:
+                tf.summary.scalar(k, summary_dict[k].numpy(), step=self.ckpt.step.numpy())
 
 
     def train_batch(self, dataset):
@@ -148,14 +167,16 @@ class AutoEncoderWrapper:
             self.num_batches = 0
             for batch in dataset:
                 self.num_batches+=1
-                loss = self.train_step(batch)
-                bar.update(self.num_batches, Loss=loss.numpy())
                 self.ckpt.step.assign_add(1)
+                
+                ret = self.train_step(batch)
+                bar.update(self.num_batches, Loss=ret['loss'].numpy())
+                self.write_summary(ret)
 
-            
+        
         save_path = self.manager.save()
         print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
-        print("loss {:1.3f}".format(loss.numpy()))
+        print("loss {:1.3f}".format(ret['loss'].numpy()))
         
     def train(self, dataset):
         self.build_model(dataset)
@@ -165,7 +186,7 @@ class AutoEncoderWrapper:
         batched_ds = dataset.batch(self.batch_size, drop_remainder=True)
         dist_ds = self.strategy.experimental_distribute_dataset(batched_ds)
         
-        num_epochs = 100
+        num_epochs = 1000
         for i in range(num_epochs):
             print('')
             print('==  Epoch {}/{}  '.format(i+1, num_epochs) + '='*65)
