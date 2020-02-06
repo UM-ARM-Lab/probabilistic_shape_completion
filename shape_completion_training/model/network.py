@@ -95,7 +95,10 @@ class AutoEncoderWrapper:
 
     def restore(self):
         status = self.ckpt.restore(self.manager.latest_checkpoint)
-        # status.assert_existing_objects_matched()
+
+        # Suppress warning 
+        if self.manager.latest_checkpoint:
+            status.assert_existing_objects_matched()
 
     def count_params(self):
         # tots = len(tf.training_variables())
@@ -157,12 +160,12 @@ class AutoEncoderWrapper:
     def train(self, dataset):
         self.build_model(dataset)
         self.count_params()
-        # dataset.shuffle(10000)
+        dataset.shuffle(10000)
 
         batched_ds = dataset.batch(self.batch_size, drop_remainder=True)
         dist_ds = self.strategy.experimental_distribute_dataset(batched_ds)
         
-        num_epochs = 10
+        num_epochs = 100
         for i in range(num_epochs):
             print('')
             print('==  Epoch {}/{}  '.format(i+1, num_epochs) + '='*65)
