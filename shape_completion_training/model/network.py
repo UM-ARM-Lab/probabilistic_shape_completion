@@ -76,14 +76,17 @@ class AutoEncoder(tf.keras.Model):
 
 class AutoEncoderWrapper:
     def __init__(self):
+        self.batch_size = 16
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
         self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/")
         # self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
 
-        self.model = AutoEncoder()
-        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.strategy = tf.distribute.MirroredStrategy()
+        with self.strategy.scope():
+            self.model = AutoEncoder()
+            self.opt = tf.keras.optimizers.Adam(0.001)
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=self.opt, net=self.model)
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
 
@@ -101,18 +104,25 @@ class AutoEncoderWrapper:
 
     def build_model(self, dataset):
         # self.model.evaluate(dataset.take(16))
-        self.model.predict(dataset.take(16).batch(16))
+        self.model.predict(dataset.take(self.batch_size).batch(self.batch_size))
 
+    @tf.function
     def train_step(self, batch):
-        with tf.GradientTape() as tape:
-            output = self.model(batch)
-            # loss = tf.reduce_mean(tf.abs(output - example['gt']))
-            # loss = tf.reduce_mean(tf.mse(output - example['gt']))
-            loss = tf.reduce_mean(tf.keras.losses.MSE(batch['gt'], output))
-            variables = self.model.trainable_variables
-            gradients = tape.gradient(loss, variables)
-            self.opt.apply_gradients(zip(gradients, variables))
-            return loss
+        def step_fn(batch):
+            with tf.GradientTape() as tape:
+                output = self.model(batch)
+                # loss = tf.reduce_mean(tf.abs(output - example['gt']))
+                # loss = tf.reduce_mean(tf.mse(output - example['gt']))
+                # mse = tf.keras.losses.MSE(batch['gt'], output)
+                mse = tf.losses.mean_squared_error(batch['gt'], output)
+                loss = tf.reduce_sum(mse) * (1.0 / self.batch_size)
+                variables = self.model.trainable_variables
+                gradients = tape.gradient(loss, variables)
+                self.opt.apply_gradients(list(zip(gradients, variables)))
+                return mse
+        per_example_losses = self.strategy.experimental_run_v2(step_fn, args=(batch, ))
+        sum_loss = self.strategy.reduce(tf.distribute.ReduceOp.SUM, per_example_losses, axis=0)
+        return tf.reduce_mean(sum_loss) * (1.0 / self.batch_size)
 
 
 
@@ -138,32 +148,25 @@ class AutoEncoderWrapper:
                 loss = self.train_step(batch)
                 bar.update(self.num_batches, Loss=loss.numpy())
                 self.ckpt.step.assign_add(1)
+
             
         save_path = self.manager.save()
         print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
         print("loss {:1.3f}".format(loss.numpy()))
-        
         
     def train(self, dataset):
         self.build_model(dataset)
         self.count_params()
         # dataset.shuffle(10000)
 
-        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
-        #                                                  save_weights_only=True,
-        #                                                  verbose=1, period=5)
-        # log_dir="logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+        batched_ds = dataset.batch(self.batch_size, drop_remainder=True)
+        dist_ds = self.strategy.experimental_distribute_dataset(batched_ds)
         
-        # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-        
-        # self.model.fit(dataset.batch(16),
-        #                epochs=500,
-        #                callbacks=[cp_callback, tensorboard_callback])
         num_epochs = 10
         for i in range(num_epochs):
             print('')
             print('==  Epoch {}/{}  '.format(i+1, num_epochs) + '='*65)
-            self.train_batch(dataset.batch(16))
+            self.train_batch(dist_ds)
             print('='*80)
         
         
@@ -180,7 +183,7 @@ class AutoEncoderWrapper:
         self.count_params()
 
     def evaluate(self, dataset):
-        self.model.evaluate(dataset.batch(16))
+        self.model.evaluate(dataset.batch(self.batch_size))
         
 
 
