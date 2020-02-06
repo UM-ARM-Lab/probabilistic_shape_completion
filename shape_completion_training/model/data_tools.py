@@ -242,9 +242,11 @@ def read_from_record(record_file):
         gt.set_shape(shape)
         known_occ.set_shape(shape)
         known_free.set_shape(shape)
-        return ({'gt': gt, 'known_occ': known_occ, 'known_free': known_free,
-                 'shape_category': category, 'id': id},
-                gt)
+        # return ({'gt': gt, 'known_occ': known_occ, 'known_free': known_free,
+        #          'shape_category': category, 'id': id},
+        #         gt)
+        return {'gt': gt, 'known_occ': known_occ, 'known_free': known_free,
+                 'shape_category': category, 'id': id}
         # return (known_occ, gt)
 
 

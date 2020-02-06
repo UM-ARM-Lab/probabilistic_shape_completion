@@ -106,7 +106,7 @@ def publish_shapenet_tfrecords():
 
     print("")
     
-    for elem, _ in data:
+    for elem in data:
         gt_pub.publish(to_msg(elem["gt"].numpy()))
         sys.stdout.write('\033[2K\033[1G')
         print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
@@ -121,11 +121,11 @@ def publish_completion():
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
     
     model = AutoEncoderWrapper()
-    model.restore()
-    model.evaluate(data)
+    # model.restore()
+    # model.evaluate(data)
     print("")
 
-    for elem, _ in data:
+    for elem in data:
 
         if rospy.is_shutdown():
             return
@@ -163,7 +163,7 @@ def layer_by_layer():
 
     i = 0
 
-    for elem, _ in data:
+    for elem in data:
         i += 1
         if i<8:
             continue

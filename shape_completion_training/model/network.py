@@ -13,58 +13,8 @@ import tensorflow as tf
 import data_tools
 import IPython
 from datetime import datetime
+import progressbar
 
-
-class SimpleNetwork:
-    def __init__(self):
-        self.build_example_model()
-
-
-    def simple_pass(self):
-        W = tf.Variable(tf.ones(shape=(2,2)), name="W")
-        b = tf.Variable(tf.zeros(shape=(2)), name="b")
-
-        @tf.function
-        def forward(x):
-            return W * x + b
-
-        out_a = forward([1,0])
-        print(out_a)
-    
-    #     self.W = tf.Variable(tf.ones(shape=(2,2)), name="W")
-    #     self.b = tf.Variable(tf.ones(shape=(2)), name="b")
-
-    # @tf.function
-    # def forward(self, x):
-    #     return self.W * x + self.b
-    
-
-    def build_example_model(self):
-        self.model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(32, 3, activation='relu',
-                                   kernel_regularizer=tf.keras.regularizers.l2(0.04),
-                                   input_shape=(28, 28, 1)),
-            tf.keras.layers.MaxPooling2D(),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dropout(0.1),
-            tf.keras.layers.Dense(64, activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Dense(10, activation='softmax')
-        ])
-
-    def forward_model(self):
-        train_data = tf.ones(shape=(1, 28, 28, 1))
-        test_data = tf.ones(shape=(1, 28, 28, 1))
-        
-        train_out = self.model(train_data, training=True)
-        print("Train out")
-        print(train_out)
-
-
-        test_out = self.model(test_data, training=False)
-        print()
-        print("Test out")
-        print(test_out)
 
 
 class AutoEncoder(tf.keras.Model):
@@ -95,7 +45,7 @@ class AutoEncoder(tf.keras.Model):
             tf.keras.layers.MaxPool3D((2,2,2)),
 
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(2000, activation='relu'),
+            tf.keras.layers.Dense(200, activation='relu'),
             
             tf.keras.layers.Dense(32768, activation='relu'),
             tf.keras.layers.Reshape((4,4,4,512)),
@@ -122,35 +72,27 @@ class AutoEncoder(tf.keras.Model):
         
         return x
 
+
+
 class AutoEncoderWrapper:
     def __init__(self):
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
-        self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/cp.ckpt")
-        self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
-        self.restore_path = self.checkpoint_path
-        # self.restore_path = os.path.join(os.path.dirname(__file__), "../restore_025mug/cp.ckpt")
-        self.model = None
-        
+        self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/")
+        # self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
 
         self.model = AutoEncoder()
-        # self.model.build(input_shape=(self.side_length, self.side_length, self.side_length, 2))
-        self.model.compile(optimizer='adam',
-                           # loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-                           loss=tf.keras.losses.MSE, 
-                           metrics=[tf.keras.metrics.MeanAbsoluteError()])
+        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=self.opt, net=self.model)
+        self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
+
+        self.num_batches = None
+        self.restore()
 
     def restore(self):
-        # self.model = tf.keras.models.load_model(self.checkpoint_path)
-        self.model.load_weights(self.restore_path)
-
-
-
-        self.model.compile(optimizer='adam',
-                           # loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-                           loss=tf.keras.losses.MSE, 
-                           metrics=[tf.keras.metrics.MeanAbsoluteError()])
+        status = self.ckpt.restore(self.manager.latest_checkpoint)
+        status.assert_existing_objects_matched()
 
     def count_params(self):
         # tots = len(tf.training_variables())
@@ -160,24 +102,74 @@ class AutoEncoderWrapper:
     def build_model(self, dataset):
         # self.model.evaluate(dataset.take(16))
         self.model.predict(dataset.take(16).batch(16))
+
+    def train_step(self, batch):
+        with tf.GradientTape() as tape:
+            output = self.model(batch)
+            # loss = tf.reduce_mean(tf.abs(output - example['gt']))
+            # loss = tf.reduce_mean(tf.mse(output - example['gt']))
+            loss = tf.reduce_mean(tf.keras.losses.MSE(batch['gt'], output))
+            variables = self.model.trainable_variables
+            gradients = tape.gradient(loss, variables)
+            self.opt.apply_gradients(zip(gradients, variables))
+            return loss
+
+
+
+    def train_batch(self, dataset):
+        if self.num_batches is not None:
+            max_size = str(self.num_batches)
+        else:
+            max_size = '???'
+        
+        widgets=[
+            '  ', progressbar.Counter(), '/', max_size,
+            ' ', progressbar.Variable("Loss"), ' ',
+            progressbar.Bar(),
+            ' [', progressbar.Timer(), '] ',
+            ' (', progressbar.ETA(), ') ',
+            ]
+
+
+        with progressbar.ProgressBar(widgets=widgets, max_value=self.num_batches) as bar:
+            self.num_batches = 0
+            for batch in dataset:
+                self.num_batches+=1
+                loss = self.train_step(batch)
+                bar.update(self.num_batches, Loss=loss.numpy())
+                self.ckpt.step.assign_add(1)
+            
+        save_path = self.manager.save()
+        print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
+        print("loss {:1.3f}".format(loss.numpy()))
+        
         
     def train(self, dataset):
         self.build_model(dataset)
         self.count_params()
+        # dataset.shuffle(10000)
 
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
-                                                         save_weights_only=True,
-                                                         verbose=1, period=5)
-        log_dir="logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
+        #                                                  save_weights_only=True,
+        #                                                  verbose=1, period=5)
+        # log_dir="logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
         
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+        # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         
-        self.model.fit(dataset.batch(16),
-                       epochs=500,
-                       callbacks=[cp_callback, tensorboard_callback])
+        # self.model.fit(dataset.batch(16),
+        #                epochs=500,
+        #                callbacks=[cp_callback, tensorboard_callback])
+        num_epochs = 10
+        for i in range(num_epochs):
+            print('')
+            print('==  Epoch {}/{}  '.format(i+1, num_epochs) + '='*65)
+            self.train_batch(dataset.batch(16))
+            print('='*80)
+        
+        
 
     def train_and_test(self, dataset):
-        # dataset.shuffle(10000)
+
 
         train_ds = dataset
         # train_ds = dataset.repeat(10)
