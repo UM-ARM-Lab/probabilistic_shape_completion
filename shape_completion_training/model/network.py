@@ -92,7 +92,7 @@ class AutoEncoderWrapper:
 
     def restore(self):
         status = self.ckpt.restore(self.manager.latest_checkpoint)
-        status.assert_existing_objects_matched()
+        # status.assert_existing_objects_matched()
 
     def count_params(self):
         # tots = len(tf.training_variables())
