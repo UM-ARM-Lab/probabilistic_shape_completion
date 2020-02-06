@@ -3,3 +3,4 @@ restore/*
 restore*
 data/*
 tmp_data/*
+logs/*

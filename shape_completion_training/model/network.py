@@ -12,6 +12,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import data_tools
 import IPython
+from datetime import datetime
 
 
 class SimpleNetwork:
@@ -166,19 +167,19 @@ class AutoEncoderWrapper:
 
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
                                                          save_weights_only=True,
-                                                         verbose=1)
-        log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+                                                         verbose=1, period=5)
+        log_dir="logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
         
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
         
         self.model.fit(dataset.batch(16),
-                       epochs=100,
+                       epochs=500,
                        callbacks=[cp_callback, tensorboard_callback])
 
     def train_and_test(self, dataset):
         # dataset.shuffle(10000)
 
-        # train_ds = dataset
+        train_ds = dataset
         # train_ds = dataset.repeat(10)
         # train_ds = dataset.skip(100)
         # test_ds = dataset.take(100)

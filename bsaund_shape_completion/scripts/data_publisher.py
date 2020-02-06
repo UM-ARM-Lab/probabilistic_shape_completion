@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import print_function
+
 
 import rospy
 import tf2_ros
@@ -53,8 +55,7 @@ def view_single_binvox():
     # fn = "model_normalized.solid.binvox"
 
     fp = os.path.join(fp, fn)
-
-
+    
     with open(fp) as f:
         gt_vox = binvox_rw.read_as_3d_array(f).data
 
@@ -89,11 +90,9 @@ def publish_test_img():
             if rospy.is_shutdown():
                 return
         
-            ko_fp = os.path.join(shape_fp, aug)
-            with open(ko_fp) as f:
+            with open(os.path.join(shape_fp, aug)) as f:
                 ko_vox = binvox_rw.read_as_3d_array(f).data
     
-
             known_occ_pub.publish(to_msg(ko_vox))
 
             print("Publishing {}".format(aug))
@@ -104,11 +103,15 @@ def publish_shapenet_tfrecords():
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
 
     print(sum(1 for _ in data))
+
+    print("")
     
     for elem, _ in data:
         gt_pub.publish(to_msg(elem["gt"].numpy()))
+        sys.stdout.write('\033[2K\033[1G')
         print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
                                             elem['id'].numpy()))
+        sys.stdout.flush()
         rospy.sleep(0.2)
 
 
@@ -118,18 +121,19 @@ def publish_completion():
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
     
     model = AutoEncoderWrapper()
-    # model.evaluate(data)
     model.restore()
-    # model.evaluate(data)
+    model.evaluate(data)
+    print("")
 
     for elem, _ in data:
 
         if rospy.is_shutdown():
             return
         
-        # print("Publishing")
+        sys.stdout.write('\033[2K\033[1G')
         print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
-                                            elem['id'].numpy()))
+                                            elem['id'].numpy()), end="")
+        sys.stdout.flush()
         dim = elem['gt'].shape[0]
 
 
