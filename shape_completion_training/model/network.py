@@ -11,10 +11,10 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import data_tools
-import IPython
-import datetime
+import filepath_tools
 import progressbar
 
+import IPython
 
 
 class AutoEncoder(tf.keras.Model):
@@ -80,10 +80,12 @@ class AutoEncoderWrapper:
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
-        self.checkpoint_path = os.path.join(os.path.dirname(__file__), "../training_checkpoints/")
-        current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        train_log_dir = 'logs/gradient_tape/' + current_time + '/train'
-        test_log_dir = 'logs/gradient_tape/' + current_time + '/test'
+        fp = filepath_tools.get_trial_directory(os.path.join(os.path.dirname(__file__), "../trials/"))
+
+        self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
+
+        train_log_dir = os.path.join(fp, 'logs/train')
+        test_log_dir = os.path.join(fp, 'logs/test')
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 

@@ -4,3 +4,4 @@ restore*
 data/*
 tmp_data/*
 logs/*
+trials/*
