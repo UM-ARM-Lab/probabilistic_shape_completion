@@ -79,13 +79,16 @@ def maxpool_np(array3d, scale):
 
 
 def get_simulated_input(gt):
+    gt_occ = gt
+    gt_free = 1.0 - gt
+    
     known_free = []
     known_occ = []
 
     known_occ = gt
     known_free = 1.0 - gt
     
-    return {"known_free": known_free, "known_occ": known_occ, "gt":gt}
+    return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
 
 
 def load_gt_voxels(filepath, augmentation):
@@ -194,7 +197,8 @@ def write_to_tfrecord(dataset, record_file):
     with tf.io.TFRecordWriter(record_file) as writer:
         for elem in dataset:
             feature={
-                'gt': _bytes_feature(tf.io.serialize_tensor(elem['gt']).numpy()),
+                'gt_occ': _bytes_feature(tf.io.serialize_tensor(elem['gt_occ']).numpy()),
+                'gt_free': _bytes_feature(tf.io.serialize_tensor(elem['gt_free']).numpy()),
                 'known_occ': _bytes_feature(tf.io.serialize_tensor(elem['known_occ']).numpy()),
                 'known_free': _bytes_feature(tf.io.serialize_tensor(elem['known_free']).numpy()),
                 'shape_category': _bytes_feature(elem['shape_category'].numpy()),
@@ -214,7 +218,8 @@ def read_from_record(record_file):
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
     voxelgrid_description = {
-        'gt': tf.io.FixedLenFeature([], tf.string),
+        'gt_occ': tf.io.FixedLenFeature([], tf.string),
+        'gt_free': tf.io.FixedLenFeature([], tf.string),
         'known_occ': tf.io.FixedLenFeature([], tf.string),
         'known_free': tf.io.FixedLenFeature([], tf.string),
         'shape_category': tf.io.FixedLenFeature([], tf.string, default_value=''),
@@ -225,7 +230,7 @@ def read_from_record(record_file):
     def _get_shape(_raw_dataset):
         e = next(_raw_dataset.__iter__())
         example = tf.io.parse_single_example(e, voxelgrid_description)
-        t = tf.io.parse_tensor(example['gt'], tf.float32)
+        t = tf.io.parse_tensor(example['gt_occ'], tf.float32)
         return t.shape
     # IPython.embed()
     shape = _get_shape(raw_dataset)
@@ -234,18 +239,20 @@ def read_from_record(record_file):
     def _parse_voxelgrid_function(example_proto):
         # Parse the input tf.Example proto using the dictionary above.
         example = tf.io.parse_single_example(example_proto, voxelgrid_description)
-        gt = tf.io.parse_tensor(example['gt'], tf.float32)
+        gt_occ = tf.io.parse_tensor(example['gt_occ'], tf.float32)
+        gt_free = tf.io.parse_tensor(example['gt_free'], tf.float32)
         known_occ = tf.io.parse_tensor(example['known_occ'], tf.float32)
         known_free = tf.io.parse_tensor(example['known_free'], tf.float32)
         category = example['shape_category']
         id = example['id']
-        gt.set_shape(shape)
+        gt_occ.set_shape(shape)
+        gt_free.set_shape(shape)
         known_occ.set_shape(shape)
         known_free.set_shape(shape)
         # return ({'gt': gt, 'known_occ': known_occ, 'known_free': known_free,
         #          'shape_category': category, 'id': id},
         #         gt)
-        return {'gt': gt, 'known_occ': known_occ, 'known_free': known_free,
+        return {'gt_occ': gt_occ, 'gt_free': gt_free, 'known_occ': known_occ, 'known_free': known_free,
                  'shape_category': category, 'id': id}
         # return (known_occ, gt)
 

@@ -23,9 +23,6 @@ class AutoEncoder(tf.keras.Model):
         self.setup_model()
 
     def setup_model(self):
-        # self.flatten = tf.keras.layers.Flatten()
-        # self.unflatten = tf.keras.layers.Reshape((64, 64, 64, 1))
-
         ip = (64, 64, 64, 2)
         self.autoencoder_layers = [
             tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same"),
@@ -57,7 +54,7 @@ class AutoEncoder(tf.keras.Model):
             tf.keras.layers.Activation(tf.nn.relu),
             tf.keras.layers.Conv3DTranspose(64, (2,2,2,), strides=2),
             tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.Conv3DTranspose(1, (2,2,2,), strides=2)
+            tf.keras.layers.Conv3DTranspose(2, (2,2,2,), strides=2)
         ]
 
 
@@ -69,8 +66,10 @@ class AutoEncoder(tf.keras.Model):
 
         for layer in self.autoencoder_layers:
             x = layer(x)
+
+        occ, free = tf.split(x, 2, axis=4)
         
-        return x
+        return {'predicted_occ':occ, 'predicted_free':free}
 
 
 
@@ -110,13 +109,18 @@ class AutoEncoderWrapper:
             status.assert_existing_objects_matched()
 
     def count_params(self):
-        # tots = len(tf.training_variables())
-        # print("There are " + str(tots) + " training variables")
         self.model.summary()
 
     def build_model(self, dataset):
         # self.model.evaluate(dataset.take(16))
         self.model.predict(dataset.take(self.batch_size).batch(self.batch_size))
+
+    @tf.function
+    def mse_loss(self, metrics):
+        l_occ = tf.reduce_sum(metrics['mse_occ']) * (1.0 / self.batch_size)
+        l_free = tf.reduce_sum(metrics['mse_free']) * (1.0 / self.batch_size)
+        return l_occ + l_free
+
 
     @tf.function
     def train_step(self, batch):
@@ -131,17 +135,27 @@ class AutoEncoderWrapper:
                 # loss = tf.reduce_mean(tf.abs(output - example['gt']))
                 # loss = tf.reduce_mean(tf.mse(output - example['gt']))
                 # mse = tf.keras.losses.MSE(batch['gt'], output)
-                mse = tf.losses.mean_squared_error(batch['gt'], output)
-                acc = tf.abs(batch['gt']- output)
-                loss = tf.reduce_sum(mse) * (1.0 / self.batch_size)
+                mse_occ = tf.losses.mean_squared_error(batch['gt_occ'], output['predicted_occ'])
+                acc_occ = tf.abs(batch['gt_occ'] - output['predicted_occ'])
+                mse_free = tf.losses.mean_squared_error(batch['gt_free'], output['predicted_free'])
+                acc_free = tf.abs(batch['gt_free'] - output['predicted_free'])
+                
+                metrics = {"mse_occ": mse_occ, "acc_occ": acc_occ,
+                           "mse_free": mse_free, "acc_free": acc_free}
+                
+                # loss = tf.reduce_sum(mse_occ) * (1.0 / self.batch_size)
+                loss = self.mse_loss(metrics)
+                
                 variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)
                 self.opt.apply_gradients(list(zip(gradients, variables)))
-                return mse, acc
-        mse, acc = self.strategy.experimental_run_v2(step_fn, args=(batch, ))
-        mse = reduce_from_gpu(mse)
-        acc = reduce_from_gpu(acc)
-        return {'mse':mse, 'acc':acc, 'loss':mse}
+                return loss, metrics
+            
+        loss, metrics = self.strategy.experimental_run_v2(step_fn, args=(batch, ))
+        loss = self.strategy.reduce(tf.distribute.ReduceOp.SUM, loss, axis=None)
+        m = {k: reduce_from_gpu(metrics[k]) for k in metrics}
+        m['loss'] = loss
+        return m
 
 
     def write_summary(self, summary_dict):
@@ -198,13 +212,7 @@ class AutoEncoderWrapper:
         
 
     def train_and_test(self, dataset):
-
-
         train_ds = dataset
-        # train_ds = dataset.repeat(10)
-        # train_ds = dataset.skip(100)
-        # test_ds = dataset.take(100)
-        # IPython.embed()
         self.train(train_ds)
         self.count_params()
 

@@ -107,7 +107,7 @@ def publish_shapenet_tfrecords():
     print("")
     
     for elem in data:
-        gt_pub.publish(to_msg(elem["gt"].numpy()))
+        gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
         sys.stdout.write('\033[2K\033[1G')
         print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
                                             elem['id'].numpy()))
@@ -134,20 +134,20 @@ def publish_completion():
         print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
                                             elem['id'].numpy()), end="")
         sys.stdout.flush()
-        dim = elem['gt'].shape[0]
+        dim = elem['gt_occ'].shape[0]
 
 
         elem_expanded = {}
         for k in elem.keys():
             elem_expanded[k] = np.expand_dims(elem[k].numpy(), axis=0)
 
-        inference = model.model(elem_expanded).numpy()
-        gt_pub.publish(to_msg(elem['gt'].numpy()))
+        inference = model.model(elem_expanded)['predicted_occ'].numpy()
+        gt_pub.publish(to_msg(elem['gt_occ'].numpy()))
         known_occ_pub.publish(to_msg(elem_expanded['known_occ']))
         known_free_pub.publish(to_msg(elem_expanded['known_free']))
         completion_pub.publish(to_msg(inference))
 
-        mismatch = np.abs(elem['gt'].numpy() - inference)
+        mismatch = np.abs(elem['gt_occ'].numpy() - inference)
         mismatch_pub.publish(to_msg(mismatch))
         # IPython.embed()
 
@@ -173,7 +173,7 @@ def layer_by_layer():
         # IPython.embed()
         
         print("Publishing")
-        dim = elem['gt'].shape[0]
+        dim = elem['gt_occ'].shape[0]
 
         elem_expanded = {}
         for k in elem.keys():
