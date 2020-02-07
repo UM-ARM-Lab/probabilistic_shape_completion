@@ -140,8 +140,8 @@ def publish_completion():
         elem_expanded = {}
         for k in elem.keys():
             elem_expanded[k] = np.expand_dims(elem[k].numpy(), axis=0)
-            
-        inference = model.model.predict(elem_expanded)
+
+        inference = model.model(elem_expanded).numpy()
         gt_pub.publish(to_msg(elem['gt'].numpy()))
         known_occ_pub.publish(to_msg(elem_expanded['known_occ']))
         known_free_pub.publish(to_msg(elem_expanded['known_free']))
