@@ -6,7 +6,7 @@ import shutil
 import datetime
 import subprocess
 
-import IPython
+
 
 
 
@@ -89,6 +89,8 @@ def _write_summary(fp, nick, summary=None):
         f.write(subprocess.check_output(['git', 'show', '--summary']))
         f.write("git status:\n")
         f.write(subprocess.check_output(['git', 'status']))
+        f.write("git diff:\n")
+        f.write(subprocess.check_output(['git', 'diff']))
     
 
 
