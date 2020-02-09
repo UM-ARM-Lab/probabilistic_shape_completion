@@ -40,41 +40,6 @@ def shapenet_labels(human_names):
 
 
 
-"""Loads data from file. From a TF_Record, if asked"""
-def load_data(from_record=False):
-
-
-
-    if from_record:
-        return read_from_record(record_name)
-    
-
-    files = [f for f in os.listdir(occ_path)]
-    files.sort()
-
-    data = []
-
-    for filename in files:
-        prefix = filename.split("occupy")[0]
-        print(prefix)
-
-        with open(join(gt_path,prefix + "gt.binvox")) as f:
-            gt_vox = binvox_rw.read_as_3d_array(f).data
-
-        data.append(gt_vox)
-
-    data = np.array(data)
-    data = np.expand_dims(data, axis=4)
-    # IPython.embed()
-    ds = tf.data.Dataset.from_tensor_slices((data, data))
-    write_to_tfrecord(ds, record_name)
-    return ds
-
-
-def maxpool_np(array3d, scale):
-    a, b, c = array3d.shape
-    s = scale
-    return array3d.reshape(a/s, s, b/s, s, c/s, s).max(axis=(1,3,5))
 
 
 
@@ -86,7 +51,7 @@ def get_simulated_input(gt):
     known_occ = []
 
     known_occ = gt
-    known_free = 1.0 - gt
+    known_free = gt_free
     
     return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
 
@@ -125,7 +90,7 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
         shape_ids.sort()
 
 
-    for i in range(0, len(shape_ids)): #Replase with iteration over folders
+    for i in range(0, len(shape_ids)): #Replace with iteration over folders
         shape_id = shape_ids[i]
         shape_path = join(shapenet_load_path, shape_id)
         gt = []
@@ -204,12 +169,10 @@ def write_to_tfrecord(dataset, record_file):
                 'shape_category': _bytes_feature(elem['shape_category'].numpy()),
                 'id': _bytes_feature(elem['id'].numpy()),
                 }
-            # IPython.embed()
             features = tf.train.Features(feature=feature)
             example = tf.train.Example(features=features)
 
             writer.write(example.SerializeToString())
-            # writer.write(tf.io.serialize_tensor(elem[0]).numpy())
             
 
             
@@ -232,40 +195,63 @@ def read_from_record(record_file):
         example = tf.io.parse_single_example(e, voxelgrid_description)
         t = tf.io.parse_tensor(example['gt_occ'], tf.float32)
         return t.shape
-    # IPython.embed()
     shape = _get_shape(raw_dataset)
         
 
     def _parse_voxelgrid_function(example_proto):
+        voxel_grid_fields = ['gt_occ', 'gt_free', 'known_occ', 'known_free']
+        
         # Parse the input tf.Example proto using the dictionary above.
         example = tf.io.parse_single_example(example_proto, voxelgrid_description)
-        gt_occ = tf.io.parse_tensor(example['gt_occ'], tf.float32)
-        gt_free = tf.io.parse_tensor(example['gt_free'], tf.float32)
-        known_occ = tf.io.parse_tensor(example['known_occ'], tf.float32)
-        known_free = tf.io.parse_tensor(example['known_free'], tf.float32)
-        category = example['shape_category']
-        id = example['id']
-        gt_occ.set_shape(shape)
-        gt_free.set_shape(shape)
-        known_occ.set_shape(shape)
-        known_free.set_shape(shape)
-        # return ({'gt': gt, 'known_occ': known_occ, 'known_free': known_free,
-        #          'shape_category': category, 'id': id},
-        #         gt)
-        return {'gt_occ': gt_occ, 'gt_free': gt_free, 'known_occ': known_occ, 'known_free': known_free,
-                 'shape_category': category, 'id': id}
-        # return (known_occ, gt)
+        for field in voxel_grid_fields:
+            example[field] = tf.io.parse_tensor(example[field], tf.float32)
+            example[field].set_shape(shape)
 
-
+        return example
+        
     parsed_dataset = raw_dataset.map(_parse_voxelgrid_function)
-
-    # elem = next(parsed_dataset.__iter__())
-    # IPython.embed()
-
-    
     return parsed_dataset
 
 
+"""
+Deprecated! Use load_shapent instead
+Loads data from file. From a TF_Record, if asked
+"""
+
+def load_data(from_record=False):
+
+
+
+    if from_record:
+        return read_from_record(record_name)
+    
+
+    files = [f for f in os.listdir(occ_path)]
+    files.sort()
+
+    data = []
+
+    for filename in files:
+        prefix = filename.split("occupy")[0]
+        print(prefix)
+
+        with open(join(gt_path,prefix + "gt.binvox")) as f:
+            gt_vox = binvox_rw.read_as_3d_array(f).data
+
+        data.append(gt_vox)
+
+    data = np.array(data)
+    data = np.expand_dims(data, axis=4)
+    # IPython.embed()
+    ds = tf.data.Dataset.from_tensor_slices((data, data))
+    write_to_tfrecord(ds, record_name)
+    return ds
+
+
+def maxpool_np(array3d, scale):
+    a, b, c = array3d.shape
+    s = scale
+    return array3d.reshape(a/s, s, b/s, s, c/s, s).max(axis=(1,3,5))
 
 
 if __name__=="__main__":
