@@ -8,6 +8,7 @@ import tensorflow as tf
 from shape_completion_training import binvox_rw
 import numpy as np
 import sys
+import progressbar
 
 import IPython
 
@@ -20,18 +21,10 @@ shape_map = {"airplane":"02691156",
 
 cur_path = os.path.dirname(__file__)
 shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
-shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/")
-# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2/tfrecords/")
-
-obj = "025_mug"
-base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/"
+shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
+# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
 
 
-gt_path = base_path + obj + "/gt/"
-occ_path = base_path + obj + "/train_x_occ/"
-non_occ_path = base_path + obj + "/non_occupy/"
-
-record_name = "./tmp_data/" + obj + ".tfrecord"
 
 
 
@@ -39,17 +32,26 @@ def shapenet_labels(human_names):
     return [shape_map[hn] for hn in human_names]
 
 
+def grouper(n, iterable, fillvalue=None):
+    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return izip_longest(fillvalue=fillvalue, *args)
 
 
-
-
-def get_simulated_input(gt):
+def get_gt_simulated_input(gt):
     gt_occ = gt
     gt_free = 1.0 - gt
+    known_occ = gt
+    known_free = gt_free
     
-    known_free = []
-    known_occ = []
+    return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
 
+def get_2_5D_simulated_input(gt):
+    gt_occ = gt
+    gt_free = 1.0 - gt
+
+    IPython.embed()
+    
     known_occ = gt
     known_free = gt_free
     
@@ -75,6 +77,72 @@ def load_gt_voxels(filepath, augmentation):
     return np.clip(combined, 0, 1)
 
 
+class ShapenetRecord:
+    def __init__(self):
+        self.filepath = None
+        self.category = None
+        self.id = None
+        self.augmentation = None
+
+def get_all_shapenet_files(shape_ids):
+    shapenet_files = []
+    if shape_ids == "all":
+        
+        shape_ids = [f for f in os.listdir(shapenet_load_path)
+                     if os.path.isdir(join(shapenet_load_path, f))]
+        shape_ids.sort()
+
+    
+    for i in range(0, len(shape_ids)): #Replace with iteration over folders
+        category = shape_ids[i]
+        shape_path = join(shapenet_load_path, category)
+        objs = os.listdir(shape_path)
+        for obj in objs:
+            obj_fp = join(shape_path, obj, "models")
+            augs = [f[len('model_augmented_'):].split('.')[0]
+                    for f in os.listdir(obj_fp)
+                    if f.startswith("model_augmented")
+                    if f.endswith(".binvox")]
+
+            augs = list(set(augs))
+            augs.sort()
+            for augmentation in augs:
+                sr = ShapenetRecord()
+                sr.id = obj
+                sr.filepath = obj_fp
+                sr.category = category
+                sr.augmentation = augmentation
+                shapenet_files.append(sr)
+    return shapenet_files
+
+"""
+Groups a single list of ShapenetRecords into groups of lists. 
+Each group contains only one category and is at most group_size long
+"""
+def group_shapenet_files(shapenet_files, group_size):
+    groups = []
+    group = []
+    category = shapenet_files[0].category
+    group_num = 1
+
+    def get_group_name(category, num):
+        return "{}_{:02d}".format(category, num)
+    
+    i = 0
+    for sr in shapenet_files:
+        if sr.category != category:
+            group_num = 1
+        if sr.category != category or i >= group_size:
+            groups.append((get_group_name(category, group_num), group))
+            group = []
+            i = 0
+            category = sr.category
+            group_num += 1
+        i += 1
+        group.append(sr)
+    groups.append((get_group_name(category, group_num), group))
+    return groups
+    
 
 """
 Processes shapenet files and saves necessary data in tfrecords
@@ -83,66 +151,77 @@ params:
 shape_ids: a list of strings of shapenet object categories, or "all"
 """
 def write_shapenet_to_tfrecord(shape_ids = "all"):
-    if shape_ids == "all":
-        
-        shape_ids = [f for f in os.listdir(shapenet_load_path)
-                     if os.path.isdir(join(shapenet_load_path, f))]
-        shape_ids.sort()
+    all_files = get_all_shapenet_files(shape_ids)
+    widgets = [
+        ' ', progressbar.Counter(), '/', str(len(all_files)),
+        ' ', progressbar.Variable("message"), ' ',
+        progressbar.Bar(),
+        ' [', progressbar.Timer(), '] '
+        ]
 
+    i = 0
+    with progressbar.ProgressBar(widgets=widgets, max_value=len(all_files)) as bar:
+        for group_name, group in group_shapenet_files(all_files, 1000):
+            data = {'id':[], 'shape_category':[]}
+            gt = []
+            for sr in group:
+                i+=1
+                bar.update(i, message=group_name)
+                
+                gt_vox = load_gt_voxels(sr.filepath, sr.augmentation)
+                gt.append(gt_vox)
+            
+                data['id'].append(sr.id)
+                data['shape_category'].append(sr.category)
 
-    for i in range(0, len(shape_ids)): #Replace with iteration over folders
-        shape_id = shape_ids[i]
-        shape_path = join(shapenet_load_path, shape_id)
-        gt = []
-        data = {'id':[], 'shape_category':[]}
+            bar.update(i, message="Creating tensor")
+            gt = np.array(gt, dtype=np.float32)
+            gt = np.expand_dims(gt, axis=4)
+            data.update(get_gt_simulated_input(gt))
+            ds = tf.data.Dataset.from_tensor_slices(data)
 
-        print("")
-        print("{}/{}: Loading {}. ({} models)".format(i+1, len(shape_ids), shape_id, len(os.listdir(shape_path))))
-        objs = os.listdir(shape_path)
-        for i, obj in zip(range(len(objs)), objs):
-            obj_fp = join(shape_path, obj, "models")
-            print("    {}/{} Processing {}".format(i+1, len(objs), obj), end="")
-            sys.stdout.flush()
+            bar.update(i, message="Writing to tf_record")
+            write_to_tfrecord(ds, join(shapenet_record_path, group_name + ".tfrecord"))
+
+        # gt = []
+        # data = {'id':[], 'shape_category':[]}
+
+        # print("")
+        # print("{}/{}: Loading {}. ({} models)".format(i+1, len(shape_ids), shape_id, len(os.listdir(shape_path))))
+
+        #     print("    {}/{} Processing {}".format(i+1, len(objs), obj), end="")
+        #     sys.stdout.flush()
 
             
-            augs = [f[len('model_augmented_'):].split('.')[0]
-                    for f in os.listdir(obj_fp)
-                    if f.startswith("model_augmented")
-                    if f.endswith(".binvox")]
-            augs = list(set(augs))
-            augs.sort()
-            for augmentation in augs:
-                gt_vox = load_gt_voxels(obj_fp, augmentation)
+        #         gt_vox = load_gt_voxels(obj_fp, augmentation)
                 
-                gt.append(gt_vox)
-                data['shape_category'].append(shape_id)
-                data['id'].append(obj)
-            sys.stdout.write('\033[2K\033[1G')
+        #         gt.append(gt_vox)
+        #         data['shape_category'].append(shape_id)
+        #         data['id'].append(obj)
+        #     sys.stdout.write('\033[2K\033[1G')
 
                     
-                # gt_vox = np.array(gt_vox, dtype=np.float32)
-        gt = np.array(gt, dtype=np.float32)
-        gt = np.expand_dims(gt, axis=4)
-        data.update(get_simulated_input(gt))
+        #         # gt_vox = np.array(gt_vox, dtype=np.float32)
+        # gt = np.array(gt, dtype=np.float32)
+        # gt = np.expand_dims(gt, axis=4)
+        # data.update(get_simulated_input(gt))
 
-        ds = tf.data.Dataset.from_tensor_slices(data)
-        # IPython.embed()
+        # ds = tf.data.Dataset.from_tensor_slices(data)
+        # # IPython.embed()
         
-        print("      Writing {}".format(shape_id))
-        sys.stdout.flush()
-        write_to_tfrecord(ds, join(shapenet_record_path, shape_id + ".tfrecord"))
+        # print("      Writing {}".format(shape_id))
+        # sys.stdout.flush()
+        # write_to_tfrecord(ds, join(shapenet_record_path, shape_id + ".tfrecord"))
 
+        
 def load_shapenet(shapes = "all"):
-    if shapes == "all":
-        shapes = [f[:-9] for f in os.listdir(shapenet_record_path)
-                  if f.endswith(".tfrecord")]
-        shapes.sort()
-
+    records = [f for f in os.listdir(shapenet_record_path)
+               if f.endswith(".tfrecord")]
+    if shapes != "all":
+        print("Not yet handling partial loading")
 
     ds = None
-    for shape in shapes:
-
-        fp = join(shapenet_record_path, shape + ".tfrecord")
+    for fp in [join(shapenet_record_path, r) for r in records]:
         if ds:
             ds = ds.concatenate(read_from_record(fp))
         else:
@@ -212,6 +291,17 @@ def read_from_record(record_file):
     parsed_dataset = raw_dataset.map(_parse_voxelgrid_function)
     return parsed_dataset
 
+
+
+# obj = "025_mug"
+# base_path = "/home/bsaund/tmp/shape_completion/instance_0619_new_model/data_occ/"
+
+
+# gt_path = base_path + obj + "/gt/"
+# occ_path = base_path + obj + "/train_x_occ/"
+# non_occ_path = base_path + obj + "/non_occupy/"
+
+# record_name = "./tmp_data/" + obj + ".tfrecord"
 
 """
 Deprecated! Use load_shapent instead

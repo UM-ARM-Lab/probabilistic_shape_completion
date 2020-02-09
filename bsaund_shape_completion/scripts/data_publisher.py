@@ -108,9 +108,11 @@ def publish_shapenet_tfrecords():
     
     for elem in data:
         gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
+        known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
+        known_free_pub.publish(to_msg(elem['known_free'].numpy()))
         sys.stdout.write('\033[2K\033[1G')
         print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
-                                            elem['id'].numpy()))
+                                            elem['id'].numpy()), end="")
         sys.stdout.flush()
         rospy.sleep(0.2)
 
