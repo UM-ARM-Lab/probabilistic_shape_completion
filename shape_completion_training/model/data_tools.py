@@ -21,8 +21,8 @@ shape_map = {"airplane":"02691156",
 
 cur_path = os.path.dirname(__file__)
 shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
-shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
-# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
+# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
+shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
 
 
 
@@ -46,14 +46,21 @@ def get_gt_simulated_input(gt):
     
     return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
 
+
 def get_2_5D_simulated_input(gt):
     gt_occ = gt
     gt_free = 1.0 - gt
+    known_occ = gt + 0.0
+    known_free = gt_free + 0.0
 
-    IPython.embed()
-    
-    known_occ = gt
-    known_free = gt_free
+
+    for i in range(gt.shape[0]):
+        unknown_mask = np.zeros((gt.shape[2], gt.shape[3]))
+        for h in range(gt.shape[1]):
+            known_occ[i, h, :, :, 0] = np.clip(known_occ[i, h, :, :, 0] - unknown_mask, 0, 1)
+            known_free[i, h, :, :, 0] = np.clip(known_free[i, h, :, :, 0] - unknown_mask, 0, 1)
+            unknown_mask = unknown_mask + gt_occ[i, h,:,:,0]
+            unknown_mask = np.clip(unknown_mask, 0, 1)
     
     return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
 
@@ -177,41 +184,12 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
             bar.update(i, message="Creating tensor")
             gt = np.array(gt, dtype=np.float32)
             gt = np.expand_dims(gt, axis=4)
-            data.update(get_gt_simulated_input(gt))
+            data.update(get_2_5D_simulated_input(gt))
             ds = tf.data.Dataset.from_tensor_slices(data)
 
             bar.update(i, message="Writing to tf_record")
             write_to_tfrecord(ds, join(shapenet_record_path, group_name + ".tfrecord"))
 
-        # gt = []
-        # data = {'id':[], 'shape_category':[]}
-
-        # print("")
-        # print("{}/{}: Loading {}. ({} models)".format(i+1, len(shape_ids), shape_id, len(os.listdir(shape_path))))
-
-        #     print("    {}/{} Processing {}".format(i+1, len(objs), obj), end="")
-        #     sys.stdout.flush()
-
-            
-        #         gt_vox = load_gt_voxels(obj_fp, augmentation)
-                
-        #         gt.append(gt_vox)
-        #         data['shape_category'].append(shape_id)
-        #         data['id'].append(obj)
-        #     sys.stdout.write('\033[2K\033[1G')
-
-                    
-        #         # gt_vox = np.array(gt_vox, dtype=np.float32)
-        # gt = np.array(gt, dtype=np.float32)
-        # gt = np.expand_dims(gt, axis=4)
-        # data.update(get_simulated_input(gt))
-
-        # ds = tf.data.Dataset.from_tensor_slices(data)
-        # # IPython.embed()
-        
-        # print("      Writing {}".format(shape_id))
-        # sys.stdout.flush()
-        # write_to_tfrecord(ds, join(shapenet_record_path, shape_id + ".tfrecord"))
 
         
 def load_shapenet(shapes = "all"):
