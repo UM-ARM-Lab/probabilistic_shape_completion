@@ -107,6 +107,9 @@ def publish_shapenet_tfrecords():
     print("")
     
     for elem in data:
+        if rospy.is_shutdown():
+            return
+        
         gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
         known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
         known_free_pub.publish(to_msg(elem['known_free'].numpy()))
