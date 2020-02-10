@@ -5,6 +5,7 @@ from os.path import join
 import shutil
 import datetime
 import subprocess
+import json
 
 
 
@@ -16,7 +17,7 @@ The directory is created if it does not exist.
 
 Call as: get_trial_directory("/path/to/trials/directory/")
 """
-def get_trial_directory(base_directory, nick=None):
+def get_trial_directory(base_directory, nick=None, expect_reuse=False):
     if not os.path.isdir(base_directory):
         _make_new_trials_directory(base_directory)
 
@@ -28,13 +29,22 @@ def get_trial_directory(base_directory, nick=None):
         nick = _make_tmp_nick(base_directory)
 
     fp = join(base_directory, nick)
-    reusing = _check_reuse_existing_directory(fp, nick)
+    reusing = _check_reuse_existing_directory(fp, nick, expect_reuse)
 
     if not reusing:
         _write_summary(fp, nick)
 
     print("Running trial {} at {}".format(nick, fp))
     return fp
+
+
+def write_params(filepath, params_dict):
+    with open(join(filepath, 'params.json'), 'w') as f:
+        json.dump(params_dict, f, sort_keys=True)
+
+def load_params(filepath):
+    with open(join(filepath, 'params.json'), 'r') as f:
+        return json.load(f)
 
 
 
@@ -64,16 +74,22 @@ def _make_tmp_nick(trials_directory):
     return nick
 
 
-def _check_reuse_existing_directory(fp, nick):
+def _check_reuse_existing_directory(fp, nick, expect_reuse):
     if not os.path.isdir(fp):
+        if expect_reuse:
+            print("Expected but not finding {}. Create? Y/n".format(nick))
+            if raw_input().lower() == 'n':
+                raise RuntimeError("Trial {} expected but not found".format(nick))
+            
         os.mkdir(fp)
         return False
-        
-    print("Trial {} already exists. Load from existing? Y/n".format(nick))
-    if raw_input().lower() == 'n':
-        print("If you want to use this nick you must manually move (or delete) the existing trial")
-        print()
-        raise RuntimeError("No load directory specified. Trial {} exists and not reusing".format(nick))
+
+    if not expect_reuse:
+        print("Trial {} already exists. Load from existing? Y/n".format(nick))
+        if raw_input().lower() == 'n':
+            print("If you want to use this nick you must manually move (or delete) the existing trial")
+            print()
+            raise RuntimeError("No load directory specified. Trial {} exists and not reusing".format(nick))
     return True
 
 def _write_summary(fp, nick, summary=None):

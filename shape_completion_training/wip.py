@@ -26,8 +26,11 @@ if __name__ == "__main__":
 
     # data = data_ycb
     data = data_shapenet
+
+
+    params = {'num_latent_layers': 200}
     
-    sn = AutoEncoderWrapper()
+    sn = AutoEncoderWrapper(params)
     # IPython.embed()
 
     sn.train_and_test(data)

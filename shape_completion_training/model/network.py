@@ -18,9 +18,11 @@ import IPython
 
 
 class AutoEncoder(tf.keras.Model):
-    def __init__(self):
+    def __init__(self, params):
         super(AutoEncoder, self).__init__()
+        self.params = params
         self.setup_model()
+
 
     def setup_model(self):
         ip = (64, 64, 64, 2)
@@ -42,7 +44,7 @@ class AutoEncoder(tf.keras.Model):
             tf.keras.layers.MaxPool3D((2,2,2)),
 
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(200, activation='relu'),
+            tf.keras.layers.Dense(self.params['num_latent_layers'], activation='relu'),
             
             tf.keras.layers.Dense(32768, activation='relu'),
             tf.keras.layers.Reshape((4,4,4,512)),
@@ -74,12 +76,18 @@ class AutoEncoder(tf.keras.Model):
 
 
 class AutoEncoderWrapper:
-    def __init__(self):
+    def __init__(self, params=None):
         self.batch_size = 16
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
-        fp = filepath_tools.get_trial_directory(os.path.join(os.path.dirname(__file__), "../trials/"))
+        expect_load_from_file = (params is None)
+        fp = filepath_tools.get_trial_directory(os.path.join(os.path.dirname(__file__), "../trials/"),
+                                                expect_reuse = expect_load_from_file)
+        if expect_load_from_file:
+            params = filepath_tools.load_params(fp)
+        else:
+            filepath_tools.write_params(fp, params)
 
         self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
 
@@ -92,7 +100,7 @@ class AutoEncoderWrapper:
 
         self.strategy = tf.distribute.MirroredStrategy()
         with self.strategy.scope():
-            self.model = AutoEncoder()
+            self.model = AutoEncoder(params)
             self.opt = tf.keras.optimizers.Adam(0.001)
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=self.opt, net=self.model)
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
