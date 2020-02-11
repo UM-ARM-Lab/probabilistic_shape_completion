@@ -33,39 +33,9 @@ def shapenet_labels(human_names):
     return [shape_map[hn] for hn in human_names]
 
 
-def grouper(n, iterable, fillvalue=None):
-    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
-    args = [iter(iterable)] * n
-    return izip_longest(fillvalue=fillvalue, *args)
-
-
-def get_gt_simulated_input(gt):
-    gt_occ = gt
-    gt_free = 1.0 - gt
-    known_occ = gt
-    known_free = gt_free
-    
-    return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
-
-
-def get_2_5D_simulated_input(gt):
-    gt_occ = gt
-    gt_free = 1.0 - gt
-    known_occ = gt + 0.0
-    known_free = gt_free + 0.0
-
-
-    for i in range(gt.shape[0]):
-        unknown_mask = np.zeros((gt.shape[2], gt.shape[3]))
-        for h in range(gt.shape[1]):
-            known_occ[i, h, :, :, 0] = np.clip(known_occ[i, h, :, :, 0] - unknown_mask, 0, 1)
-            known_free[i, h, :, :, 0] = np.clip(known_free[i, h, :, :, 0] - unknown_mask, 0, 1)
-            unknown_mask = unknown_mask + gt_occ[i, h,:,:,0]
-            unknown_mask = np.clip(unknown_mask, 0, 1)
-    
-    return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
-
-
+"""
+Given a single ground truth mask occupied list, return ground truth occupied and free, as well as simulate the known occupied and free
+"""
 def simulate_2_5D_input(gt):
     gt_occ = gt
     gt_free = 1.0 - gt
@@ -77,15 +47,18 @@ def simulate_2_5D_input(gt):
         known_free[h, :, :, 0] = np.clip(known_free[h, :, :, 0] - unknown_mask, 0, 1)
         unknown_mask = unknown_mask + gt_occ[h,:,:,0]
         unknown_mask = np.clip(unknown_mask, 0, 1)
-    # return {"known_free": known_free, "known_occ": known_occ, "gt_occ":gt_occ, "gt_free":gt_free}
     return gt_occ, gt_free, known_occ, known_free
 
 
 
 
+"""
+Loads ground truth voxels into a np.array
+
+filepath: string filepath to the "models" folder for this shape
+augmentation: string identifying the augmentation
+"""
 def load_gt_voxels(filepath, augmentation):
-
-
     binvox_wire_fp = join(filepath, 'model_augmented_' + augmentation + '.wire.binvox')    
     with open(binvox_wire_fp) as f:
         wire_vox = binvox_rw.read_as_3d_array(f).data
@@ -120,8 +93,7 @@ def get_all_shapenet_files(shape_ids):
                      if os.path.isdir(join(shapenet_load_path, f))]
         shape_ids.sort()
 
-    
-    for i in range(0, len(shape_ids)): #Replace with iteration over folders
+    for i in range(0, len(shape_ids)):
         category = shape_ids[i]
         shape_path = join(shapenet_load_path, category)
         objs = os.listdir(shape_path)
