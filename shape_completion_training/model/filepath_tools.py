@@ -42,9 +42,13 @@ def write_params(filepath, params_dict):
     with open(join(filepath, 'params.json'), 'w') as f:
         json.dump(params_dict, f, sort_keys=True)
 
-def load_params(filepath):
+def load_params(default_params_fp, filepath):
+    with open(join(default_params_fp, 'default_params.json'), 'r') as f:
+        params = json.load(f)
+    
     with open(join(filepath, 'params.json'), 'r') as f:
-        return json.load(f)
+        params.update(json.load(f))
+        return params
 
 
 
