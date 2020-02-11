@@ -21,6 +21,7 @@ import datetime
 
 NUM_THREADS_PER_CATEGORY = 10
 NUM_THREADS_PER_OBJECT = 6
+HARDCODED_BOUNDARY = '-bb -0.5 -0.5 -0.5 0.5 0.5 0.5'
 
 NUM_THREADS = NUM_THREADS_PER_CATEGORY * NUM_THREADS_PER_OBJECT
 
@@ -144,10 +145,10 @@ Runs binvox on the input obj file
 def binvox_object_file(fp):
 
     #TODO Hardcoded binvox path
-    binvox_str = "~/useful_scripts/binvox -dc -pb -down -down -dmin 2 {}".format(fp)
+    binvox_str = "~/useful_scripts/binvox -dc -pb -down -down -dmin 2 {} {}".format(HARDCODED_BOUNDARY, fp)
 
     #Fast but inaccurate
-    wire_binvox_str = "~/useful_scripts/binvox -e -pb -down -down -dmin 1 {}".format(fp)
+    wire_binvox_str = "~/useful_scripts/binvox -e -pb -down -down -dmin 1 {} {}".format(HARDCODED_BOUNDARY, fp)
     cuda_binvox_str = "~/useful_scripts/cuda_voxelizer -s 64 -f {}".format(fp)
 
     fp_base = fp[:-4]
