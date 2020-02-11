@@ -103,7 +103,7 @@ def publish_test_img():
 def publish_shapenet_tfrecords():
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
 
-    print(sum(1 for _ in data))
+    # print(sum(1 for _ in data))
 
     print("")
     

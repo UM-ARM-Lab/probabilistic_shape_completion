@@ -228,9 +228,3 @@ class AutoEncoderWrapper:
         
 
 
-
-if __name__ == "__main__":
-    print("hi")
-    sn = SimpleNetwork()
-    # sn.simple_pass()
-    sn.forward_model()
