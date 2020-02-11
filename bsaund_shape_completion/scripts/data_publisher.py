@@ -59,6 +59,7 @@ def view_single_binvox():
     with open(fp) as f:
         gt_vox = binvox_rw.read_as_3d_array(f).data
 
+    print("Publishing single binvox {}".format(fp))
     gt_pub.publish(to_msg(gt_vox))
     rospy.sleep(10)
 
@@ -225,6 +226,7 @@ if __name__=="__main__":
     completion_pub = rospy.Publisher('predicted_voxel_grid', OccupancyStamped, queue_size=1)
     mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
 
+    # Transform so shapes appear upright in rviz
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
     t.header.stamp = rospy.Time.now()
