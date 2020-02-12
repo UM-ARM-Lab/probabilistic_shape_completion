@@ -24,6 +24,7 @@ if __name__ == "__main__":
 
     # data = data_ycb
     data = data_shapenet
+    data = data_tools.simulate_input(data, 10, 10, 10)
 
 
     params = {'num_latent_layers': 200}

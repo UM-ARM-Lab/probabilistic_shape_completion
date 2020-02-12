@@ -48,9 +48,53 @@ def simulate_2_5D_input(gt):
         known_free[h, :, :, 0] = np.clip(known_free[h, :, :, 0] - unknown_mask, 0, 1)
         unknown_mask = unknown_mask + gt_occ[h,:,:,0]
         unknown_mask = np.clip(unknown_mask, 0, 1)
-    return gt_occ, gt_free, known_occ, known_free
+    return known_occ, known_free
 
 
+def shift_elem(elem, x, y, z):
+    keys = ['gt_occ', 'known_occ', 'gt_free', 'known_free']
+    pad_values = {'gt_occ':0.0,
+                  'known_occ':0.0,
+                  'gt_free':1.0,
+                  'known_free':1.0}
+    for k in keys:
+        elem[k] = shift_tensor(elem[k], x, y, z, pad_values[k])
+    return elem
+
+# @tf.function
+# def shift_tensor(t, amt, axis, pad_value):
+    
+
+@tf.function
+def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
+    # p = np.madx(np.abs([dx,dy,dz]))
+    a = np.abs(max_x)
+    b = np.abs(max_y)
+    c = np.abs(max_z)
+
+    if a > 0:
+        t = tf.pad(t, paddings=tf.constant([[a,a], [0,0], [0,0], [0,0]]),
+                   mode="CONSTANT", constant_values=pad_value)
+        t = tf.roll(t, dx, axis=[0])
+        t = t[a:-a, :, :, :]
+
+    if b > 0:
+        t = tf.pad(t, paddings=tf.constant([[0,0], [b,b], [0,0], [0,0]]),
+                   mode="CONSTANT", constant_values=pad_value)
+        t = tf.roll(t, dy, axis=[1])
+        t = t[:, b:-b, :, :]
+    if c > 0:
+        t = tf.pad(t, paddings=tf.constant([[0,0], [0,0], [c,c],[0,0]]),
+                   mode="CONSTANT", constant_values=pad_value)
+        t = tf.roll(t, dz, axis=[2])
+        t = t[:, :, c:-c, :]
+
+    return t
+
+
+
+                        
+    
 
 
 """
@@ -194,6 +238,7 @@ def read_from_tfrecord(record_file):
     keys = ['id', 'shape_category', 'fp', 'augmentation']
     tfrecord_description = {k: tf.io.FixedLenFeature([], tf.string) for k in keys}
 
+
     def _get_shape(_raw_dataset):
         e = next(_raw_dataset.__iter__())
         example = tf.io.parse_single_example(e, tfrecord_description)
@@ -211,25 +256,45 @@ def read_from_tfrecord(record_file):
         aug = example['augmentation']
         fp = example['fp']
         gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
+        gt.set_shape(shape)
+        example['gt_occ'] = gt
+        example['gt_free'] = 1.0-gt
+        # gt_occ.set_shape(shape)
+        # gt_free.set_shape(shape)
 
-        gt_occ, gt_free, known_occ, known_free = tf.numpy_function(simulate_2_5D_input, [gt],
-                                                                   [tf.float32, tf.float32,
-                                                                    tf.float32, tf.float32])
-        gt_occ.set_shape(shape)
-        gt_free.set_shape(shape)
-        known_occ.set_shape(shape)
-        known_free.set_shape(shape)
-
-        example['gt_occ'] = gt_occ
-        example['gt_free'] = gt_free
-        example['known_occ'] = known_occ
-        example['known_free'] = known_free
         return example
+
         
     parsed_dataset = raw_dataset.map(_parse_record_function).map(_load_voxelgrids)
     parsed_dataset = parsed_dataset.cache(cache_fp)
     return parsed_dataset
 
+
+def simulate_input(dataset, x, y, z):
+    def _simulate_input(example):
+        known_occ, known_free = tf.numpy_function(simulate_2_5D_input, [example['gt_occ']],
+                                                  [tf.float32, tf.float32])
+        known_occ.set_shape(example['gt_occ'].shape)
+        known_free.set_shape(example['gt_occ'].shape)
+        example['known_occ'] = known_occ
+        example['known_free'] = known_free
+        return example
+
+    def _shift(example):
+        dx = 0
+        dy = 0
+        dz = 0
+        if x > 0:
+            dx = tf.random.uniform(shape=[1], minval = -x, maxval=x, dtype=tf.int64)
+        if y > 0:
+            dy = tf.random.uniform(shape=[1], minval = -x, maxval=x, dtype=tf.int64)
+        if z > 0:
+            dz = tf.random.uniform(shape=[1], minval = -x, maxval=x, dtype=tf.int64)
+        example['gt_occ'] = shift_tensor(example['gt_occ'], dx, dy, dz, 0.0, x, y, z)
+        example['gt_free'] = shift_tensor(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
+        return example
+
+    return dataset.map(_shift).map(_simulate_input)
 
 
 
