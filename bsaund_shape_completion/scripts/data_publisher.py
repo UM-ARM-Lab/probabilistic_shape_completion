@@ -10,7 +10,6 @@ from mps_shape_completion_msgs.msg import OccupancyStamped
 from mps_shape_completion_visualization import conversions
 
 
-
 import numpy as np
 
 import sys
@@ -100,25 +99,30 @@ def publish_test_img():
             rospy.sleep(.5)
 
 
+def publish_elem(elem):
+    gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
+    known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
+    known_free_pub.publish(to_msg(elem['known_free'].numpy()))
+    sys.stdout.write('\033[2K\033[1G')
+    print("Category: {}, id: {}, aug: {}".format(elem['shape_category'].numpy(),
+                                                 elem['id'].numpy(),
+                                                 elem['augmentation'].numpy()), end="")
+    sys.stdout.flush()
+
+
 def publish_shapenet_tfrecords():
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    data = data_tools.simulate_input(data, 5, 5, 5)
 
     # print(sum(1 for _ in data))
 
     print("")
     
-    for elem in data:
+    for elem in data.batch(1):
         if rospy.is_shutdown():
             return
-        
-        gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
-        known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
-        known_free_pub.publish(to_msg(elem['known_free'].numpy()))
-        sys.stdout.write('\033[2K\033[1G')
-        print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
-                                            elem['id'].numpy()), end="")
-        sys.stdout.flush()
-        rospy.sleep(0.2)
+        publish_elem(elem)
+        rospy.sleep(0.5)
 
 
 def publish_completion():
@@ -248,8 +252,8 @@ if __name__=="__main__":
 
     # view_single_binvox()
     # publish_test_img()
-    # publish_shapenet_tfrecords()
-    publish_completion()
+    publish_shapenet_tfrecords()
+    # publish_completion()
     # layer_by_layer()
     # data_tools.write_shapenet_to_tfrecord()
     # data_tools.load_shapenet()
