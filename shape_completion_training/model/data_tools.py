@@ -99,7 +99,7 @@ def get_all_shapenet_files(shape_ids):
         objs = os.listdir(shape_path)
         for obj in objs:
             obj_fp = join(shape_path, obj, "models")
-            augs = [f[len('model_augmented_'):].split('.')[0]
+            augs = [f[len('model_augmented_'):-len('.wire.binvox')]
                     for f in os.listdir(obj_fp)
                     if f.startswith("model_augmented")
                     if f.endswith(".binvox")]
@@ -169,8 +169,17 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
         data['augmentation'].append(sr.augmentation)
 
     ds = tf.data.Dataset.from_tensor_slices(data)
-    write_to_filepath_tfrecord(ds, join(shapenet_record_path, "filepaths.tfrecord"))
+    write_to_tfrecord(ds, join(shapenet_record_path, "filepaths.tfrecord"))
 
+def write_to_tfrecord(dataset, record_file):
+    def _bytes_feature(value):
+        return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+    with tf.io.TFRecordWriter(record_file) as writer:
+        for elem in dataset:
+            feature={k: _bytes_feature(elem[k].numpy()) for k in elem}
+            features = tf.train.Features(feature=feature)
+            example = tf.train.Example(features=features)
+            writer.write(example.SerializeToString())
 
 
 """
@@ -274,15 +283,6 @@ def read_from_tfrecord(record_file):
 #             write_to_tfrecord(ds, join(shapenet_record_path, group_name + ".tfrecord"))
 
 
-# def write_to_filepath_tfrecord(dataset, record_file):
-#     def _bytes_feature(value):
-#         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-#     with tf.io.TFRecordWriter(record_file) as writer:
-#         for elem in dataset:
-#             feature={k: _bytes_feature(elem[k].numpy()) for k in elem}
-#             features = tf.train.Features(feature=feature)
-#             example = tf.train.Example(features=features)
-#             writer.write(example.SerializeToString())
 
 
 
