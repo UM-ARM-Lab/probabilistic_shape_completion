@@ -7,9 +7,7 @@ from os.path import dirname, abspath, join
 sc_path = join(dirname(abspath(__file__)), "..")
 sys.path.append(sc_path)
 
-from model.data_tools import load_data
 from model import data_tools
-# from model.network import SimpleNetwork
 from model.network import AutoEncoderWrapper
 import IPython
 

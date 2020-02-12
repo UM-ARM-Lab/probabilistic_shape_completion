@@ -59,6 +59,7 @@ def view_single_binvox():
     with open(fp) as f:
         gt_vox = binvox_rw.read_as_3d_array(f).data
 
+    print("Publishing single binvox {}".format(fp))
     gt_pub.publish(to_msg(gt_vox))
     rospy.sleep(10)
 
@@ -102,7 +103,7 @@ def publish_test_img():
 def publish_shapenet_tfrecords():
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
 
-    print(sum(1 for _ in data))
+    # print(sum(1 for _ in data))
 
     print("")
     
@@ -228,6 +229,7 @@ if __name__=="__main__":
     completion_pub = rospy.Publisher('predicted_voxel_grid', OccupancyStamped, queue_size=1)
     mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
 
+    # Transform so shapes appear upright in rviz
     br = tf2_ros.TransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
     t.header.stamp = rospy.Time.now()

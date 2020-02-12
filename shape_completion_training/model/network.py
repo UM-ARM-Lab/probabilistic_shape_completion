@@ -85,7 +85,8 @@ class AutoEncoderWrapper:
         fp = filepath_tools.get_trial_directory(os.path.join(os.path.dirname(__file__), "../trials/"),
                                                 expect_reuse = expect_load_from_file)
         if expect_load_from_file:
-            params = filepath_tools.load_params(fp)
+            defaults_fp = os.path.join(os.path.dirname(__file__), "../model/")
+            params = filepath_tools.load_params(defaults_fp, fp)
         else:
             filepath_tools.write_params(fp, params)
 
@@ -95,8 +96,6 @@ class AutoEncoderWrapper:
         test_log_dir = os.path.join(fp, 'logs/test')
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
-
-        # self.restore_path = os.path.join(os.path.dirname(__file__), "../restore/cp.ckpt")
 
         self.strategy = tf.distribute.MirroredStrategy()
         with self.strategy.scope():
@@ -229,9 +228,3 @@ class AutoEncoderWrapper:
         
 
 
-
-if __name__ == "__main__":
-    print("hi")
-    sn = SimpleNetwork()
-    # sn.simple_pass()
-    sn.forward_model()
