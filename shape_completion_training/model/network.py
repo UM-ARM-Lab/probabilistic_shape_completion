@@ -122,8 +122,8 @@ class AutoEncoderWrapper:
 
     @tf.function
     def mse_loss(self, metrics):
-        l_occ = tf.reduce_mean(metrics['mse_occ'])
-        l_free = tf.reduce_mean(metrics['mse_free'])
+        l_occ = tf.reduce_sum(metrics['mse_occ']) * (1/self.batch_size)
+        l_free = tf.reduce_sum(metrics['mse_free']) * (1/self.batch_size)
         return l_occ + l_free
 
 
@@ -201,7 +201,8 @@ class AutoEncoderWrapper:
         self.count_params()
         # dataset = dataset.shuffle(10000)
 
-        batched_ds = dataset.batch(self.batch_size, drop_remainder=True).prefetch(64)
+        # batched_ds = dataset.batch(self.batch_size, drop_remainder=True).prefetch(64)
+        batched_ds = dataset.batch(self.batch_size).prefetch(64)
         
         num_epochs = 1000
         for i in range(num_epochs):
