@@ -24,6 +24,7 @@ shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
 shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/filepath")
+cache_fp = join(shapenet_record_path, "ds.cache")
 
 
 
@@ -204,6 +205,9 @@ def read_from_tfrecord(record_file):
     def _parse_record_function(example_proto):
         # Parse the input tf.Example proto using the dictionary above.
         example = tf.io.parse_single_example(example_proto, tfrecord_description)
+        return example
+
+    def _load_voxelgrids(example):
         aug = example['augmentation']
         fp = example['fp']
         gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
@@ -220,11 +224,10 @@ def read_from_tfrecord(record_file):
         example['gt_free'] = gt_free
         example['known_occ'] = known_occ
         example['known_free'] = known_free
-
-
         return example
         
-    parsed_dataset = raw_dataset.map(_parse_record_function)
+    parsed_dataset = raw_dataset.map(_parse_record_function).map(_load_voxelgrids)
+    parsed_dataset = parsed_dataset.cache(cache_fp)
     return parsed_dataset
 
 
