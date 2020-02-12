@@ -97,10 +97,8 @@ class AutoEncoderWrapper:
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
-        self.strategy = tf.distribute.MirroredStrategy()
-        with self.strategy.scope():
-            self.model = AutoEncoder(params)
-            self.opt = tf.keras.optimizers.Adam(0.001)
+        self.model = AutoEncoder(params)
+        self.opt = tf.keras.optimizers.Adam(0.001)
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=self.opt, net=self.model)
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
 
@@ -124,16 +122,15 @@ class AutoEncoderWrapper:
 
     @tf.function
     def mse_loss(self, metrics):
-        l_occ = tf.reduce_sum(metrics['mse_occ']) * (1.0 / self.batch_size)
-        l_free = tf.reduce_sum(metrics['mse_free']) * (1.0 / self.batch_size)
+        l_occ = tf.reduce_mean(metrics['mse_occ'])
+        l_free = tf.reduce_mean(metrics['mse_free'])
         return l_occ + l_free
 
 
     @tf.function
     def train_step(self, batch):
-        def reduce_from_gpu(val):
-            v2 = self.strategy.reduce(tf.distribute.ReduceOp.SUM, val, axis=0)
-            return tf.reduce_mean(v2) * (1.0 / self.batch_size)
+        def reduce(val):
+            return tf.reduce_mean(val)
             
         
         def step_fn(batch):
@@ -150,7 +147,6 @@ class AutoEncoderWrapper:
                 metrics = {"mse_occ": mse_occ, "acc_occ": acc_occ,
                            "mse_free": mse_free, "acc_free": acc_free}
                 
-                # loss = tf.reduce_sum(mse_occ) * (1.0 / self.batch_size)
                 loss = self.mse_loss(metrics)
                 
                 variables = self.model.trainable_variables
@@ -158,9 +154,8 @@ class AutoEncoderWrapper:
                 self.opt.apply_gradients(list(zip(gradients, variables)))
                 return loss, metrics
             
-        loss, metrics = self.strategy.experimental_run_v2(step_fn, args=(batch, ))
-        loss = self.strategy.reduce(tf.distribute.ReduceOp.SUM, loss, axis=None)
-        m = {k: reduce_from_gpu(metrics[k]) for k in metrics}
+        loss, metrics = step_fn(batch)
+        m = {k: reduce(metrics[k]) for k in metrics}
         m['loss'] = loss
         return m
 
@@ -204,16 +199,15 @@ class AutoEncoderWrapper:
     def train(self, dataset):
         self.build_model(dataset)
         self.count_params()
-        dataset.shuffle(10000)
+        # dataset = dataset.shuffle(10000)
 
-        batched_ds = dataset.batch(self.batch_size, drop_remainder=True)
-        dist_ds = self.strategy.experimental_distribute_dataset(batched_ds)
+        batched_ds = dataset.batch(self.batch_size, drop_remainder=True).prefetch(64)
         
         num_epochs = 1000
         for i in range(num_epochs):
             print('')
             print('==  Epoch {}/{}  '.format(i+1, num_epochs) + '='*65)
-            self.train_batch(dist_ds)
+            self.train_batch(batched_ds)
             print('='*80)
         
         
