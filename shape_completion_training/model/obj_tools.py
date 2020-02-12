@@ -35,17 +35,20 @@ def augment(filename):
 
     savepath = os.path.dirname(filename)
 
-
-    for i in range(0, 360, 20):
-        rotate(scene, i, savepath)
-
-    # rotate(scene, 70, savepath)
-
-    # scene.rootnode.transform = rotz(3.1415)
-
-def rotate(scene, degrees, savepath):
+    y_rotations = range(0,360, 20)
+    x_trans = [-0.1, 0, 0.1]
+    y_trans = [-0.1, 0, 0.1]
+    z_trans = [-0.1, 0, 0.1]
     
-    m = roty(degrees * 3.1415/180)
+
+    for yr in y_rotations:
+        for x in x_trans:
+            for y in y_trans:
+                for z in z_trans:
+                    transform(scene, yr, x, y, z, savepath)
+
+def transform(scene, y_rot, x_trans, y_trans, z_trans, savepath):
+    m = roty(y_rot * 3.1415/180)
     scene.mRootNode.contents.mTransformation.a1 = m[0,0]
     scene.mRootNode.contents.mTransformation.a2 = m[0,1]
     scene.mRootNode.contents.mTransformation.a3 = m[0,2]
@@ -55,14 +58,15 @@ def rotate(scene, degrees, savepath):
     scene.mRootNode.contents.mTransformation.c1 = m[2,0]
     scene.mRootNode.contents.mTransformation.c2 = m[2,1]
     scene.mRootNode.contents.mTransformation.c3 = m[2,2]
+    scene.mRootNode.contents.mTransformation.a4 = x_trans
+    scene.mRootNode.contents.mTransformation.b4 = y_trans
+    scene.mRootNode.contents.mTransformation.c4 = z_trans
 
-    savename = os.path.join(savepath, "model_augmented_{:03d}.obj".format(degrees))
-    
-    # IPython.embed()
+    fn = "model_augmented_{:1.1f}_{:1.1f}_{:1.1f}_{:03d}.obj".format(x_trans, y_trans, z_trans,
+                                                                     y_rot)
+    savename = os.path.join(savepath, fn)
     pyassimp.export(scene, savename, 'obj')
-
-
-
+    
 
 def rotx(rad):
     s = np.sin(rad)

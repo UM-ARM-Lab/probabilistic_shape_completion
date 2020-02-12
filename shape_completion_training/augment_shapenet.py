@@ -19,9 +19,9 @@ import time
 import datetime
 
 
-NUM_THREADS_PER_CATEGORY = 10
+NUM_THREADS_PER_CATEGORY = 5
 NUM_THREADS_PER_OBJECT = 6
-HARDCODED_BOUNDARY = '-bb -0.5 -0.5 -0.5 0.5 0.5 0.5'
+HARDCODED_BOUNDARY = '-bb -0.6 -0.6 -0.6 0.6 0.6 0.6'
 
 NUM_THREADS = NUM_THREADS_PER_CATEGORY * NUM_THREADS_PER_OBJECT
 
@@ -114,6 +114,7 @@ def augment_shape(filepath):
     augmented_obj_files = [f for f in os.listdir(fp)
                            if f.startswith('model_augmented')
                            if f.endswith('.obj')]
+    augmented_obj_files.sort()
 
     q = mp.Queue()
     for f in augmented_obj_files:
@@ -140,6 +141,30 @@ def binvox_object_file_worker(queue):
 
 
 """
+Augment a hardcoded single shape. Useful for debugging
+"""
+def augment_single(basepath):
+    
+    shape_id = '2d10421716b16580e45ef4135c266a12'
+    fp = join(basepath, shape_id, 'models')
+    print("Augmenting single models at {}".format(fp))
+
+    old_files = [f for f in os.listdir(fp) if f.startswith("model_augmented")]
+    for f in old_files:
+        os.remove(join(fp, f))
+
+    obj_path = join(fp, "model_normalized.obj")
+    obj_tools.augment(obj_path)
+
+
+    augmented_obj_files = [f for f in os.listdir(fp)
+                           if f.startswith('model_augmented')
+                           if f.endswith('.obj')]
+    augmented_obj_files.sort()
+    for f in augmented_obj_files:
+        binvox_object_file(join(fp, f))
+        
+"""
 Runs binvox on the input obj file
 """
 def binvox_object_file(fp):
@@ -165,12 +190,12 @@ def binvox_object_file(fp):
 
 if __name__=="__main__":
 
-
     sn_path = join(data_tools.cur_path, "../data/ShapeNetCore.v2_augmented")
     sn_path = join(sn_path, data_tools.shape_map['mug'])
 
     start_time = datetime.datetime.now()
-    
+
+    # augment_single(sn_path)
     augment_category(sn_path)
     print("")
     print("Augmenting with {} threads took {} seconds".format(NUM_THREADS, datetime.datetime.now() - start_time))
