@@ -129,6 +129,7 @@ def publish_completion():
 
     print("Loading...")
     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    data = data_tools.simulate_input(data, 0, 0, 0)
     
     model = AutoEncoderWrapper()
     # model.restore()
