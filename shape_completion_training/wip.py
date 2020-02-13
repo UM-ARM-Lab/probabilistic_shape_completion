@@ -16,10 +16,11 @@ shape_map = {"airplane":"02691156",
 
 
 if __name__ == "__main__":
-    print("hi")
-    # data_ycb = load_data(from_record=False)
+    print("Deprecated for now. Use `train.py`")
+    return
+    
     data_shapenet = data_tools.load_shapenet([shape_map["mug"]])
-    # data_shapenet = data_shapenet.take(1).repeat(400)
+
 
 
     # data = data_ycb

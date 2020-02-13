@@ -1,1 +1,4 @@
-{"num_latent_layers": 200}
+{"num_latent_layers": 200,
+ "translation_pixel_range_x": 10,
+ "translation_pixel_range_y": 10,
+ "translation_pixel_range_z": 10}

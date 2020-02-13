@@ -9,8 +9,6 @@ import json
 
 
 
-
-
 """
 Returns the filepath to the directory for the trial, prompting the user for information if necessary.
 The directory is created if it does not exist.
@@ -37,12 +35,47 @@ def get_trial_directory(base_directory, nick=None, expect_reuse=False):
     print("Running trial {} at {}".format(nick, fp))
     return fp
 
+"""
+Handles loading and saving of the params
+If params is None it will load from params from the directory
+Otherwise it save params to the directory
+Returns the params loaded or saved
+Prompts user if default parameters do not match the given parameters
 
-def write_params(filepath, params_dict):
+TODO: If given_params is specified this will silently overwrite any params already part of the model.
+"""
+def handle_params(default_params_fp, model_params_fp, given_params):
+    if given_params is None:
+        return _load_params(default_params_fp, model_params_fp)
+
+    ### Check defaults
+    with open(join(default_params_fp, 'default_params.json'), 'r') as f:
+        default_params = json.load(f)        
+
+    given_keys = set(given_params.keys())
+    default_keys = set(default_params.keys())
+
+    if given_keys != default_keys:
+        print()
+        print("!! Warning !!")
+        print("Default params and given params have different keys. The defaults should have the same entry names as the specified params. This difference may prevent properly reloading after future changes!")
+        for missing_default_key in given_keys - default_keys:
+            print("{} missing from defaults".format(missing_default_key))
+        print()
+        for missing_given_key in default_keys - given_keys:
+            print("{} missing from specified keys".format(missing_give_key))
+        print("Press any key to continue")
+        raw_input()
+    
+    _write_params(model_params_fp, given_params)
+    return given_params
+
+
+def _write_params(filepath, params_dict):
     with open(join(filepath, 'params.json'), 'w') as f:
         json.dump(params_dict, f, sort_keys=True)
 
-def load_params(default_params_fp, filepath):
+def _load_params(default_params_fp, filepath):
     with open(join(default_params_fp, 'default_params.json'), 'r') as f:
         params = json.load(f)
     

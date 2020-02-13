@@ -81,14 +81,10 @@ class AutoEncoderWrapper:
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
-        expect_load_from_file = (params is None)
-        fp = filepath_tools.get_trial_directory(os.path.join(os.path.dirname(__file__), "../trials/"),
-                                                expect_reuse = expect_load_from_file)
-        if expect_load_from_file:
-            defaults_fp = os.path.join(os.path.dirname(__file__), "../model/")
-            params = filepath_tools.load_params(defaults_fp, fp)
-        else:
-            filepath_tools.write_params(fp, params)
+        self_fp = os.path.dirname(__file__)
+        fp = filepath_tools.get_trial_directory(os.path.join(self_fp, "../trials/"),
+                                                expect_reuse = (params is None))
+        self.params = filepath_tools.handle_params(self_fp, fp, params)
 
         self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
 
@@ -97,7 +93,7 @@ class AutoEncoderWrapper:
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
-        self.model = AutoEncoder(params)
+        self.model = AutoEncoder(self.params)
         self.opt = tf.keras.optimizers.Adam(0.001)
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=self.opt, net=self.model)
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
