@@ -116,7 +116,11 @@ class AutoEncoderWrapper:
 
     def build_model(self, dataset):
         # self.model.evaluate(dataset.take(16))
-        self.model.predict(dataset.take(self.batch_size).batch(self.batch_size))
+        elem = dataset.take(self.batch_size).batch(self.batch_size)
+        tf.summary.trace_on(graph=True, profiler=False)
+        self.model.predict(elem)
+        with self.train_summary_writer.as_default():
+            tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
     @tf.function
     def mse_loss(self, metrics):
