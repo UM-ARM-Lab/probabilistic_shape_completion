@@ -294,7 +294,8 @@ def simulate_input(dataset, x, y, z):
         example['gt_free'] = shift_tensor(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
         return example
 
-    return dataset.map(_shift).map(_simulate_input)
+    return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE)\
+                  .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
 
 
