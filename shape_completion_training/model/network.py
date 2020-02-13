@@ -10,6 +10,7 @@ Tensorflow 2.0 (instead of 1.0)
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
+import tensorflow.keras.layers as tfl
 import data_tools
 import filepath_tools
 import progressbar
@@ -21,53 +22,60 @@ class AutoEncoder(tf.keras.Model):
     def __init__(self, params):
         super(AutoEncoder, self).__init__()
         self.params = params
+        self.layers_dict = {}
+        self.layer_names = []
         self.setup_model()
+
+    def _add_layer(self, layer):
+        self.layers_dict[layer.name] = layer
+        self.layer_names.append(layer.name)
 
 
     def setup_model(self):
         ip = (64, 64, 64, 2)
-        self.autoencoder_layers = [
-            tf.keras.layers.Conv3D(64, (2,2,2), input_shape=ip, padding="same"),
-            tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.MaxPool3D((2,2,2)),
+        self.conv_names = ['conv_4', 'conv_3', 'conv_2', 'conv_1']
+        conv_sizes = {'conv_4':64,
+                      'conv_3':128,
+                      'conv_2':256,
+                      'conv_1':512}
+        self.deconv_names = ['deconv_1', 'deconv_2', 'deconv_3']
+        deconv_sizes = {'deconv_1':256,
+                        'deconv_2':128,
+                        'deconv_3':64,
+                        'deconv_4':2}
 
-            tf.keras.layers.Conv3D(128, (2,2,2), padding="same"),
-            tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.MaxPool3D((2,2,2)),
 
-            tf.keras.layers.Conv3D(256, (2,2,2), padding="same"),
-            tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.MaxPool3D((2,2,2)),
+        for conv_name in self.conv_names:
+            self._add_layer(tfl.Conv3D(conv_sizes[conv_name],
+                                       (2,2,2), padding="same", name=conv_name + '_conv'))
+            self._add_layer(tfl.Activation(tf.nn.relu, name=conv_name + '_activation'))
+            self._add_layer(tfl.MaxPool3D((2,2,2), name=conv_name + '_maxpool'))
 
-            tf.keras.layers.Conv3D(512, (2,2,2), padding="same"),
-            tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.MaxPool3D((2,2,2)),
+        self._add_layer(tfl.Flatten(name='flatten'))
+        self._add_layer(tfl.Dense(self.params['num_latent_layers'], activation='relu', name='latent'))
+        self._add_layer(tfl.Dense(32768, activation='relu', name='expand'))
+        self._add_layer(tfl.Reshape((4,4,4,512), name='reshape'))
 
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(self.params['num_latent_layers'], activation='relu'),
-            
-            tf.keras.layers.Dense(32768, activation='relu'),
-            tf.keras.layers.Reshape((4,4,4,512)),
-            
+        for deconv_name in self.deconv_names:
+            self._add_layer(tfl.Conv3DTranspose(deconv_sizes[deconv_name],
+                                                (2,2,2,), strides=2, name=deconv_name + '_deconv'))
+            self._add_layer(tfl.Activation(tf.nn.relu, name=deconv_name + '_activation'))
+        deconv_name = 'deconv_4'
+        self._add_layer(tfl.Conv3DTranspose(deconv_sizes[deconv_name],
+                                            (2,2,2,), strides=2, name=deconv_name + '_deconv'))
 
-            tf.keras.layers.Conv3DTranspose(256, (2,2,2,), strides=2),
-            tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.Conv3DTranspose(128, (2,2,2,), strides=2),
-            tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.Conv3DTranspose(64, (2,2,2,), strides=2),
-            tf.keras.layers.Activation(tf.nn.relu),
-            tf.keras.layers.Conv3DTranspose(2, (2,2,2,), strides=2)
-        ]
-
+        # IPython.embed()
 
     def call(self, inputs):
         known_occ = inputs['known_occ']
         known_free = inputs['known_free']
 
-        x = tf.keras.layers.concatenate([known_occ, known_free], axis=4)
+        x = tfl.concatenate([known_occ, known_free], axis=4)
 
-        for layer in self.autoencoder_layers:
-            x = layer(x)
+        for n in self.layer_names:
+            x = self.layers_dict[n](x)
+
+        
 
         occ, free = tf.split(x, 2, axis=4)
         
@@ -81,10 +89,10 @@ class AutoEncoderWrapper:
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
-        self_fp = os.path.dirname(__file__)
-        fp = filepath_tools.get_trial_directory(os.path.join(self_fp, "../trials/"),
+        file_fp = os.path.dirname(__file__)
+        fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
                                                 expect_reuse = (params is None))
-        self.params = filepath_tools.handle_params(self_fp, fp, params)
+        self.params = filepath_tools.handle_params(file_fp, fp, params)
 
         self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
 
