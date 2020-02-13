@@ -95,7 +95,9 @@ class AutoEncoderWrapper:
 
         self.model = AutoEncoder(self.params)
         self.opt = tf.keras.optimizers.Adam(0.001)
-        self.ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=self.opt, net=self.model)
+        self.ckpt = tf.train.Checkpoint(step=tf.Variable(1),
+                                        epoch=tf.Variable(0),
+                                        optimizer=self.opt, net=self.model)
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
 
         self.num_batches = None
@@ -201,9 +203,10 @@ class AutoEncoderWrapper:
         batched_ds = dataset.batch(self.batch_size).prefetch(64)
         
         num_epochs = 1000
-        for i in range(num_epochs):
+        while self.ckpt.epoch < num_epochs:
+            self.ckpt.epoch.assign_add(1)
             print('')
-            print('==  Epoch {}/{}  '.format(i+1, num_epochs) + '='*65)
+            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '='*65)
             self.train_batch(batched_ds)
             print('='*80)
         
