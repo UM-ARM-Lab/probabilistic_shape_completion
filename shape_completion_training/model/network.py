@@ -122,8 +122,8 @@ class AutoEncoderWrapper:
 
     @tf.function
     def mse_loss(self, metrics):
-        l_occ = tf.reduce_sum(metrics['mse_occ']) * (1/self.batch_size)
-        l_free = tf.reduce_sum(metrics['mse_free']) * (1/self.batch_size)
+        l_occ = tf.reduce_sum(metrics['mse_occ']) * (1.0/self.batch_size)
+        l_free = tf.reduce_sum(metrics['mse_free']) * (1.0/self.batch_size)
         return l_occ + l_free
 
 
