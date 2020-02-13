@@ -32,48 +32,110 @@ class AutoEncoder(tf.keras.Model):
 
 
     def setup_model(self):
-        ip = (64, 64, 64, 2)
-        self.conv_names = ['conv_4', 'conv_3', 'conv_2', 'conv_1']
-        conv_sizes = {'conv_4':64,
-                      'conv_3':128,
-                      'conv_2':256,
-                      'conv_1':512}
-        self.deconv_names = ['deconv_1', 'deconv_2', 'deconv_3']
-        deconv_sizes = {'deconv_1':256,
-                        'deconv_2':128,
-                        'deconv_3':64,
-                        'deconv_4':2}
+
+        nl = self.params['num_latent_layers']
+        
+        autoencoder_layers = [
+            tfl.Conv3D(64, (2,2,2), padding="same",  name='conv_4_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_4_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_4_maxpool'),
+
+            tfl.Conv3D(128, (2,2,2), padding="same", name='conv_3_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_3_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_3_maxpool'),
+
+            tfl.Conv3D(256, (2,2,2), padding="same", name='conv_2_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_2_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_2_maxpool'),
+
+            tfl.Conv3D(512, (2,2,2), padding="same", name='conv_1_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_1_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_1_maxpool'),
+
+            tfl.Flatten(                             name='flatten'),
+
+            tfl.Dense(nl, activation='relu',         name='latent'),
+            
+            tfl.Dense(32768, activation='relu',      name='expand'),
+            tfl.Reshape((4,4,4,512),                 name='reshape'),
+            
+
+            tfl.Conv3DTranspose(256, (2,2,2,), strides=2, name='deconv_1_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_1_activation'),
+            tfl.Conv3DTranspose(128, (2,2,2,), strides=2, name='deconv_2_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_2_activation'),
+            tfl.Conv3DTranspose(64, (2,2,2,), strides=2,  name='deconv_3_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_3_activation'),
+            tfl.Conv3DTranspose(2, (2,2,2,), strides=2,   name='deconv_4_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_4_activation')
+        ]
+        if self.params['is_u_connected']:
+            extra_unet_layers = [
+                tfl.Conv3D(2, (1,1,1,),                   name='unet_combine'),
+                tfl.Activation(tf.nn.relu,                name='unet_final_activation'),
+            ]
+            autoencoder_layers = autoencoder_layers + extra_unet_layers
+
+        for l in autoencoder_layers:
+            self._add_layer(l)
 
 
-        for conv_name in self.conv_names:
-            self._add_layer(tfl.Conv3D(conv_sizes[conv_name],
-                                       (2,2,2), padding="same", name=conv_name + '_conv'))
-            self._add_layer(tfl.Activation(tf.nn.relu, name=conv_name + '_activation'))
-            self._add_layer(tfl.MaxPool3D((2,2,2), name=conv_name + '_maxpool'))
 
-        self._add_layer(tfl.Flatten(name='flatten'))
-        self._add_layer(tfl.Dense(self.params['num_latent_layers'], activation='relu', name='latent'))
-        self._add_layer(tfl.Dense(32768, activation='relu', name='expand'))
-        self._add_layer(tfl.Reshape((4,4,4,512), name='reshape'))
 
-        for deconv_name in self.deconv_names:
-            self._add_layer(tfl.Conv3DTranspose(deconv_sizes[deconv_name],
-                                                (2,2,2,), strides=2, name=deconv_name + '_deconv'))
-            self._add_layer(tfl.Activation(tf.nn.relu, name=deconv_name + '_activation'))
-        deconv_name = 'deconv_4'
-        self._add_layer(tfl.Conv3DTranspose(deconv_sizes[deconv_name],
-                                            (2,2,2,), strides=2, name=deconv_name + '_deconv'))
 
-        # IPython.embed()
 
     def call(self, inputs):
         known_occ = inputs['known_occ']
         known_free = inputs['known_free']
 
+        unet = self.params['is_u_connected']
+
         x = tfl.concatenate([known_occ, known_free], axis=4)
 
-        for n in self.layer_names:
-            x = self.layers_dict[n](x)
+
+        u5 = x
+        x = self.layers_dict['conv_4_conv'](x)
+        x = self.layers_dict['conv_4_activation'](x)
+        x = self.layers_dict['conv_4_maxpool'](x)
+        u4 = x
+        x = self.layers_dict['conv_3_conv'](x)
+        x = self.layers_dict['conv_3_activation'](x)
+        x = self.layers_dict['conv_3_maxpool'](x)
+        u3 = x
+        x = self.layers_dict['conv_2_conv'](x)
+        x = self.layers_dict['conv_2_activation'](x)
+        x = self.layers_dict['conv_2_maxpool'](x)
+        u2 = x
+        x = self.layers_dict['conv_1_conv'](x)
+        x = self.layers_dict['conv_1_activation'](x)
+        x = self.layers_dict['conv_1_maxpool'](x)
+        u1 = x
+            
+        x = self.layers_dict['flatten'](x)
+        x = self.layers_dict['latent'](x)
+        x = self.layers_dict['expand'](x)
+        x = self.layers_dict['reshape'](x)
+
+        if(unet):
+            x = tfl.concatenate([x, u1], axis=4, name='u_1')
+        x = self.layers_dict['deconv_1_deconv'](x)
+        x = self.layers_dict['deconv_1_activation'](x)
+        if(unet):
+            x = tfl.concatenate([x, u2], axis=4, name='u_2')
+        x = self.layers_dict['deconv_2_deconv'](x)
+        x = self.layers_dict['deconv_2_activation'](x)
+        if(unet):
+            x = tfl.concatenate([x, u3], axis=4, name='u_3')
+        x = self.layers_dict['deconv_3_deconv'](x)
+        x = self.layers_dict['deconv_3_activation'](x)
+        if(unet):
+            x = tfl.concatenate([x, u4], axis=4, name='u_4')
+        x = self.layers_dict['deconv_4_deconv'](x)
+        x = self.layers_dict['deconv_4_activation'](x)
+        if(unet):
+            x = tfl.concatenate([x, u5], axis=4, name='u_5')
+            x = self.layers_dict['unet_combine'](x)
+            x = self.layers_dict['unet_final_activation'](x)
 
         
 
