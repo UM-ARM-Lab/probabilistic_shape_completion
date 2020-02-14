@@ -19,6 +19,7 @@ params = {
     'translation_pixel_range_y': 10,
     'translation_pixel_range_z': 10,
     'is_u_connected': True,
+    'final_activation': 'sigmoid',
 }
 
 

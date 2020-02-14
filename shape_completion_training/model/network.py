@@ -71,9 +71,15 @@ class AutoEncoder(tf.keras.Model):
         ]
         if self.params['is_u_connected']:
             extra_unet_layers = [
-                tfl.Conv3D(2, (1,1,1,),                   name='unet_combine'),
-                tfl.Activation(tf.nn.relu,                name='unet_final_activation'),
+                tfl.Conv3D(2, (1,1,1,), use_bias=False,                  name='unet_combine'),
+                # tfl.Activation(tf.nn.relu,                             name='unet_final_activation'),
             ]
+            if self.params['final_activation'] == 'sigmoid':
+                extra_unet_layers.append(tfl.Activation(tf.math.sigmoid, name='unet_final_activation'))
+            if self.params['final_activation'] == 'relu':
+                extra_unet_layers.append(tfl.Activation(tf.nn.relu,      name='unet_final_activation'))
+            
+
             autoencoder_layers = autoencoder_layers + extra_unet_layers
 
         for l in autoencoder_layers:
@@ -145,6 +151,17 @@ class AutoEncoder(tf.keras.Model):
 
 
 
+@tf.function
+def p_x_given_y(x, y):
+    """
+    Returns the reduce p(x|y)
+    Clips x from 0 to one, then filters and normalizes by y
+    Assumes y is a tensor where every element is 0.0 or 1.0
+    """
+    clipped = tf.clip_by_value(x, 0.0, 1.0)
+    return tf.reduce_sum(clipped * y) / tf.reduce_sum(y)
+    
+    
 class AutoEncoderWrapper:
     def __init__(self, params=None):
         self.batch_size = 16
@@ -212,19 +229,37 @@ class AutoEncoderWrapper:
                 # loss = tf.reduce_mean(tf.mse(output - example['gt']))
                 # mse = tf.keras.losses.MSE(batch['gt'], output)
 
-                mse_occ = tf.losses.mean_squared_error(batch['gt_occ'], output['predicted_occ'])
-                acc_occ = tf.abs(batch['gt_occ'] - output['predicted_occ'])
-                mse_free = tf.losses.mean_squared_error(batch['gt_free'], output['predicted_free'])
-                acc_free = tf.abs(batch['gt_free'] - output['predicted_free'])
+                # mse_occ = tf.losses.mean_squared_error(batch['gt_occ'], output['predicted_occ'])
+                acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
+                mse_occ = tf.math.square(acc_occ)
+                # mse_free = tf.losses.mean_squared_error(batch['gt_free'], output['predicted_free'])
+                acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
+                mse_free = tf.math.square(acc_free)
 
-                num_occ = tf.reduce_sum(batch['gt_occ'])
-                num_free = tf.reduce_sum(batch['gt_free'])
-                p_occ_given_occ = tf.reduce_sum(tf.clip_by_value(output['predicted_occ'], 0.0, 1.0) * batch['gt_occ']) / num_occ
-                p_free_given_free = tf.reduce_sum(tf.clip_by_value(output['predicted_free'], 0.0, 1.0) * batch['gt_free']) / num_free
-                
+
                 metrics = {"mse_occ": mse_occ, "acc_occ": acc_occ,
                            "mse_free": mse_free, "acc_free": acc_free,
-                           "p_occ|occ":p_occ_given_occ, "p_free|free": p_free_given_free}
+                           "p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
+                                                                  batch['gt_occ']),
+                           "p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
+                                                                    batch['gt_free']),
+                           "p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
+                                                                     batch['known_occ']),
+                           "p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
+                                                                       batch['known_free']),
+                           "p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
+                                                                  batch['gt_free']),
+                           "p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
+                                                                    batch['gt_occ']),
+                           "p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
+                                                                     batch['known_free']),
+                           "p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
+                                                                       batch['known_occ']),
+                           "p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
+                           "p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
+                           "p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
+                           "p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
+                           }
                 
                 loss = self.mse_loss(metrics)
                 
