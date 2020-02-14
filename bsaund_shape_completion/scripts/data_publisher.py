@@ -111,7 +111,7 @@ def publish_elem(elem):
 
 
 def publish_shapenet_tfrecords():
-    data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    data = data_tools.load_shapenet([data_tools.shape_map["mug"]], shuffle=False)
     data = data_tools.simulate_input(data, 5, 5, 5)
 
     # print(sum(1 for _ in data))
@@ -128,7 +128,7 @@ def publish_shapenet_tfrecords():
 def publish_completion():
 
     print("Loading...")
-    data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    data = data_tools.load_shapenet([data_tools.shape_map["mug"]], shuffle=False)
     data = data_tools.simulate_input(data, 0, 0, 0)
     
     model = AutoEncoderWrapper()

@@ -24,7 +24,7 @@ shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
 shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/filepath")
-cache_fp = join(shapenet_record_path, "ds.cache")
+
 
 
 
@@ -189,7 +189,7 @@ def group_shapenet_files(shapenet_files, group_size):
     return groups
 
 
-def load_shapenet(shapes = "all"):
+def load_shapenet(shapes = "all", shuffle=True):
     records = [f for f in os.listdir(shapenet_record_path)
                if f.endswith(".tfrecord")]
     if shapes != "all":
@@ -198,9 +198,9 @@ def load_shapenet(shapes = "all"):
     ds = None
     for fp in [join(shapenet_record_path, r) for r in records]:
         if ds:
-            ds = ds.concatenate(read_from_tfrecord(fp))
+            ds = ds.concatenate(read_from_tfrecord(fp, shuffle))
         else:
-            ds = read_from_tfrecord(fp)
+            ds = read_from_tfrecord(fp, shuffle)
     return ds
 
 
@@ -231,7 +231,7 @@ def write_to_tfrecord(dataset, record_file):
 Reads from a tfrecord file of paths and augmentations
 Loads the binvox files, simulates the input tensors, and returns a dataset
 """
-def read_from_tfrecord(record_file):
+def read_from_tfrecord(record_file, shuffle):
     print("Reading from filepath record")
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
@@ -264,9 +264,14 @@ def read_from_tfrecord(record_file):
 
         return example
 
+    cache_name = "ds.cache"
+    if shuffle:
+        raw_dataset = raw_dataset.shuffle(10000)
+        cache_name = "shuffled_ds.cache"
+    cache_fp = join(shapenet_record_path, cache_name)
         
     parsed_dataset = raw_dataset.map(_parse_record_function).map(_load_voxelgrids)
-    parsed_dataset = parsed_dataset.cache(cache_fp)
+    # parsed_dataset = parsed_dataset.cache(cache_fp)
     return parsed_dataset
 
 

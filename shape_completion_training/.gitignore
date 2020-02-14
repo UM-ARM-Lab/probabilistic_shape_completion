@@ -5,3 +5,4 @@ data/*
 tmp_data/*
 logs/*
 trials/*
+old_trials/*
