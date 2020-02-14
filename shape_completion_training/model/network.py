@@ -14,6 +14,8 @@ import tensorflow.keras.layers as tfl
 import data_tools
 import filepath_tools
 import progressbar
+import datetime
+import time
 
 import IPython
 
@@ -184,6 +186,7 @@ class AutoEncoderWrapper:
         self.opt = tf.keras.optimizers.Adam(0.001)
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1),
                                         epoch=tf.Variable(0),
+                                        train_time=tf.Variable(0.0),
                                         optimizer=self.opt, net=self.model)
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
 
@@ -211,8 +214,8 @@ class AutoEncoderWrapper:
 
     @tf.function
     def mse_loss(self, metrics):
-        l_occ = tf.reduce_sum(metrics['mse_occ']) * (1.0/self.batch_size)
-        l_free = tf.reduce_sum(metrics['mse_free']) * (1.0/self.batch_size)
+        l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
+        l_free = tf.reduce_sum(metrics['mse/free']) * (1.0/self.batch_size)
         return l_occ + l_free
 
 
@@ -237,28 +240,28 @@ class AutoEncoderWrapper:
                 mse_free = tf.math.square(acc_free)
 
 
-                metrics = {"mse_occ": mse_occ, "acc_occ": acc_occ,
-                           "mse_free": mse_free, "acc_free": acc_free,
-                           "p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
+                metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
+                           "mse/free": mse_free, "acc/free": acc_free,
+                           "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
                                                                   batch['gt_occ']),
-                           "p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
+                           "pred|gt/p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
                                                                     batch['gt_free']),
-                           "p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
-                                                                     batch['known_occ']),
-                           "p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
-                                                                       batch['known_free']),
-                           "p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
-                                                                  batch['gt_free']),
-                           "p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
-                                                                    batch['gt_occ']),
-                           "p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
-                                                                     batch['known_free']),
-                           "p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
-                                                                       batch['known_occ']),
-                           "p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
-                           "p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
-                           "p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
-                           "p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
+                           "pred|known/p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                batch['known_occ']),
+                           "pred|known/p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
+                                                                                  batch['known_free']),
+                           "pred|gt/p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
+                                                                           batch['gt_free']),
+                           "pred|gt/p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
+                                                                           batch['gt_occ']),
+                           "pred|known/p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
+                                                                                 batch['known_free']),
+                           "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
+                                                                                 batch['known_occ']),
+                           "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
+                           "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
+                           "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
+                           "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
                            }
                 
                 loss = self.mse_loss(metrics)
@@ -290,20 +293,25 @@ class AutoEncoderWrapper:
             '  ', progressbar.Counter(), '/', max_size,
             ' ', progressbar.Variable("Loss"), ' ',
             progressbar.Bar(),
-            ' [', progressbar.Timer(), '] ',
+            ' [', progressbar.Variable("TrainTime"), '] ',
             ' (', progressbar.ETA(), ') ',
             ]
 
 
         with progressbar.ProgressBar(widgets=widgets, max_value=self.num_batches) as bar:
             self.num_batches = 0
+            t0 = time.time()
             for batch in dataset:
                 self.num_batches+=1
                 self.ckpt.step.assign_add(1)
                 
                 ret = self.train_step(batch)
-                bar.update(self.num_batches, Loss=ret['loss'].numpy())
+                time_str = str(datetime.timedelta(seconds=int(self.ckpt.train_time.numpy())))
+                bar.update(self.num_batches, Loss=ret['loss'].numpy(),
+                           TrainTime=time_str)
                 self.write_summary(ret)
+                self.ckpt.train_time.assign_add(time.time() - t0)
+                t0 = time.time()
 
         
         save_path = self.manager.save()
