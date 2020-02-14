@@ -141,10 +141,6 @@ def publish_completion():
         if rospy.is_shutdown():
             return
         
-        sys.stdout.write('\033[2K\033[1G')
-        print("Category: {}, id: {}".format(elem['shape_category'].numpy(),
-                                            elem['id'].numpy()), end="")
-        sys.stdout.flush()
         dim = elem['gt_occ'].shape[0]
 
 
@@ -153,11 +149,9 @@ def publish_completion():
             elem_expanded[k] = np.expand_dims(elem[k].numpy(), axis=0)
 
         inference = model.model(elem_expanded)['predicted_occ'].numpy()
-        gt_pub.publish(to_msg(elem['gt_occ'].numpy()))
-        known_occ_pub.publish(to_msg(elem_expanded['known_occ']))
-        known_free_pub.publish(to_msg(elem_expanded['known_free']))
-        completion_pub.publish(to_msg(inference))
+        publish_elem(elem)
 
+        completion_pub.publish(to_msg(inference))
         mismatch = np.abs(elem['gt_occ'].numpy() - inference)
         mismatch_pub.publish(to_msg(mismatch))
         # IPython.embed()
@@ -253,8 +247,8 @@ if __name__=="__main__":
 
     # view_single_binvox()
     # publish_test_img()
-    publish_shapenet_tfrecords()
-    # publish_completion()
+    # publish_shapenet_tfrecords()
+    publish_completion()
     # layer_by_layer()
     # data_tools.write_shapenet_to_tfrecord()
     # data_tools.load_shapenet()
