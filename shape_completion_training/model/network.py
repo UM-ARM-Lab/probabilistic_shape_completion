@@ -211,13 +211,20 @@ class AutoEncoderWrapper:
                 # loss = tf.reduce_mean(tf.abs(output - example['gt']))
                 # loss = tf.reduce_mean(tf.mse(output - example['gt']))
                 # mse = tf.keras.losses.MSE(batch['gt'], output)
+
                 mse_occ = tf.losses.mean_squared_error(batch['gt_occ'], output['predicted_occ'])
                 acc_occ = tf.abs(batch['gt_occ'] - output['predicted_occ'])
                 mse_free = tf.losses.mean_squared_error(batch['gt_free'], output['predicted_free'])
                 acc_free = tf.abs(batch['gt_free'] - output['predicted_free'])
+
+                num_occ = tf.reduce_sum(batch['gt_occ'])
+                num_free = tf.reduce_sum(batch['gt_free'])
+                p_occ_given_occ = tf.reduce_sum(tf.clip_by_value(output['predicted_occ'], 0.0, 1.0) * batch['gt_occ']) / num_occ
+                p_free_given_free = tf.reduce_sum(tf.clip_by_value(output['predicted_free'], 0.0, 1.0) * batch['gt_free']) / num_free
                 
                 metrics = {"mse_occ": mse_occ, "acc_occ": acc_occ,
-                           "mse_free": mse_free, "acc_free": acc_free}
+                           "mse_free": mse_free, "acc_free": acc_free,
+                           "p_occ|occ":p_occ_given_occ, "p_free|free": p_free_given_free}
                 
                 loss = self.mse_loss(metrics)
                 
