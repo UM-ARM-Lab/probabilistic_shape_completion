@@ -35,7 +35,7 @@ def augment(filename):
 
     savepath = os.path.dirname(filename)
 
-    y_rotations = range(0,360, 20)
+    y_rotations = range(0,360, 5)
     # x_trans = [-0.1, 0, 0.1]
     # y_trans = [-0.1, 0, 0.1]
     # z_trans = [-0.1, 0, 0.1]
