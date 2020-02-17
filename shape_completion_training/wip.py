@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-
+from __future__ import print_function
 
 import sys
 from os.path import dirname, abspath, join
@@ -9,6 +9,7 @@ sys.path.append(sc_path)
 
 from model import data_tools
 from model.network import AutoEncoderWrapper
+import tensorflow as tf
 import IPython
 
 shape_map = {"airplane":"02691156",
@@ -17,7 +18,7 @@ shape_map = {"airplane":"02691156",
 
 if __name__ == "__main__":
     print("Deprecated for now. Use `train.py`")
-    return
+
     
     data_shapenet = data_tools.load_shapenet([shape_map["mug"]])
 
@@ -28,11 +29,11 @@ if __name__ == "__main__":
     data = data_tools.simulate_input(data, 10, 10, 10)
 
 
-    params = {'num_latent_layers': 200}
     
-    sn = AutoEncoderWrapper(params)
-    # IPython.embed()
+    sn = AutoEncoderWrapper()
+    IPython.embed()
 
+    
     sn.train_and_test(data)
     # sn.evaluate(data)
     # sn.restore()

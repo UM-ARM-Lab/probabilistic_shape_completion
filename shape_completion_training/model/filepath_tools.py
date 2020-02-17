@@ -63,7 +63,7 @@ def handle_params(default_params_fp, model_params_fp, given_params):
             print("{} missing from defaults".format(missing_default_key))
         print()
         for missing_given_key in default_keys - given_keys:
-            print("{} missing from specified keys".format(missing_give_key))
+            print("{} missing from specified keys".format(missing_given_key))
         print("Press any key to continue")
         raw_input()
     
