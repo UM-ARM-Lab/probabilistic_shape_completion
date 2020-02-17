@@ -239,7 +239,7 @@ class AutoEncoderWrapper:
                 acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
                 mse_free = tf.math.square(acc_free)
 
-
+                
                 metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
                            "mse/free": mse_free, "acc/free": acc_free,
                            "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
@@ -265,16 +265,34 @@ class AutoEncoderWrapper:
                            }
                 
                 loss = self.mse_loss(metrics)
-                
                 variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)
+
+
                 self.opt.apply_gradients(list(zip(gradients, variables)))
+                metrics.update(self.get_insights(variables, gradients))
                 return loss, metrics
             
         loss, metrics = step_fn(batch)
         m = {k: reduce(metrics[k]) for k in metrics}
         m['loss'] = loss
         return m
+
+    @tf.function
+    def get_insights(self, variables, gradients):
+        final_conv = variables[-1]
+        final_grad = gradients[-1]
+        insights = {
+            "weights/prec_occ->occ": final_conv[-1][0,0,2,0],
+            "weights/prec_occ->free": final_conv[-1][0,0,2,1],
+            "weights/prec_free->occ": final_conv[-1][0,0,3,0],
+            "weights/prec_free->free": final_conv[-1][0,0,3,1],
+            "gradients/prec_occ->occ": final_grad[-1][0,0,2,0],
+            "gradients/prec_occ->free": final_grad[-1][0,0,2,1],
+            "gradients/prec_free->occ": final_grad[-1][0,0,3,0],
+            "gradients/prec_free->free": final_grad[-1][0,0,3,1]
+            }
+        return insights
 
 
     def write_summary(self, summary_dict):
