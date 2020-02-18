@@ -282,16 +282,20 @@ class AutoEncoderWrapper:
     def get_insights(self, variables, gradients):
         final_conv = variables[-1]
         final_grad = gradients[-1]
-        insights = {
-            "weights/know_occ->pred_occ": final_conv[-1][0,0,2,0],
-            "weights/know_occ->pred_free": final_conv[-1][0,0,2,1],
-            "weights/know_free->pred_occ": final_conv[-1][0,0,3,0],
-            "weights/know_free->pred_free": final_conv[-1][0,0,3,1],
-            "gradients/know_occ->pred_occ": final_grad[-1][0,0,2,0],
-            "gradients/know_occ->pred_free": final_grad[-1][0,0,2,1],
-            "gradients/know_free->pred_occ": final_grad[-1][0,0,3,0],
-            "gradients/know_free->pred_free": final_grad[-1][0,0,3,1]
+        insights = {}
+        if self.params['is_u_connected']:
+            
+            unet_insights = {
+                "weights/know_occ->pred_occ": final_conv[-1][0,0,2,0],
+                "weights/know_occ->pred_free": final_conv[-1][0,0,2,1],
+                "weights/know_free->pred_occ": final_conv[-1][0,0,3,0],
+                "weights/know_free->pred_free": final_conv[-1][0,0,3,1],
+                "gradients/know_occ->pred_occ": final_grad[-1][0,0,2,0],
+                "gradients/know_occ->pred_free": final_grad[-1][0,0,2,1],
+                "gradients/know_free->pred_occ": final_grad[-1][0,0,3,0],
+                "gradients/know_free->pred_free": final_grad[-1][0,0,3,1]
             }
+            insights.update(unet_insights)
         return insights
 
 
