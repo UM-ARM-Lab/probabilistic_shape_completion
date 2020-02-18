@@ -283,14 +283,14 @@ class AutoEncoderWrapper:
         final_conv = variables[-1]
         final_grad = gradients[-1]
         insights = {
-            "weights/prec_occ->occ": final_conv[-1][0,0,2,0],
-            "weights/prec_occ->free": final_conv[-1][0,0,2,1],
-            "weights/prec_free->occ": final_conv[-1][0,0,3,0],
-            "weights/prec_free->free": final_conv[-1][0,0,3,1],
-            "gradients/prec_occ->occ": final_grad[-1][0,0,2,0],
-            "gradients/prec_occ->free": final_grad[-1][0,0,2,1],
-            "gradients/prec_free->occ": final_grad[-1][0,0,3,0],
-            "gradients/prec_free->free": final_grad[-1][0,0,3,1]
+            "weights/know_occ->pred_occ": final_conv[-1][0,0,2,0],
+            "weights/know_occ->pred_free": final_conv[-1][0,0,2,1],
+            "weights/know_free->pred_occ": final_conv[-1][0,0,3,0],
+            "weights/know_free->pred_free": final_conv[-1][0,0,3,1],
+            "gradients/know_occ->pred_occ": final_grad[-1][0,0,2,0],
+            "gradients/know_occ->pred_free": final_grad[-1][0,0,2,1],
+            "gradients/know_free->pred_occ": final_grad[-1][0,0,3,0],
+            "gradients/know_free->pred_free": final_grad[-1][0,0,3,1]
             }
         return insights
 
