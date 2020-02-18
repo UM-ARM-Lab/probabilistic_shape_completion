@@ -71,7 +71,7 @@ class AutoEncoder(tf.keras.Model):
             tfl.Conv3DTranspose(2, (2,2,2,), strides=2,   name='deconv_4_deconv'),
             tfl.Activation(tf.nn.relu,                    name='deconv_4_activation')
         ]
-        if self.params['is_u_connected']:
+        if self.params['is_u_connected'] and self.params['use_final_unet_layer']:
             extra_unet_layers = [
                 tfl.Conv3D(2, (1,1,1,), use_bias=False,                  name='unet_combine'),
                 # tfl.Activation(tf.nn.relu,                             name='unet_final_activation'),
@@ -92,7 +92,7 @@ class AutoEncoder(tf.keras.Model):
 
 
 
-    def call(self, inputs):
+    def call(self, inputs, training=False):
         known_occ = inputs['known_occ']
         known_free = inputs['known_free']
 
@@ -101,23 +101,23 @@ class AutoEncoder(tf.keras.Model):
         x = tfl.concatenate([known_occ, known_free], axis=4)
 
 
-        u5 = x
+        u5 = tfl.Dropout(rate=self.params['unet_dropout_rate'], name='dropout_u5')(x, training=training)
         x = self.layers_dict['conv_4_conv'](x)
         x = self.layers_dict['conv_4_activation'](x)
         x = self.layers_dict['conv_4_maxpool'](x)
-        u4 = x
+        u4 = tfl.Dropout(rate=self.params['unet_dropout_rate'], name='dropout_u4')(x, training=training)
         x = self.layers_dict['conv_3_conv'](x)
         x = self.layers_dict['conv_3_activation'](x)
         x = self.layers_dict['conv_3_maxpool'](x)
-        u3 = x
+        u3 = tfl.Dropout(rate=self.params['unet_dropout_rate'], name='dropout_u3')(x, training=training)
         x = self.layers_dict['conv_2_conv'](x)
         x = self.layers_dict['conv_2_activation'](x)
         x = self.layers_dict['conv_2_maxpool'](x)
-        u2 = x
+        u2 = tfl.Dropout(rate=self.params['unet_dropout_rate'], name='dropout_u2')(x, training=training)
         x = self.layers_dict['conv_1_conv'](x)
         x = self.layers_dict['conv_1_activation'](x)
         x = self.layers_dict['conv_1_maxpool'](x)
-        u1 = x
+        u1 = tfl.Dropout(rate=self.params['unet_dropout_rate'], name='dropout_u1')(x, training=training)
             
         x = self.layers_dict['flatten'](x)
         x = self.layers_dict['latent'](x)
@@ -140,7 +140,7 @@ class AutoEncoder(tf.keras.Model):
             x = tfl.concatenate([x, u4], axis=4, name='u_4')
         x = self.layers_dict['deconv_4_deconv'](x)
         x = self.layers_dict['deconv_4_activation'](x)
-        if(unet):
+        if(unet and self.params['use_final_unet_layer']):
             x = tfl.concatenate([x, u5], axis=4, name='u_5')
             x = self.layers_dict['unet_combine'](x)
             x = self.layers_dict['unet_final_activation'](x)
@@ -227,7 +227,7 @@ class AutoEncoderWrapper:
         
         def step_fn(batch):
             with tf.GradientTape() as tape:
-                output = self.model(batch)
+                output = self.model(batch, training=True)
                 # loss = tf.reduce_mean(tf.abs(output - example['gt']))
                 # loss = tf.reduce_mean(tf.mse(output - example['gt']))
                 # mse = tf.keras.losses.MSE(batch['gt'], output)
@@ -293,7 +293,7 @@ class AutoEncoderWrapper:
         final_conv = variables[-1]
         final_grad = gradients[-1]
         insights = {}
-        if self.params['is_u_connected']:
+        if self.params['is_u_connected'] and self.params['use_final_unet_layer']:
             
             unet_insights = {
                 "weights/know_occ->pred_occ": final_conv[-1][0,0,2,0],

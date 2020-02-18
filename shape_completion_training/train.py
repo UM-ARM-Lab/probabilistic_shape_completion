@@ -20,6 +20,8 @@ params = {
     'translation_pixel_range_z': 10,
     'is_u_connected': True,
     'final_activation': 'sigmoid',
+    'unet_dropout_rate': 0.5,
+    'use_final_unet_layer': False,
 }
 
 
