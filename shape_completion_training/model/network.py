@@ -239,6 +239,8 @@ class AutoEncoderWrapper:
                 acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
                 mse_free = tf.math.square(acc_free)
 
+                unknown_occ = batch['gt_occ'] - batch['known_occ']
+                unknown_free = batch['gt_free'] - batch['known_free']
                 
                 metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
                            "mse/free": mse_free, "acc/free": acc_free,
@@ -258,6 +260,14 @@ class AutoEncoderWrapper:
                                                                                  batch['known_free']),
                            "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
                                                                                  batch['known_occ']),
+                           "pred|unknown/p(predicted_occ|unknown_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                    unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_occ)": p_x_given_y(output['predicted_free'],
+                                                                                     unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_free)": p_x_given_y(output['predicted_free'],
+                                                                                      unknown_free),
+                           "pred|unknown/p(predicted_occ|unknown_free)": p_x_given_y(output['predicted_occ'],
+                                                                                      unknown_free),
                            "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
                            "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
                            "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
