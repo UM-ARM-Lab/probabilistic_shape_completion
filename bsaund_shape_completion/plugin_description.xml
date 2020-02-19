@@ -1,0 +1,9 @@
+<library path="lib/libbsaund_shape_completion">
+  <class name="bsaund_shape_completion/ShapeSelection"
+         type="bsaund_shape_completion::ShapeSelectionPanel"
+         base_class_type="rviz::Panel">
+    <description>
+      My cool little panel
+    </description>
+  </class>
+</library>
