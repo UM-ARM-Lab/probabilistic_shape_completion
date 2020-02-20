@@ -21,6 +21,10 @@ from shape_completion_training.model.network import AutoEncoderWrapper
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import obj_tools
 from shape_completion_training import binvox_rw
+
+from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
+from std_msgs.msg import String
+
 import IPython
 
 
@@ -33,6 +37,12 @@ known_free_pub = None
 completion_pub = None
 mismatch_pub = None
 
+options_pub = None
+selected_sub = None
+
+model = None
+
+selection_map = {}
 
 
 def to_msg(voxel_grid):
@@ -41,6 +51,111 @@ def to_msg(voxel_grid):
                                                 dim = voxel_grid.shape[1],
                                                 scale=0.01,
                                                 frame_id = "object")
+
+def publish_elem(elem):
+    gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
+    known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
+    known_free_pub.publish(to_msg(elem['known_free'].numpy()))
+    sys.stdout.write('\033[2K\033[1G')
+    print("Category: {}, id: {}, aug: {}".format(elem['shape_category'].numpy(),
+                                                 elem['id'].numpy(),
+                                                 elem['augmentation'].numpy()), end="")
+    sys.stdout.flush()
+
+
+
+def publish_options(metadata):
+    tso = TextSelectionOptions()
+
+    for i, elem in metadata.enumerate():
+        s = elem['id'].numpy() + elem['augmentation'].numpy()
+        selection_map[s] = i
+        tso.options.append(s)
+
+    options_pub.publish(tso)
+
+
+def publish_selection(metadata, str_msg):
+    ds = metadata.skip(selection_map[str_msg.data]).take(1)
+    ds = data_tools.load_voxelgrids(ds)
+    ds = data_tools.simulate_input(ds, 0, 0, 0)
+
+    # Note: there is only one elem in this ds
+    for elem in ds:
+        publish_elem(elem)
+
+        if model is None:
+            return
+        
+        elem_expanded = {}
+        for k in elem.keys():
+            elem_expanded[k] = np.expand_dims(elem[k].numpy(), axis=0)
+
+        inference = model.model(elem_expanded)['predicted_occ'].numpy()
+        completion_pub.publish(to_msg(inference))
+        mismatch = np.abs(elem['gt_occ'].numpy() - inference)
+        mismatch_pub.publish(to_msg(mismatch))
+
+            
+
+
+def publish_object_transform():
+    # Transform so shapes appear upright in rviz
+    br = tf2_ros.TransformBroadcaster()
+    t = geometry_msgs.msg.TransformStamped()
+    t.header.stamp = rospy.Time.now()
+    t.header.frame_id = "world"
+    t.child_frame_id = "object"
+    q = tf_conversions.transformations.quaternion_from_euler(1.57,0,0)
+    t.transform.rotation.x = q[0]
+    t.transform.rotation.y = q[1]
+    t.transform.rotation.z = q[2]
+    t.transform.rotation.w = q[3]
+
+    rospy.sleep(1)
+    br.sendTransform(t)
+
+def load_network():
+    global model
+    print('Load network? (Y/n)')
+    if raw_input().lower() == 'n':
+        return
+    model = AutoEncoderWrapper()
+    
+
+if __name__=="__main__":
+    rospy.init_node('shape_publisher')
+    rospy.loginfo("Data Publisher")
+
+    records = data_tools.load_shapenet_metadata(shuffle=False)
+    load_network()
+
+    gt_pub = rospy.Publisher('gt_voxel_grid', OccupancyStamped, queue_size=1)
+    known_occ_pub = rospy.Publisher('known_occ_voxel_grid', OccupancyStamped, queue_size=1)
+    known_free_pub = rospy.Publisher('known_free_voxel_grid', OccupancyStamped, queue_size=1)
+    completion_pub = rospy.Publisher('predicted_voxel_grid', OccupancyStamped, queue_size=1)
+    mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
+    options_pub = rospy.Publisher('shapenet_options', TextSelectionOptions, queue_size=1)
+    selected_sub = rospy.Subscriber('/shapenet_selection', String,
+                                    lambda x: publish_selection(records, x))
+
+    publish_object_transform()
+    publish_options(records)
+    rospy.spin()
+
+    
+
+
+
+
+
+
+
+
+
+######  OLD
+
+
 
 
 def view_single_binvox():
@@ -99,15 +214,6 @@ def publish_test_img():
             rospy.sleep(.5)
 
 
-def publish_elem(elem):
-    gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
-    known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
-    known_free_pub.publish(to_msg(elem['known_free'].numpy()))
-    sys.stdout.write('\033[2K\033[1G')
-    print("Category: {}, id: {}, aug: {}".format(elem['shape_category'].numpy(),
-                                                 elem['id'].numpy(),
-                                                 elem['augmentation'].numpy()), end="")
-    sys.stdout.flush()
 
 
 def publish_shapenet_tfrecords():
@@ -215,41 +321,3 @@ def layer_by_layer():
             
         # IPython.embed()
         rospy.sleep(2.0)
-
-    
-
-if __name__=="__main__":
-    rospy.init_node('shape_publisher')
-    rospy.loginfo("Data Publisher")
-
-    gt_pub = rospy.Publisher('gt_voxel_grid', OccupancyStamped, queue_size=1)
-    known_occ_pub = rospy.Publisher('known_occ_voxel_grid', OccupancyStamped, queue_size=1)
-    known_free_pub = rospy.Publisher('known_free_voxel_grid', OccupancyStamped, queue_size=1)
-    completion_pub = rospy.Publisher('predicted_voxel_grid', OccupancyStamped, queue_size=1)
-    mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
-
-    # Transform so shapes appear upright in rviz
-    br = tf2_ros.TransformBroadcaster()
-    t = geometry_msgs.msg.TransformStamped()
-    t.header.stamp = rospy.Time.now()
-    t.header.frame_id = "world"
-    t.child_frame_id = "object"
-    q = tf_conversions.transformations.quaternion_from_euler(1.57,0,0)
-    t.transform.rotation.x = q[0]
-    t.transform.rotation.y = q[1]
-    t.transform.rotation.z = q[2]
-    t.transform.rotation.w = q[3]
-
-
-    rospy.sleep(1)
-    br.sendTransform(t)
-
-
-    # view_single_binvox()
-    # publish_test_img()
-    # publish_shapenet_tfrecords()
-    publish_completion()
-    # layer_by_layer()
-    # data_tools.write_shapenet_to_tfrecord()
-    # data_tools.load_shapenet()
-    

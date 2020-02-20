@@ -190,6 +190,11 @@ def group_shapenet_files(shapenet_files, group_size):
 
 
 def load_shapenet(shapes = "all", shuffle=True):
+    ds = load_shapenet_metadata(shapes, shuffle)
+    return load_voxelgrids(ds)
+
+
+def load_shapenet_metadata(shapes = "all", shuffle=True):
     records = [f for f in os.listdir(shapenet_record_path)
                if f.endswith(".tfrecord")]
     if shapes != "all":
@@ -198,9 +203,9 @@ def load_shapenet(shapes = "all", shuffle=True):
     ds = None
     for fp in [join(shapenet_record_path, r) for r in records]:
         if ds:
-            ds = ds.concatenate(read_from_tfrecord(fp, shuffle))
+            ds = ds.concatenate(read_metadata_from_tfrecord(fp, shuffle))
         else:
-            ds = read_from_tfrecord(fp, shuffle)
+            ds = read_metadata_from_tfrecord(fp, shuffle)
     return ds
 
 
@@ -231,7 +236,7 @@ def write_to_tfrecord(dataset, record_file):
 Reads from a tfrecord file of paths and augmentations
 Loads the binvox files, simulates the input tensors, and returns a dataset
 """
-def read_from_tfrecord(record_file, shuffle):
+def read_metadata_from_tfrecord(record_file, shuffle):
     print("Reading from filepath record")
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
@@ -239,30 +244,12 @@ def read_from_tfrecord(record_file, shuffle):
     tfrecord_description = {k: tf.io.FixedLenFeature([], tf.string) for k in keys}
 
 
-    def _get_shape(_raw_dataset):
-        e = next(_raw_dataset.__iter__())
-        example = tf.io.parse_single_example(e, tfrecord_description)
-        gt = tf.numpy_function(load_gt_voxels, [example['fp'], example['augmentation']], tf.float32)
-        return gt.shape
-    shape = _get_shape(raw_dataset)
-
 
     def _parse_record_function(example_proto):
         # Parse the input tf.Example proto using the dictionary above.
         example = tf.io.parse_single_example(example_proto, tfrecord_description)
         return example
 
-    def _load_voxelgrids(example):
-        aug = example['augmentation']
-        fp = example['fp']
-        gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
-        gt.set_shape(shape)
-        example['gt_occ'] = gt
-        example['gt_free'] = 1.0-gt
-        # gt_occ.set_shape(shape)
-        # gt_free.set_shape(shape)
-
-        return example
 
     cache_name = "ds.cache"
     if shuffle:
@@ -270,10 +257,32 @@ def read_from_tfrecord(record_file, shuffle):
         cache_name = "shuffled_ds.cache"
     cache_fp = join(shapenet_record_path, cache_name)
         
-    parsed_dataset = raw_dataset.map(_parse_record_function).map(_load_voxelgrids)
+    parsed_dataset = raw_dataset.map(_parse_record_function)
     # parsed_dataset = parsed_dataset.cache(cache_fp)
     return parsed_dataset
 
+def load_voxelgrids(metadata_ds):
+    def _get_shape(_raw_dataset):
+        e = next(_raw_dataset.__iter__())
+        gt = tf.numpy_function(load_gt_voxels, [e['fp'], e['augmentation']], tf.float32)
+        return gt.shape
+    shape = _get_shape(metadata_ds)
+
+    
+    def _load_voxelgrids(elem):
+        aug = elem['augmentation']
+        fp = elem['fp']
+        gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
+        gt.set_shape(shape)
+        elem['gt_occ'] = gt
+        elem['gt_free'] = 1.0-gt
+        # gt_occ.set_shape(shape)
+        # gt_free.set_shape(shape)
+        return elem
+    return metadata_ds.map(_load_voxelgrids)
+
+
+    
 
 def simulate_input(dataset, x, y, z):
     def _simulate_input(example):
