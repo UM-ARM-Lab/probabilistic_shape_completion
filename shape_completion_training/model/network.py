@@ -370,6 +370,10 @@ class AutoEncoderWrapper:
 
     def train_and_test(self, dataset):
         train_ds = dataset
+
+        if self.params['simulate_partial_completion']:
+            train_ds = data_tools.simulate_partial_completion(train_ds)
+        
         self.train(train_ds)
         self.count_params()
 

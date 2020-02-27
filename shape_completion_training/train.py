@@ -22,6 +22,7 @@ params = {
     'final_activation': 'sigmoid',
     'unet_dropout_rate': 0.5,
     'use_final_unet_layer': False,
+    'simulate_partial_completion': True,
 }
 
 

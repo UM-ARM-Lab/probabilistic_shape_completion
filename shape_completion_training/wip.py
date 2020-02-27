@@ -17,7 +17,12 @@ shape_map = {"airplane":"02691156",
 
 
 if __name__ == "__main__":
-    print("Deprecated for now. Use `train.py`")
+    print("Deprecated. Use `train.py`")
+
+
+    
+
+    
 
     
     data_shapenet = data_tools.load_shapenet([shape_map["mug"]])
@@ -27,6 +32,12 @@ if __name__ == "__main__":
     # data = data_ycb
     data = data_shapenet
     data = data_tools.simulate_input(data, 10, 10, 10)
+
+
+    elem = next(data.__iter__())
+    gt = elem['gt_occ']
+    
+    data_tools.simulate_first_random_input(gt)
 
 
     

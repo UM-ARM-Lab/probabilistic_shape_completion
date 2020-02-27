@@ -61,9 +61,6 @@ def shift_elem(elem, x, y, z):
         elem[k] = shift_tensor(elem[k], x, y, z, pad_values[k])
     return elem
 
-# @tf.function
-# def shift_tensor(t, amt, axis, pad_value):
-    
 
 @tf.function
 def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
@@ -91,10 +88,25 @@ def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
 
     return t
 
+# @tf.function
+def simulate_first_n_input(gt, n):
+    gt_occ = gt
+    gt_free = 1.0 - gt
 
 
-                        
+    mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
+    mask = tf.concat([tf.ones(mask_n), tf.zeros(tf.size(gt) - mask_n)], axis=0)
+
+    shape = gt.shape
+
+    gt_occ_masked = tf.reshape(tf.reshape(gt_occ, [-1]) * mask, shape)
+    gt_free_masked = tf.reshape(tf.reshape(gt_free, [-1]) * mask, shape)
+    return gt_occ_masked, gt_free_masked
     
+
+# @tf.function
+def simulate_first_random_input(gt):
+    return simulate_first_n_input(gt, tf.size(gt))
 
 
 """
@@ -315,9 +327,14 @@ def simulate_input(dataset, x, y, z):
 
 
 
+def simulate_partial_completion(dataset):
+    def _add_partial_gt(elem):
+        partial_occ, partial_free = simulate_first_random_input(elem['gt_occ'])
+        elem['known_occ'] = tf.clip_by_value(elem['known_occ'] + partial_occ, 0.0, 1.0)
+        elem['known_free'] = tf.clip_by_value(elem['known_free'] + partial_free, 0.0, 1.0)
+        return elem
 
-
-
+    return dataset.map(_add_partial_gt)
 
 
 
