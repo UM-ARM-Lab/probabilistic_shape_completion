@@ -27,6 +27,8 @@ from bsaund_shape_completion import sampling_tools
 from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
 from std_msgs.msg import String
 
+import threading
+
 import IPython
 
 
@@ -49,6 +51,10 @@ selected_sub = None
 model = None
 
 selection_map = {}
+stop_current_sampler = None
+sampling_thread = None
+
+
 
 
 def to_msg(voxel_grid):
@@ -92,6 +98,8 @@ def publish_options(metadata):
 
 
 def publish_selection(metadata, str_msg):
+
+    
     ds = metadata.skip(selection_map[str_msg.data]).take(1)
     ds = data_tools.load_voxelgrids(ds)
     ds = data_tools.simulate_input(ds, 0, 0, 0)
@@ -116,32 +124,62 @@ def publish_selection(metadata, str_msg):
     mismatch_pub.publish(to_msg(mismatch))
 
     if SAMPLING:
-        elem = elem_expanded
-        # sampler = sampling_tools.UnknownSpaceSampler(elem)
-        sampler = sampling_tools.MostConfidentSampler(elem)
-        inference = model.model(elem)
+        global stop_current_sampler
+        global sampling_thread
+        
+        print()
+        print("Stopping old worker")
+        stop_current_sampler = True
+        if sampling_thread is not None:
+            sampling_thread.join()
+        
+        # sampler_worker(elem_expanded)
+
+        sampling_thread = threading.Thread(target=sampler_worker, args=(elem_expanded,))
+        sampling_thread.start()
+        
+        # global sampling_process
+        # if sampling_process is not None:
+        #     sampling_process.terminate()
+        #     print("Terminated Existing Proceed!")
+        #     raw_input()
+
+        # sampling_process = Process(target=sampler_worker, args=(elem_expanded,))
+        # sampling_process.start()
+                                
+
+
+def sampler_worker(elem):
+    global stop_current_sampler
+    stop_current_sampler = False
+
+    print()
+    sampler = sampling_tools.UnknownSpaceSampler(elem)
+    # sampler = sampling_tools.MostConfidentSampler(elem)
+    inference = model.model(elem)
         
 
-        finished = False
-        ct = 0
+    finished = False
+    ct = 0
 
-        while not finished:
+    while not finished and not stop_current_sampler:
+        # a = raw_input()
 
-            try:
-                elem, inference = sampler.sample(model, elem, inference)
-            except StopIteration:
-                finished = True
+        try:
+            elem, inference = sampler.sample(model, elem, inference)
+        except StopIteration:
+            finished = True
 
                 
-            ct += 1
-            if ct >= 100:
-                ct = 0
+        ct += 1
+        if ct >= 3000 or finished:
+            ct = 0
             
-                publish_np_elem(elem)
-                completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
-                completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
-        
-        # IPython.embed()
+            publish_np_elem(elem)
+            completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
+            completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
+    print("Sampling complete")
+    # IPython.embed()
 
 
 
@@ -191,6 +229,7 @@ if __name__=="__main__":
 
     publish_object_transform()
     publish_options(records)
+
     rospy.spin()
 
     

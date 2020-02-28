@@ -10,7 +10,7 @@ class UnknownSpaceSampler:
     def __init__(self, elem):
         shape = elem['known_free'].shape[1:4]        
         self.indices = [(i,j,k) for i in range(shape[0]) for j in range(shape[1]) for k in range(shape[2])]
-        # random.shuffle(self.indices)
+        random.shuffle(self.indices)
         self.indices_iter = self.indices.__iter__()
         self.pred_free = None
         self.pred_occ = None
@@ -32,10 +32,10 @@ class UnknownSpaceSampler:
         if elem['known_occ'][i] == 1.0:
             return elem, inference
 
-        if self.pred_free[i] > 0.99:
+        if self.pred_free[i] > 1.0:
             elem['known_free'][i]=1.0
             return elem, inference
-        if self.pred_occ[i] > 0.99:
+        if self.pred_occ[i] > 1.0:
             elem['known_occ'][i]=1.0
             return elem, inference
 
