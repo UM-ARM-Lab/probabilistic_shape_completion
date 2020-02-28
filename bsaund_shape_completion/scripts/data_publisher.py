@@ -96,6 +96,7 @@ def publish_selection(metadata, str_msg):
     ds = data_tools.load_voxelgrids(ds)
     ds = data_tools.simulate_input(ds, 0, 0, 0)
     # ds = data_tools.simulate_partial_completion(ds)
+    # ds = data_tools.simulate_random_partial_completion(ds)
 
     # Note: there is only one elem in this ds
     elem = next(ds.__iter__())
@@ -116,7 +117,8 @@ def publish_selection(metadata, str_msg):
 
     if SAMPLING:
         elem = elem_expanded
-        sampler = sampling_tools.UnknownSpaceSampler(elem)
+        # sampler = sampling_tools.UnknownSpaceSampler(elem)
+        sampler = sampling_tools.MostConfidentSampler(elem)
         inference = model.model(elem)
         
 
@@ -126,20 +128,20 @@ def publish_selection(metadata, str_msg):
         while not finished:
 
             try:
-                elem, inference = sampler.sample_conditional_unknown_space(model, elem, inference)
+                elem, inference = sampler.sample(model, elem, inference)
             except StopIteration:
                 finished = True
 
                 
             ct += 1
-            if ct > 100:
+            if ct >= 100:
                 ct = 0
             
                 publish_np_elem(elem)
                 completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
                 completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
         
-        IPython.embed()
+        # IPython.embed()
 
 
 

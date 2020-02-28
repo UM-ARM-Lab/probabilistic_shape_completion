@@ -37,7 +37,8 @@ if __name__ == "__main__":
     elem = next(data.__iter__())
     gt = elem['gt_occ']
     
-    data_tools.simulate_first_random_input(gt)
+    # data_tools.simulate_first_random_input(gt)
+    data_tools.simulate_random_partial_completion_input(gt)
 
 
     

@@ -373,6 +373,8 @@ class AutoEncoderWrapper:
 
         if self.params['simulate_partial_completion']:
             train_ds = data_tools.simulate_partial_completion(train_ds)
+        if self.params['simulate_random_partial_completion']:
+            train_ds = data_tools.simulate_random_partial_completion(train_ds)
         
         self.train(train_ds)
         self.count_params()
