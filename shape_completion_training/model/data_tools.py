@@ -112,7 +112,10 @@ def simulate_random_partial_completion_input(gt):
     gt_occ = gt
     gt_free = 1.0 - gt
 
-    mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
+    # mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
+    mask_n = tf.random.uniform(shape=[1])
+    mask_n = tf.pow(mask_n, 4.0)
+    mask_n = tf.cast(mask_n * tf.cast(tf.size(gt), tf.float32), tf.int32)
     mask = tf.concat([tf.ones(mask_n), tf.zeros(tf.size(gt) - mask_n)], axis=0)
 
     mask = tf.random.shuffle(mask)
