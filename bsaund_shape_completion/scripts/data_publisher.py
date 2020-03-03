@@ -98,11 +98,12 @@ def publish_options(metadata):
 
 
 def publish_selection(metadata, str_msg):
-
+    translation = 0
     
     ds = metadata.skip(selection_map[str_msg.data]).take(1)
     ds = data_tools.load_voxelgrids(ds)
-    ds = data_tools.simulate_input(ds, 0, 0, 0)
+    # ds = data_tools.simulate_input(ds, 0, 0, 0)
+    ds = data_tools.simulate_input(ds, translation, translation, translation)
     # ds = data_tools.simulate_partial_completion(ds)
     # ds = data_tools.simulate_random_partial_completion(ds)
 
@@ -110,8 +111,10 @@ def publish_selection(metadata, str_msg):
     elem = next(ds.__iter__())
     publish_elem(elem)
 
+    
     if model is None:
         return
+    
         
     elem_expanded = {}
     for k in elem.keys():
@@ -160,7 +163,8 @@ def sampler_worker(elem):
         
 
     finished = False
-    ct = 0
+    # ct = 0
+    prev_ct = 0
 
     while not finished and not stop_current_sampler:
         # a = raw_input()
@@ -171,8 +175,9 @@ def sampler_worker(elem):
             finished = True
 
                 
-        ct += 1
-        if ct >= 3000 or finished:
+        # ct += 1
+        if sampler.ct - prev_ct >= 100 or finished:
+            prev_ct = sampler.ct
             ct = 0
             
             publish_np_elem(elem)
