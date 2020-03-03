@@ -17,7 +17,7 @@ import os
 
 sc_path = os.path.join(os.path.dirname(__file__), "../../")
 sys.path.append(sc_path)
-from shape_completion_training.model.network import AutoEncoderWrapper
+from shape_completion_training.model.network import Network
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import obj_tools
 from shape_completion_training import binvox_rw
@@ -212,7 +212,7 @@ def load_network():
     print('Load network? (Y/n)')
     if raw_input().lower() == 'n':
         return
-    model = AutoEncoderWrapper()
+    model = Network()
     
 
 if __name__=="__main__":
@@ -334,7 +334,7 @@ if __name__=="__main__":
 #     data = data_tools.load_shapenet([data_tools.shape_map["mug"]], shuffle=False)
 #     data = data_tools.simulate_input(data, 0, 0, 0)
     
-#     model = AutoEncoderWrapper()
+#     model = Network()
 #     # model.restore()
 #     # model.evaluate(data)
 #     print("")
@@ -366,7 +366,7 @@ if __name__=="__main__":
 #     print("Loading...")
 #     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
     
-#     model = AutoEncoderWrapper()
+#     model = Network()
 #     model.restore()
 
 #     i = 0
