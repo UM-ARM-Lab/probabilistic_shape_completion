@@ -273,19 +273,19 @@ def p_x_given_y(x, y):
 
 
 class MaskedConv3D(tf.keras.layers.Layer):
-    def __init__(self, conv_size, in_channels, out_channels):
-        super(MaskedConv3D, self).__init__()
+    def __init__(self, conv_size, in_channels, out_channels, name='masked_conv_3d'):
+        super(MaskedConv3D, self).__init__(name=name)
         self.conv_size = conv_size
         self.in_channels = in_channels
         self.out_channels = out_channels
 
     def build(self, input_shape):
         conv_vars = int(self.conv_size)**3
-        self.a = self.add_weight('trainable_convoluation',
+        self.a = self.add_weight(name=self.name + 'trainable',
                                  shape=[conv_vars/2 * self.in_channels * self.out_channels],
                                  initializer=tf.initializers.GlorotUniform(),
                                  trainable=True)
-        self.b = self.add_weight('masked_convoluation',
+        self.b = self.add_weight(name=self.name + 'masked',
                                  shape=[(conv_vars/2 + 1) * self.in_channels * self.out_channels],
                                  initializer='zeros',
                                  trainable=False)
@@ -321,14 +321,22 @@ class VoxelCNN(tf.keras.Model):
         conv_size = 3
 
         self.conv_layers = [
-            MaskedConv3D(conv_size, 1, 16),
-            MaskedConv3D(conv_size, 16, 32),
-            MaskedConv3D(conv_size, 32, 64),
-            # MaskedConv3D(conv_size, 64, 128),
-            # MaskedConv3D(conv_size, 128, 64),
-            MaskedConv3D(conv_size, 64, 32),
-            MaskedConv3D(conv_size, 32, 16),
-            MaskedConv3D(conv_size, 16, 1)
+            MaskedConv3D(conv_size, 1, 16,      name='masked_conv_1'),
+            tfl.Activation(tf.nn.elu,           name='conv_1_activation'),
+            MaskedConv3D(conv_size, 16, 32,     name='masked_conv_2'),
+            tfl.Activation(tf.nn.elu,           name='conv_2_activation'),
+            MaskedConv3D(conv_size, 32, 64,     name='masked_conv_3'),
+            tfl.Activation(tf.nn.elu,           name='conv_3_activation'),
+            # MaskedConv3D(conv_size, 64, 128,  name='masked_conv_4'),
+            tfl.Activation(tf.nn.elu,           name='conv_4_activation'),
+            # MaskedConv3D(conv_size, 128, 64,  name='masked_conv_5'),
+            tfl.Activation(tf.nn.elu,           name='conv_5_activation'),
+            MaskedConv3D(conv_size, 64, 32,     name='masked_conv_6'),
+            tfl.Activation(tf.nn.elu,           name='conv_6_activation'),
+            MaskedConv3D(conv_size, 32, 16,     name='masked_conv_7'),
+            tfl.Activation(tf.nn.elu,           name='conv_7_activation'),
+            MaskedConv3D(conv_size, 16, 1,      name='masked_conv_8'),
+            tfl.Activation(tf.nn.elu,           name='conv_8_activation'),
             ]
         # for l in conv_layers:
         #     self._add_layer(l)
@@ -340,7 +348,7 @@ class VoxelCNN(tf.keras.Model):
         x = gt
         for l in self.conv_layers:
             x = l(x)
-            x = tf.nn.elu(x)
+            # x = tf.nn.elu(x)
         return {'predicted_occ':x, 'predicted_free':1.0-x}
 
 
@@ -437,9 +445,9 @@ class Network:
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
-        if params['network'] == 'VoxelCNN':
+        if self.params['network'] == 'VoxelCNN':
             self.model = VoxelCNN(self.params, batch_size=self.batch_size)
-        elif params['network'] == 'AutoEncoder':
+        elif self.params['network'] == 'AutoEncoder':
             self.model = AutoEncoder(self.params, batch_size=self.batch_size)
         else:
             raise Exception('Unknown Model Type')
