@@ -281,10 +281,12 @@ class MaskedConv3D(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         conv_vars = int(self.conv_size)**3
-        self.a = self.add_weight(shape=[conv_vars/2 * self.in_channels * self.out_channels],
+        self.a = self.add_weight('trainable_convoluation',
+                                 shape=[conv_vars/2 * self.in_channels * self.out_channels],
                                  initializer=tf.initializers.GlorotUniform(),
                                  trainable=True)
-        self.b = self.add_weight(shape=[(conv_vars/2 + 1) * self.in_channels * self.out_channels],
+        self.b = self.add_weight('masked_convoluation',
+                                 shape=[(conv_vars/2 + 1) * self.in_channels * self.out_channels],
                                  initializer='zeros',
                                  trainable=False)
 

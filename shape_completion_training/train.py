@@ -25,6 +25,7 @@ params = {
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': True,
     'network': 'VoxelCNN',
+    # 'network': 'AutoEncoder',
 }
 
 
