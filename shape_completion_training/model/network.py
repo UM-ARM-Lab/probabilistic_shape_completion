@@ -282,11 +282,11 @@ class MaskedConv3D(tf.keras.layers.Layer):
     def build(self, input_shape):
         conv_vars = int(self.conv_size)**3
         self.a = self.add_weight(name=self.name + 'trainable',
-                                 shape=[conv_vars/2 * self.in_channels * self.out_channels],
+                                 shape=[(conv_vars/2) * self.in_channels * self.out_channels],
                                  initializer=tf.initializers.GlorotUniform(),
                                  trainable=True)
         self.b = self.add_weight(name=self.name + 'masked',
-                                 shape=[(conv_vars/2 + 1) * self.in_channels * self.out_channels],
+                                 shape=[(conv_vars/2+1) * self.in_channels * self.out_channels],
                                  initializer='zeros',
                                  trainable=False)
 
@@ -328,9 +328,9 @@ class VoxelCNN(tf.keras.Model):
             MaskedConv3D(conv_size, 32, 64,     name='masked_conv_3'),
             tfl.Activation(tf.nn.elu,           name='conv_3_activation'),
             # MaskedConv3D(conv_size, 64, 128,  name='masked_conv_4'),
-            tfl.Activation(tf.nn.elu,           name='conv_4_activation'),
+            # tfl.Activation(tf.nn.elu,           name='conv_4_activation'),
             # MaskedConv3D(conv_size, 128, 64,  name='masked_conv_5'),
-            tfl.Activation(tf.nn.elu,           name='conv_5_activation'),
+            # tfl.Activation(tf.nn.elu,           name='conv_5_activation'),
             MaskedConv3D(conv_size, 64, 32,     name='masked_conv_6'),
             tfl.Activation(tf.nn.elu,           name='conv_6_activation'),
             MaskedConv3D(conv_size, 32, 16,     name='masked_conv_7'),
