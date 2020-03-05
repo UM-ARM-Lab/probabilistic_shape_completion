@@ -273,20 +273,30 @@ def p_x_given_y(x, y):
 
 
 class MaskedConv3D(tf.keras.layers.Layer):
-    def __init__(self, conv_size, in_channels, out_channels, name='masked_conv_3d'):
+    def __init__(self, conv_size, in_channels, out_channels, name='masked_conv_3d', is_first_layer=False):
         super(MaskedConv3D, self).__init__(name=name)
         self.conv_size = conv_size
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.is_first_layer = is_first_layer
 
     def build(self, input_shape):
         conv_vars = int(self.conv_size)**3
+
+        if self.is_first_layer:
+            n_train = (conv_vars/2) * self.in_channels * self.out_channels
+            n_zeros = (conv_vars/2+1) * self.in_channels * self.out_channels
+        else:
+            n_zeros = (conv_vars/2) * self.in_channels * self.out_channels
+            n_train = (conv_vars/2+1) * self.in_channels * self.out_channels
+
+        
         self.a = self.add_weight(name=self.name + 'trainable',
-                                 shape=[(conv_vars/2) * self.in_channels * self.out_channels],
+                                 shape=[n_train],
                                  initializer=tf.initializers.GlorotUniform(),
                                  trainable=True)
         self.b = self.add_weight(name=self.name + 'masked',
-                                 shape=[(conv_vars/2+1) * self.in_channels * self.out_channels],
+                                 shape=[n_zeros],
                                  initializer='zeros',
                                  trainable=False)
 
@@ -295,10 +305,10 @@ class MaskedConv3D(tf.keras.layers.Layer):
 
     def call(self, inputs):
         cs = self.conv_size
-        self.f = tf.reshape(tf.concat([self.a,self.b], axis=0),
-                            [cs, cs, cs, self.in_channels, self.out_channels])
+        f = tf.reshape(tf.concat([self.a,self.b], axis=0),
+                       [cs, cs, cs, self.in_channels, self.out_channels])
 
-        return tf.nn.conv3d(inputs, self.f, strides=[1,1,1,1,1], padding='SAME')
+        return tf.nn.conv3d(inputs, f, strides=[1,1,1,1,1], padding='SAME')
 
 class VoxelCNN(tf.keras.Model):
     def __init__(self, params, batch_size=16):
@@ -321,7 +331,7 @@ class VoxelCNN(tf.keras.Model):
         conv_size = 3
 
         self.conv_layers = [
-            MaskedConv3D(conv_size, 1, 16,      name='masked_conv_1'),
+            MaskedConv3D(conv_size, 1, 16,      name='masked_conv_1', is_first_layer=True),
             tfl.Activation(tf.nn.elu,           name='conv_1_activation'),
             MaskedConv3D(conv_size, 16, 32,     name='masked_conv_2'),
             tfl.Activation(tf.nn.elu,           name='conv_2_activation'),

@@ -136,20 +136,9 @@ def publish_selection(metadata, str_msg):
         if sampling_thread is not None:
             sampling_thread.join()
         
-        # sampler_worker(elem_expanded)
-
         sampling_thread = threading.Thread(target=sampler_worker, args=(elem_expanded,))
         sampling_thread.start()
         
-        # global sampling_process
-        # if sampling_process is not None:
-        #     sampling_process.terminate()
-        #     print("Terminated Existing Proceed!")
-        #     raw_input()
-
-        # sampling_process = Process(target=sampler_worker, args=(elem_expanded,))
-        # sampling_process.start()
-                                
 
 
 def sampler_worker(elem):
