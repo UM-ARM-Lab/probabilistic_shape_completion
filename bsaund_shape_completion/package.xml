@@ -50,15 +50,10 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
 
-  <depend>libqt5-core</depend>
-  <depend>libqt5-gui</depend>
-  <depend>libqt5-widgets</depend>
-  <depend>rviz</depend>
-
-
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <rviz plugin="${prefix}/plugin_description.xml"/>
+    <!-- Other tools can request additional information be placed here -->
+
   </export>
 </package>
