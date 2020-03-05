@@ -76,7 +76,7 @@ namespace mps_shape_completion_visualization
                         val = 1.0;
                     }
 
-                    p.setColor(r_, g_, b_, val*a_);
+                    p.setColor(r_, g_, b_, std::min(val*a_, (float)1.0));
                     
                     points.push_back(p);
                 }
