@@ -34,10 +34,17 @@ if __name__ == "__main__":
 
     # data = data_ycb
     data = data_shapenet
+
+    if params['network'] == 'VoxelCNN':
+        sim_input_fn=data_tools.simulate_omniscient_input
+    elif params['network'] == 'AutoEncoder':
+        sim_input_fn=data_tools.simulate_2_5D_input
+    
     data = data_tools.simulate_input(data,
                                      params['translation_pixel_range_x'],
                                      params['translation_pixel_range_y'],
-                                     params['translation_pixel_range_z'])
+                                     params['translation_pixel_range_z'],
+                                     sim_input_fn=sim_input_fn)
 
     
     sn = Network(params)

@@ -37,6 +37,9 @@ def shapenet_labels(human_names):
 """
 Given a single ground truth mask occupied list, return ground truth occupied and free, as well as simulate the known occupied and free
 """
+def simulate_omniscient_input(gt):
+    return gt, 1.0 - gt
+
 def simulate_2_5D_input(gt):
     gt_occ = gt
     gt_free = 1.0 - gt
@@ -94,8 +97,8 @@ def simulate_first_n_input(gt, n):
     gt_free = 1.0 - gt
 
 
-    mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
-    mask = tf.concat([tf.ones(mask_n), tf.zeros(tf.size(gt) - mask_n)], axis=0)
+
+    mask = tf.concat([tf.ones(n), tf.zeros(tf.size(gt) - n)], axis=0)
 
     shape = gt.shape
 
@@ -106,7 +109,8 @@ def simulate_first_n_input(gt, n):
 
 # @tf.function
 def simulate_first_random_input(gt):
-    return simulate_first_n_input(gt, tf.size(gt))
+    n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
+    return simulate_first_n_input(gt, n)
 
 def simulate_random_partial_completion_input(gt):
     gt_occ = gt
@@ -315,9 +319,9 @@ def load_voxelgrids(metadata_ds):
 
     
 
-def simulate_input(dataset, x, y, z):
+def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
     def _simulate_input(example):
-        known_occ, known_free = tf.numpy_function(simulate_2_5D_input, [example['gt_occ']],
+        known_occ, known_free = tf.numpy_function(sim_input_fn, [example['gt_occ']],
                                                   [tf.float32, tf.float32])
         known_occ.set_shape(example['gt_occ'].shape)
         known_free.set_shape(example['gt_occ'].shape)
@@ -341,8 +345,6 @@ def simulate_input(dataset, x, y, z):
 
     return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE)\
                   .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-
 
 
 

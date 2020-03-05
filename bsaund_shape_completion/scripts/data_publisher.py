@@ -103,7 +103,10 @@ def publish_selection(metadata, str_msg):
     ds = metadata.skip(selection_map[str_msg.data]).take(1)
     ds = data_tools.load_voxelgrids(ds)
     # ds = data_tools.simulate_input(ds, 0, 0, 0)
-    ds = data_tools.simulate_input(ds, translation, translation, translation)
+    sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3/2)
+    
+    ds = data_tools.simulate_input(ds, translation, translation, translation,
+                                   sim_input_fn=sim_input_fn)
     # ds = data_tools.simulate_partial_completion(ds)
     # ds = data_tools.simulate_random_partial_completion(ds)
 

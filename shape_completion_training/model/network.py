@@ -320,13 +320,6 @@ class VoxelCNN(tf.keras.Model):
         self.opt = tf.keras.optimizers.Adam(0.001)
         self.setup_model()
 
-    # def get_masked_conv_tensor(self, conv_size, in_channels, out_channels):
-    #     initializer = tf.initializers.GlorotUniform()
-    #     conv_vars = int(conv_size)**3
-    #     a = tf.Variable(initializer([conv_vars/2 * in_channels * out_channels]), trainable=True)
-    #     b = tf.Variable(tf.zeros([(conv_vars/2 + 1) * in_channels * out_channels]), trainable=False)
-    #     return tf.reshape(tf.concat([a,b], axis=0), [conv_size, conv_size, conv_size, in_channels, out_channels])
-
     def setup_model(self):
         conv_size = 3
 
@@ -353,7 +346,7 @@ class VoxelCNN(tf.keras.Model):
 
 
     def call(self, inputs):
-        gt = inputs['gt_occ']
+        gt = inputs['known_occ']
 
         x = gt
         for l in self.conv_layers:
@@ -438,14 +431,15 @@ class VoxelCNN(tf.keras.Model):
 
     
 class Network:
-    def __init__(self, params=None):
+    def __init__(self, params=None, trial_name=None):
         self.batch_size = 16
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
         file_fp = os.path.dirname(__file__)
         fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
-                                                expect_reuse = (params is None))
+                                                expect_reuse = (params is None),
+                                                nick=trial_name)
         self.params = filepath_tools.handle_params(file_fp, fp, params)
 
         self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
