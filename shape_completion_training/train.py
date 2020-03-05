@@ -8,7 +8,7 @@ sc_path = join(dirname(abspath(__file__)), "..")
 sys.path.append(sc_path)
 
 from model import data_tools
-from model.network import AutoEncoderWrapper
+from model.network import Network
 import IPython
 
 
@@ -22,6 +22,10 @@ params = {
     'final_activation': 'sigmoid',
     'unet_dropout_rate': 0.5,
     'use_final_unet_layer': False,
+    'simulate_partial_completion': False,
+    'simulate_random_partial_completion': True,
+    'network': 'VoxelCNN',
+    # 'network': 'AutoEncoder',
 }
 
 
@@ -36,7 +40,7 @@ if __name__ == "__main__":
                                      params['translation_pixel_range_z'])
 
     
-    sn = AutoEncoderWrapper(params)
+    sn = Network(params)
     # IPython.embed()
 
     sn.train_and_test(data)

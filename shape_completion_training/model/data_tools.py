@@ -61,9 +61,6 @@ def shift_elem(elem, x, y, z):
         elem[k] = shift_tensor(elem[k], x, y, z, pad_values[k])
     return elem
 
-# @tf.function
-# def shift_tensor(t, amt, axis, pad_value):
-    
 
 @tf.function
 def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
@@ -91,10 +88,44 @@ def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
 
     return t
 
+# @tf.function
+def simulate_first_n_input(gt, n):
+    gt_occ = gt
+    gt_free = 1.0 - gt
 
 
-                        
+    mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
+    mask = tf.concat([tf.ones(mask_n), tf.zeros(tf.size(gt) - mask_n)], axis=0)
+
+    shape = gt.shape
+
+    gt_occ_masked = tf.reshape(tf.reshape(gt_occ, [-1]) * mask, shape)
+    gt_free_masked = tf.reshape(tf.reshape(gt_free, [-1]) * mask, shape)
+    return gt_occ_masked, gt_free_masked
     
+
+# @tf.function
+def simulate_first_random_input(gt):
+    return simulate_first_n_input(gt, tf.size(gt))
+
+def simulate_random_partial_completion_input(gt):
+    gt_occ = gt
+    gt_free = 1.0 - gt
+
+    # mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
+    mask_n = tf.random.uniform(shape=[1])
+    mask_n = tf.pow(mask_n, 8.0)
+    mask_n = tf.cast(mask_n * tf.cast(tf.size(gt), tf.float32), tf.int32)
+    mask = tf.concat([tf.ones(mask_n), tf.zeros(tf.size(gt) - mask_n)], axis=0)
+
+    mask = tf.random.shuffle(mask)
+
+    shape = gt.shape
+
+    gt_occ_masked = tf.reshape(tf.reshape(gt_occ, [-1]) * mask, shape)
+    gt_free_masked = tf.reshape(tf.reshape(gt_free, [-1]) * mask, shape)
+    return gt_occ_masked, gt_free_masked
+
 
 
 """
@@ -190,6 +221,11 @@ def group_shapenet_files(shapenet_files, group_size):
 
 
 def load_shapenet(shapes = "all", shuffle=True):
+    ds = load_shapenet_metadata(shapes, shuffle)
+    return load_voxelgrids(ds)
+
+
+def load_shapenet_metadata(shapes = "all", shuffle=True):
     records = [f for f in os.listdir(shapenet_record_path)
                if f.endswith(".tfrecord")]
     if shapes != "all":
@@ -198,9 +234,9 @@ def load_shapenet(shapes = "all", shuffle=True):
     ds = None
     for fp in [join(shapenet_record_path, r) for r in records]:
         if ds:
-            ds = ds.concatenate(read_from_tfrecord(fp, shuffle))
+            ds = ds.concatenate(read_metadata_from_tfrecord(fp, shuffle))
         else:
-            ds = read_from_tfrecord(fp, shuffle)
+            ds = read_metadata_from_tfrecord(fp, shuffle)
     return ds
 
 
@@ -231,7 +267,7 @@ def write_to_tfrecord(dataset, record_file):
 Reads from a tfrecord file of paths and augmentations
 Loads the binvox files, simulates the input tensors, and returns a dataset
 """
-def read_from_tfrecord(record_file, shuffle):
+def read_metadata_from_tfrecord(record_file, shuffle):
     print("Reading from filepath record")
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
@@ -239,30 +275,12 @@ def read_from_tfrecord(record_file, shuffle):
     tfrecord_description = {k: tf.io.FixedLenFeature([], tf.string) for k in keys}
 
 
-    def _get_shape(_raw_dataset):
-        e = next(_raw_dataset.__iter__())
-        example = tf.io.parse_single_example(e, tfrecord_description)
-        gt = tf.numpy_function(load_gt_voxels, [example['fp'], example['augmentation']], tf.float32)
-        return gt.shape
-    shape = _get_shape(raw_dataset)
-
 
     def _parse_record_function(example_proto):
         # Parse the input tf.Example proto using the dictionary above.
         example = tf.io.parse_single_example(example_proto, tfrecord_description)
         return example
 
-    def _load_voxelgrids(example):
-        aug = example['augmentation']
-        fp = example['fp']
-        gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
-        gt.set_shape(shape)
-        example['gt_occ'] = gt
-        example['gt_free'] = 1.0-gt
-        # gt_occ.set_shape(shape)
-        # gt_free.set_shape(shape)
-
-        return example
 
     cache_name = "ds.cache"
     if shuffle:
@@ -270,10 +288,32 @@ def read_from_tfrecord(record_file, shuffle):
         cache_name = "shuffled_ds.cache"
     cache_fp = join(shapenet_record_path, cache_name)
         
-    parsed_dataset = raw_dataset.map(_parse_record_function).map(_load_voxelgrids)
+    parsed_dataset = raw_dataset.map(_parse_record_function)
     # parsed_dataset = parsed_dataset.cache(cache_fp)
     return parsed_dataset
 
+def load_voxelgrids(metadata_ds):
+    def _get_shape(_raw_dataset):
+        e = next(_raw_dataset.__iter__())
+        gt = tf.numpy_function(load_gt_voxels, [e['fp'], e['augmentation']], tf.float32)
+        return gt.shape
+    shape = _get_shape(metadata_ds)
+
+    
+    def _load_voxelgrids(elem):
+        aug = elem['augmentation']
+        fp = elem['fp']
+        gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
+        gt.set_shape(shape)
+        elem['gt_occ'] = gt
+        elem['gt_free'] = 1.0-gt
+        # gt_occ.set_shape(shape)
+        # gt_free.set_shape(shape)
+        return elem
+    return metadata_ds.map(_load_voxelgrids)
+
+
+    
 
 def simulate_input(dataset, x, y, z):
     def _simulate_input(example):
@@ -306,9 +346,24 @@ def simulate_input(dataset, x, y, z):
 
 
 
+def simulate_partial_completion(dataset):
+    def _add_partial_gt(elem):
+        partial_occ, partial_free = simulate_first_random_input(elem['gt_occ'])
+        elem['known_occ'] = tf.clip_by_value(elem['known_occ'] + partial_occ, 0.0, 1.0)
+        elem['known_free'] = tf.clip_by_value(elem['known_free'] + partial_free, 0.0, 1.0)
+        return elem
+
+    return dataset.map(_add_partial_gt)
 
 
+def simulate_random_partial_completion(dataset):
+    def _add_partial_gt(elem):
+        partial_occ, partial_free = simulate_random_partial_completion_input(elem['gt_occ'])
+        elem['known_occ'] = tf.clip_by_value(elem['known_occ'] + partial_occ, 0.0, 1.0)
+        elem['known_free'] = tf.clip_by_value(elem['known_free'] + partial_free, 0.0, 1.0)
+        return elem
 
+    return dataset.map(_add_partial_gt)
 
 
 

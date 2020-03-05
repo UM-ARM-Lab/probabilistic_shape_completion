@@ -21,12 +21,14 @@ import IPython
 
 
 class AutoEncoder(tf.keras.Model):
-    def __init__(self, params):
+    def __init__(self, params, batch_size=16):
         super(AutoEncoder, self).__init__()
         self.params = params
         self.layers_dict = {}
         self.layer_names = []
         self.setup_model()
+        self.batch_size = batch_size
+        self.opt = tf.keras.optimizers.Adam(0.001)
 
     def _add_layer(self, layer):
         self.layers_dict[layer.name] = layer
@@ -151,67 +153,6 @@ class AutoEncoder(tf.keras.Model):
         
         return {'predicted_occ':occ, 'predicted_free':free}
 
-
-
-@tf.function
-def p_x_given_y(x, y):
-    """
-    Returns the reduce p(x|y)
-    Clips x from 0 to one, then filters and normalizes by y
-    Assumes y is a tensor where every element is 0.0 or 1.0
-    """
-    clipped = tf.clip_by_value(x, 0.0, 1.0)
-    return tf.reduce_sum(clipped * y) / tf.reduce_sum(y)
-    
-    
-class AutoEncoderWrapper:
-    def __init__(self, params=None):
-        self.batch_size = 16
-        self.side_length = 64
-        self.num_voxels = self.side_length ** 3
-
-        file_fp = os.path.dirname(__file__)
-        fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
-                                                expect_reuse = (params is None))
-        self.params = filepath_tools.handle_params(file_fp, fp, params)
-
-        self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
-
-        train_log_dir = os.path.join(fp, 'logs/train')
-        test_log_dir = os.path.join(fp, 'logs/test')
-        self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
-
-        self.model = AutoEncoder(self.params)
-        self.opt = tf.keras.optimizers.Adam(0.001)
-        self.ckpt = tf.train.Checkpoint(step=tf.Variable(1),
-                                        epoch=tf.Variable(0),
-                                        train_time=tf.Variable(0.0),
-                                        optimizer=self.opt, net=self.model)
-        self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
-
-        self.num_batches = None
-        self.restore()
-        
-
-    def restore(self):
-        status = self.ckpt.restore(self.manager.latest_checkpoint)
-
-        # Suppress warning 
-        if self.manager.latest_checkpoint:
-            status.assert_existing_objects_matched()
-
-    def count_params(self):
-        self.model.summary()
-
-    def build_model(self, dataset):
-        # self.model.evaluate(dataset.take(16))
-        elem = dataset.take(self.batch_size).batch(self.batch_size)
-        tf.summary.trace_on(graph=True, profiler=False)
-        self.model.predict(elem)
-        with self.train_summary_writer.as_default():
-            tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
-
     @tf.function
     def mse_loss(self, metrics):
         l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
@@ -227,7 +168,7 @@ class AutoEncoderWrapper:
         
         def step_fn(batch):
             with tf.GradientTape() as tape:
-                output = self.model(batch, training=True)
+                output = self(batch, training=True)
                 # loss = tf.reduce_mean(tf.abs(output - example['gt']))
                 # loss = tf.reduce_mean(tf.mse(output - example['gt']))
                 # mse = tf.keras.losses.MSE(batch['gt'], output)
@@ -275,7 +216,7 @@ class AutoEncoderWrapper:
                            }
                 
                 loss = self.mse_loss(metrics)
-                variables = self.model.trainable_variables
+                variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
 
 
@@ -309,6 +250,249 @@ class AutoEncoderWrapper:
         return insights
 
 
+
+
+@tf.function
+def p_x_given_y(x, y):
+    """
+    Returns the reduce p(x|y)
+    Clips x from 0 to one, then filters and normalizes by y
+    Assumes y is a tensor where every element is 0.0 or 1.0
+    """
+    clipped = tf.clip_by_value(x, 0.0, 1.0)
+    return tf.reduce_sum(clipped * y) / tf.reduce_sum(y)
+
+
+
+
+
+
+
+
+
+
+
+class MaskedConv3D(tf.keras.layers.Layer):
+    def __init__(self, conv_size, in_channels, out_channels, name='masked_conv_3d', is_first_layer=False):
+        super(MaskedConv3D, self).__init__(name=name)
+        self.conv_size = conv_size
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.is_first_layer = is_first_layer
+
+    def build(self, input_shape):
+        conv_vars = int(self.conv_size)**3
+
+        if self.is_first_layer:
+            n_train = (conv_vars/2) * self.in_channels * self.out_channels
+            n_zeros = (conv_vars/2+1) * self.in_channels * self.out_channels
+        else:
+            n_zeros = (conv_vars/2) * self.in_channels * self.out_channels
+            n_train = (conv_vars/2+1) * self.in_channels * self.out_channels
+
+        
+        self.a = self.add_weight(name=self.name + 'trainable',
+                                 shape=[n_train],
+                                 initializer=tf.initializers.GlorotUniform(),
+                                 trainable=True)
+        self.b = self.add_weight(name=self.name + 'masked',
+                                 shape=[n_zeros],
+                                 initializer='zeros',
+                                 trainable=False)
+
+
+        
+
+    def call(self, inputs):
+        cs = self.conv_size
+        f = tf.reshape(tf.concat([self.a,self.b], axis=0),
+                       [cs, cs, cs, self.in_channels, self.out_channels])
+
+        return tf.nn.conv3d(inputs, f, strides=[1,1,1,1,1], padding='SAME')
+
+class VoxelCNN(tf.keras.Model):
+    def __init__(self, params, batch_size=16):
+        super(VoxelCNN, self).__init__()
+        self.params = params
+        self.layers_dict = {}
+        self.layer_names = []
+        self.batch_size = batch_size
+        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.setup_model()
+
+    # def get_masked_conv_tensor(self, conv_size, in_channels, out_channels):
+    #     initializer = tf.initializers.GlorotUniform()
+    #     conv_vars = int(conv_size)**3
+    #     a = tf.Variable(initializer([conv_vars/2 * in_channels * out_channels]), trainable=True)
+    #     b = tf.Variable(tf.zeros([(conv_vars/2 + 1) * in_channels * out_channels]), trainable=False)
+    #     return tf.reshape(tf.concat([a,b], axis=0), [conv_size, conv_size, conv_size, in_channels, out_channels])
+
+    def setup_model(self):
+        conv_size = 3
+
+        self.conv_layers = [
+            MaskedConv3D(conv_size, 1, 16,      name='masked_conv_1', is_first_layer=True),
+            tfl.Activation(tf.nn.elu,           name='conv_1_activation'),
+            MaskedConv3D(conv_size, 16, 32,     name='masked_conv_2'),
+            tfl.Activation(tf.nn.elu,           name='conv_2_activation'),
+            MaskedConv3D(conv_size, 32, 64,     name='masked_conv_3'),
+            tfl.Activation(tf.nn.elu,           name='conv_3_activation'),
+            # MaskedConv3D(conv_size, 64, 128,  name='masked_conv_4'),
+            # tfl.Activation(tf.nn.elu,           name='conv_4_activation'),
+            # MaskedConv3D(conv_size, 128, 64,  name='masked_conv_5'),
+            # tfl.Activation(tf.nn.elu,           name='conv_5_activation'),
+            MaskedConv3D(conv_size, 64, 32,     name='masked_conv_6'),
+            tfl.Activation(tf.nn.elu,           name='conv_6_activation'),
+            MaskedConv3D(conv_size, 32, 16,     name='masked_conv_7'),
+            tfl.Activation(tf.nn.elu,           name='conv_7_activation'),
+            MaskedConv3D(conv_size, 16, 1,      name='masked_conv_8'),
+            tfl.Activation(tf.nn.elu,           name='conv_8_activation'),
+            ]
+        # for l in conv_layers:
+        #     self._add_layer(l)
+
+
+    def call(self, inputs):
+        gt = inputs['gt_occ']
+
+        x = gt
+        for l in self.conv_layers:
+            x = l(x)
+            # x = tf.nn.elu(x)
+        return {'predicted_occ':x, 'predicted_free':1.0-x}
+
+
+    @tf.function
+    def mse_loss(self, metrics):
+        l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
+        return l_occ
+
+
+    @tf.function
+    def train_step(self, batch):
+        def reduce(val):
+            return tf.reduce_mean(val)
+            
+        
+        def step_fn(batch):
+            with tf.GradientTape() as tape:
+                output = self(batch, training=True)
+                acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
+                mse_occ = tf.math.square(acc_occ)
+                acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
+                mse_free = tf.math.square(acc_free)
+
+                unknown_occ = batch['gt_occ'] - batch['known_occ']
+                unknown_free = batch['gt_free'] - batch['known_free']
+                
+                metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
+                           "mse/free": mse_free, "acc/free": acc_free,
+                           "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
+                                                                  batch['gt_occ']),
+                           "pred|gt/p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
+                                                                    batch['gt_free']),
+                           "pred|known/p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                batch['known_occ']),
+                           "pred|known/p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
+                                                                                  batch['known_free']),
+                           "pred|gt/p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
+                                                                           batch['gt_free']),
+                           "pred|gt/p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
+                                                                           batch['gt_occ']),
+                           "pred|known/p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
+                                                                                 batch['known_free']),
+                           "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
+                                                                                 batch['known_occ']),
+                           "pred|unknown/p(predicted_occ|unknown_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                    unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_occ)": p_x_given_y(output['predicted_free'],
+                                                                                     unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_free)": p_x_given_y(output['predicted_free'],
+                                                                                      unknown_free),
+                           "pred|unknown/p(predicted_occ|unknown_free)": p_x_given_y(output['predicted_occ'],
+                                                                                      unknown_free),
+                           "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
+                           "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
+                           "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
+                           "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
+                           }
+                
+                loss = self.mse_loss(metrics)
+                variables = self.trainable_variables
+                gradients = tape.gradient(loss, variables)
+
+                self.opt.apply_gradients(list(zip(gradients, variables)))
+                return loss, metrics
+            
+        loss, metrics = step_fn(batch)
+        m = {k: reduce(metrics[k]) for k in metrics}
+        m['loss'] = loss
+        return m
+
+
+
+
+
+
+
+
+    
+class Network:
+    def __init__(self, params=None):
+        self.batch_size = 16
+        self.side_length = 64
+        self.num_voxels = self.side_length ** 3
+
+        file_fp = os.path.dirname(__file__)
+        fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
+                                                expect_reuse = (params is None))
+        self.params = filepath_tools.handle_params(file_fp, fp, params)
+
+        self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
+
+        train_log_dir = os.path.join(fp, 'logs/train')
+        test_log_dir = os.path.join(fp, 'logs/test')
+        self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
+
+        if self.params['network'] == 'VoxelCNN':
+            self.model = VoxelCNN(self.params, batch_size=self.batch_size)
+        elif self.params['network'] == 'AutoEncoder':
+            self.model = AutoEncoder(self.params, batch_size=self.batch_size)
+        else:
+            raise Exception('Unknown Model Type')
+
+        self.ckpt = tf.train.Checkpoint(step=tf.Variable(1),
+                                        epoch=tf.Variable(0),
+                                        train_time=tf.Variable(0.0),
+                                        optimizer=self.model.opt, net=self.model)
+        self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
+
+        self.num_batches = None
+        self.restore()
+        
+
+    def restore(self):
+        status = self.ckpt.restore(self.manager.latest_checkpoint)
+
+        # Suppress warning 
+        if self.manager.latest_checkpoint:
+            status.assert_existing_objects_matched()
+
+    def count_params(self):
+        self.model.summary()
+
+    def build_model(self, dataset):
+        # self.model.evaluate(dataset.take(16))
+        elem = dataset.take(self.batch_size).batch(self.batch_size)
+        tf.summary.trace_on(graph=True, profiler=False)
+        self.model.predict(elem)
+        with self.train_summary_writer.as_default():
+            tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
+
+
+
+
     def write_summary(self, summary_dict):
         with self.train_summary_writer.as_default():
             for k in summary_dict:
@@ -337,7 +521,7 @@ class AutoEncoderWrapper:
                 self.num_batches+=1
                 self.ckpt.step.assign_add(1)
                 
-                ret = self.train_step(batch)
+                ret = self.model.train_step(batch)
                 time_str = str(datetime.timedelta(seconds=int(self.ckpt.train_time.numpy())))
                 bar.update(self.num_batches, Loss=ret['loss'].numpy(),
                            TrainTime=time_str)
@@ -355,6 +539,7 @@ class AutoEncoderWrapper:
         self.count_params()
         # dataset = dataset.shuffle(10000)
 
+
         # batched_ds = dataset.batch(self.batch_size, drop_remainder=True).prefetch(64)
         batched_ds = dataset.batch(self.batch_size).prefetch(64)
         
@@ -370,6 +555,12 @@ class AutoEncoderWrapper:
 
     def train_and_test(self, dataset):
         train_ds = dataset
+
+        if self.params['simulate_partial_completion']:
+            train_ds = data_tools.simulate_partial_completion(train_ds)
+        if self.params['simulate_random_partial_completion']:
+            train_ds = data_tools.simulate_random_partial_completion(train_ds)
+        
         self.train(train_ds)
         self.count_params()
 
