@@ -10,7 +10,7 @@ class UnknownSpaceSampler:
     def __init__(self, elem):
         shape = elem['known_free'].shape[1:4]        
         self.indices = [(i,j,k) for i in range(shape[0]) for j in range(shape[1]) for k in range(shape[2])]
-        random.shuffle(self.indices)
+        # random.shuffle(self.indices)
         self.indices_iter = self.indices.__iter__()
         self.pred_free = None
         self.pred_occ = None
@@ -32,6 +32,11 @@ class UnknownSpaceSampler:
         if elem['known_occ'][i] == 1.0:
             return elem, inference
 
+        inference = model.model(elem)
+        self.pred_free = inference['predicted_free'].numpy()
+        self.pred_occ = inference['predicted_occ'].numpy()
+
+
         if self.pred_free[i] > 1.0:
             elem['known_free'][i]=1.0
             return elem, inference
@@ -46,11 +51,11 @@ class UnknownSpaceSampler:
             elem['known_free'][i] = 1.0
         
 
-        inference = model.model(elem)
-        self.pred_free = inference['predicted_free'].numpy()
-        self.pred_occ = inference['predicted_occ'].numpy()
+        # inference = model.model(elem)
+        # self.pred_free = inference['predicted_free'].numpy()
+        # self.pred_occ = inference['predicted_occ'].numpy()
         self.ct += 1
-        print("Sampling {}".format(self.ct))
+        print("Sampling {}: ({}, {}, {})".format(self.ct, ind[0], ind[1], ind[2]))
         return elem, inference
 
 class MostConfidentSampler:

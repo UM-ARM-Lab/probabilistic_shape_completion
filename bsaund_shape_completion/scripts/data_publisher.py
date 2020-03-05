@@ -32,7 +32,7 @@ import threading
 import IPython
 
 
-SAMPLING = False
+SAMPLING = True
 
 
 
@@ -129,12 +129,13 @@ def publish_selection(metadata, str_msg):
     mismatch = np.abs(elem['gt_occ'].numpy() - inference['predicted_occ'].numpy())
     mismatch_pub.publish(to_msg(mismatch))
 
+
     if SAMPLING:
         global stop_current_sampler
         global sampling_thread
         
         print()
-        print("Stopping old worker")
+        # print("Stopping old worker")
         stop_current_sampler = True
         if sampling_thread is not None:
             sampling_thread.join()
