@@ -309,6 +309,7 @@ class MaskedConv3D(tf.keras.layers.Layer):
                                  shape=[n_zeros],
                                  initializer='zeros',
                                  trainable=False)
+
     @tf.function
     def call(self, inputs):
         cs = self.conv_size
@@ -370,7 +371,6 @@ class VoxelCNN(tf.keras.Model):
         l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
         return l_occ
 
-
     @tf.function
     def train_step(self, batch):
         def reduce(val):
@@ -419,8 +419,10 @@ class VoxelCNN(tf.keras.Model):
                            "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
                            "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
                            }
-                
-                loss = self.mse_loss(metrics)
+                if self.params['loss'] == 'cross_entropy':
+                    loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'], output['predicted_occ']))
+                elif self.params['loss'] == 'mse':
+                    loss = self.mse_loss(metrics)
                 variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
 

@@ -10,5 +10,6 @@
  "simulate_random_partial_completion": false,
  "network": "VoxelCNN",
  "turn_on_prob":0.0,
- "turn_off_prob":0.0
+ "turn_off_prob":0.0,
+ "loss":"mse"
 }

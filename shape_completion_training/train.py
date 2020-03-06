@@ -25,8 +25,9 @@ params = {
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': True,
     'network': 'VoxelCNN',
-    'turn_on_prob':0.00001,
-    'turn_off_prob':0.1,
+    'turn_on_prob':0.00000,
+    'turn_off_prob':0.0,
+    'loss':'cross_entropy'
 }
 
 
