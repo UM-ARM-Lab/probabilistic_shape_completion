@@ -346,9 +346,13 @@ class VoxelCNN(tf.keras.Model):
             MaskedConv3D(conv_size, 32, 16,     name='masked_conv_7'),
             tfl.Activation(tf.nn.elu,           name='conv_7_activation'),
             MaskedConv3D(conv_size, 16, 1,      name='masked_conv_8'),
-            # tfl.Activation(tf.nn.elu,           name='conv_8_activation'),
-            tfl.Activation(tf.nn.sigmoid,       name='conv_8_activation'),
+            # 
             ]
+        if self.params['final_activation'] == 'sigmoid':
+            self.conv_layers.append(tfl.Activation(tf.nn.sigmoid,       name='conv_8_activation'))
+        elif self.params['final_activation'] == 'elu':
+            self.conv_layers.append(tfl.Activation(tf.nn.elu,           name='conv_8_activation'))
+        
         # for l in conv_layers:
         #     self._add_layer(l)
 
