@@ -25,7 +25,8 @@ params = {
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': True,
     'network': 'VoxelCNN',
-    # 'network': 'AutoEncoder',
+    'turn_on_prob':0.00001,
+    'turn_off_prob':0.1,
 }
 
 
@@ -35,16 +36,19 @@ if __name__ == "__main__":
     # data = data_ycb
     data = data_shapenet
 
-    if params['network'] == 'VoxelCNN':
-        sim_input_fn=data_tools.simulate_omniscient_input
-    elif params['network'] == 'AutoEncoder':
-        sim_input_fn=data_tools.simulate_2_5D_input
+    # if params['network'] == 'VoxelCNN':
+    #     sim_input_fn=data_tools.simulate_omniscient_input
+    # elif params['network'] == 'AutoEncoder':
+    sim_input_fn=data_tools.simulate_2_5D_input
     
     data = data_tools.simulate_input(data,
                                      params['translation_pixel_range_x'],
                                      params['translation_pixel_range_y'],
                                      params['translation_pixel_range_z'],
                                      sim_input_fn=sim_input_fn)
+    data = data_tools.simulate_condition_occ(data,
+                                             turn_on_prob=params['turn_on_prob'],
+                                             turn_off_prob=params['turn_off_prob'])
 
     
     sn = Network(params)

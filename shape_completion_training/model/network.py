@@ -358,11 +358,7 @@ class VoxelCNN(tf.keras.Model):
 
     @tf.function
     def call(self, inputs, training = False):
-        if training:
-            x = inputs['gt_occ']
-            x = Dropout()(x, keep_prob=tf.random.uniform([1]), training=True)
-        else:
-            x = inputs['conditioned_occ']
+        x = inputs['conditioned_occ']
 
         for l in self.conv_layers:
             x = l(x)

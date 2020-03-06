@@ -45,6 +45,7 @@ known_free_pub = None
 completion_pub = None
 completion_free_pub = None
 sampled_occ_pub = None
+conditioned_occ_pub = None
 mismatch_pub = None
 
 options_pub = None
@@ -81,8 +82,15 @@ def publish_np_elem(elem):
     known_occ_pub.publish(to_msg(elem["known_occ"]))
     known_free_pub.publish(to_msg(elem['known_free']))
 
-    if elem.has_key('sampled_occ'):
-        sampled_occ_pub.publish(to_msg(elem['sampled_occ']))
+    if not elem.has_key('sampled_occ'):
+        elem['sampled_occ'] = np.zeros(elem['gt_occ'].shape)
+    sampled_occ_pub.publish(to_msg(elem['sampled_occ']))
+
+    if not elem.has_key('conditioned_occ'):
+        elem['conditioned_occ'] = np.zeros(elem['gt_occ'].shape)
+    conditioned_occ_pub.publish(to_msg(elem['conditioned_occ']))
+
+    
     sys.stdout.write('\033[2K\033[1G')
     print("Category: {}, id: {}, aug: {}".format(elem['shape_category'],
                                                  elem['id'],
@@ -112,6 +120,7 @@ def publish_selection(metadata, str_msg):
     
     ds = data_tools.simulate_input(ds, translation, translation, translation,
                                    sim_input_fn=sim_input_fn)
+    ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00001, turn_off_prob=0.1)
     # ds = data_tools.simulate_partial_completion(ds)
     # ds = data_tools.simulate_random_partial_completion(ds)
 
@@ -120,7 +129,6 @@ def publish_selection(metadata, str_msg):
     elem = {}
     for k in elem_raw.keys():
         elem[k] = np.expand_dims(elem_raw[k].numpy(), axis=0)
-        
     publish_np_elem(elem)
 
     
@@ -128,7 +136,6 @@ def publish_selection(metadata, str_msg):
         return
     
         
-
     elem = sampling_tools.prepare_for_sampling(elem)
     
 
@@ -230,6 +237,7 @@ if __name__=="__main__":
     completion_pub = rospy.Publisher('predicted_occ_voxel_grid', OccupancyStamped, queue_size=1)
     completion_free_pub = rospy.Publisher('predicted_free_voxel_grid', OccupancyStamped, queue_size=1)
     sampled_occ_pub = rospy.Publisher('sampled_occ_voxel_grid', OccupancyStamped, queue_size=1)
+    conditioned_occ_pub = rospy.Publisher('conditioned_occ_voxel_grid', OccupancyStamped, queue_size=1)
     mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
     options_pub = rospy.Publisher('shapenet_options', TextSelectionOptions, queue_size=1)
     selected_sub = rospy.Subscriber('/shapenet_selection', String,

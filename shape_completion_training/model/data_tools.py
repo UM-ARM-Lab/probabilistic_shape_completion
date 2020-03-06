@@ -369,6 +369,18 @@ def simulate_random_partial_completion(dataset):
 
 
 
+def simulate_condition_occ(dataset, turn_on_prob = 0.0, turn_off_prob=0.0):
+    def _add_conditional(elem):
+        x = elem['gt_occ']
+        x = x + tf.cast(tf.random.uniform(x.shape) < turn_on_prob, tf.float32)
+        x = x - tf.cast(tf.random.uniform(x.shape) < turn_off_prob, tf.float32)
+        x = tf.clip_by_value(x, 0.0, 1.0)
+        elem['conditioned_occ'] = x
+        return elem
+
+    return dataset.map(_add_conditional)
+
+
 ###################################################################
 ##   OLD WAY OF TFRECORDS
 ###################################################################

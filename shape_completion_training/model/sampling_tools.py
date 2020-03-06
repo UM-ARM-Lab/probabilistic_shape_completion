@@ -24,6 +24,7 @@ def update_from_sampling(elem, sampled_ind, sampled_val):
 
     if update_needed:
         elem['conditioned_occ'][sampled_ind] = sampled_val
+        # elem['conditioned_occ'][sampled_ind] = elem['gt_occ'][sampled_ind]
 
     return elem, update_needed
     
