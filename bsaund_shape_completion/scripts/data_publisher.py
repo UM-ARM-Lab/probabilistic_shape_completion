@@ -22,7 +22,8 @@ from shape_completion_training.model import data_tools
 from shape_completion_training.model import obj_tools
 from shape_completion_training import binvox_rw
 
-from bsaund_shape_completion import sampling_tools
+# from bsaund_shape_completion import sampling_tools
+from shape_completion_training.model import sampling_tools
 
 from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
 from std_msgs.msg import String
@@ -43,6 +44,7 @@ known_occ_pub = None
 known_free_pub = None
 completion_pub = None
 completion_free_pub = None
+sampled_occ_pub = None
 mismatch_pub = None
 
 options_pub = None
@@ -78,6 +80,9 @@ def publish_np_elem(elem):
     gt_pub.publish(to_msg(elem["gt_occ"]))
     known_occ_pub.publish(to_msg(elem["known_occ"]))
     known_free_pub.publish(to_msg(elem['known_free']))
+
+    if elem.has_key('sampled_occ'):
+        sampled_occ_pub.publish(to_msg(elem['sampled_occ']))
     sys.stdout.write('\033[2K\033[1G')
     print("Category: {}, id: {}, aug: {}".format(elem['shape_category'],
                                                  elem['id'],
@@ -111,22 +116,26 @@ def publish_selection(metadata, str_msg):
     # ds = data_tools.simulate_random_partial_completion(ds)
 
     # Note: there is only one elem in this ds
-    elem = next(ds.__iter__())
-    publish_elem(elem)
+    elem_raw = next(ds.__iter__())
+    elem = {}
+    for k in elem_raw.keys():
+        elem[k] = np.expand_dims(elem_raw[k].numpy(), axis=0)
+        
+    publish_np_elem(elem)
 
     
     if model is None:
         return
     
         
-    elem_expanded = {}
-    for k in elem.keys():
-        elem_expanded[k] = np.expand_dims(elem[k].numpy(), axis=0)
 
-    inference = model.model(elem_expanded)
+    elem = sampling_tools.prepare_for_sampling(elem)
+    
+
+    inference = model.model(elem)
     completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
     completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
-    mismatch = np.abs(elem['gt_occ'].numpy() - inference['predicted_occ'].numpy())
+    mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
     mismatch_pub.publish(to_msg(mismatch))
 
 
@@ -140,7 +149,7 @@ def publish_selection(metadata, str_msg):
         if sampling_thread is not None:
             sampling_thread.join()
         
-        sampling_thread = threading.Thread(target=sampler_worker, args=(elem_expanded,))
+        sampling_thread = threading.Thread(target=sampler_worker, args=(elem,))
         sampling_thread.start()
         
 
@@ -150,29 +159,28 @@ def sampler_worker(elem):
     stop_current_sampler = False
 
     print()
-    sampler = sampling_tools.UnknownSpaceSampler(elem)
+    for i in range(200):
+        if stop_current_sampler:
+            return
+        rospy.sleep(0.01)
+    
+    # sampler = sampling_tools.UnknownSpaceSampler(elem)
+    sampler = sampling_tools.EfficientCNNSampler(elem)
     # sampler = sampling_tools.MostConfidentSampler(elem)
     inference = model.model(elem)
-        
+
 
     finished = False
-    # ct = 0
     prev_ct = 0
 
     while not finished and not stop_current_sampler:
-        # a = raw_input()
-
         try:
             elem, inference = sampler.sample(model, elem, inference)
         except StopIteration:
             finished = True
 
-                
-        # ct += 1
         if sampler.ct - prev_ct >= 100 or finished:
             prev_ct = sampler.ct
-            ct = 0
-            
             publish_np_elem(elem)
             completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
             completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
@@ -205,6 +213,7 @@ def load_network():
     print('Load network? (Y/n)')
     if raw_input().lower() == 'n':
         return
+    # model = Network(trial_name="VoxelCNN_only_mask_first_layer")
     model = Network()
     
 
@@ -220,6 +229,7 @@ if __name__=="__main__":
     known_free_pub = rospy.Publisher('known_free_voxel_grid', OccupancyStamped, queue_size=1)
     completion_pub = rospy.Publisher('predicted_occ_voxel_grid', OccupancyStamped, queue_size=1)
     completion_free_pub = rospy.Publisher('predicted_free_voxel_grid', OccupancyStamped, queue_size=1)
+    sampled_occ_pub = rospy.Publisher('sampled_occ_voxel_grid', OccupancyStamped, queue_size=1)
     mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
     options_pub = rospy.Publisher('shapenet_options', TextSelectionOptions, queue_size=1)
     selected_sub = rospy.Subscriber('/shapenet_selection', String,
@@ -240,174 +250,3 @@ if __name__=="__main__":
 
 
 
-
-    
-
-######  OLD
-
-
-
-
-# def view_single_binvox():
-#     gt_pub = rospy.Publisher('gt_voxel_grid', OccupancyStamped, queue_size=1)
-#     fp = "/home/bsaund/catkin_ws/src/mps_shape_completion/shape_completion_training/data/ShapeNetCore.v2_augmented/03797390"
-#     # fp = os.path.join(fp, "a1d293f5cc20d01ad7f470ee20dce9e0")
-#     fp = os.path.join(fp, "214dbcace712e49de195a69ef7c885a4")
-#     fp = os.path.join(fp, "models")
-#     # fn = "model_normalized.obj_64.binvox"
-#     fn = "model_normalized.binvox"
-#     # fn = "model_normalized.solid.binvox"
-
-#     fp = os.path.join(fp, fn)
-    
-#     with open(fp) as f:
-#         gt_vox = binvox_rw.read_as_3d_array(f).data
-
-#     print("Publishing single binvox {}".format(fp))
-#     gt_pub.publish(to_msg(gt_vox))
-#     rospy.sleep(10)
-
-
-# def publish_test_img():
-
-#     mug_fp = "/home/bsaund/catkin_ws/src/mps_shape_completion/shape_completion_training/data/ShapeNetCore.v2_augmented/03797390/"
-
-
-#     shapes = os.listdir(mug_fp)
-#     shapes = ['214dbcace712e49de195a69ef7c885a4']
-    
-#     for shape in shapes:
-#         shape_fp = os.path.join(mug_fp, shape, "models")
-#         print ("Displaying {}".format(shape))
-
-#         gt_fp = os.path.join(shape_fp, "model_normalized.solid.binvox")
-
-#         with open(gt_fp) as f:
-#             gt_vox = binvox_rw.read_as_3d_array(f).data
-#         gt_pub.publish(to_msg(gt_vox))
-#         rospy.sleep(1)
-
-#         augs = [f for f in os.listdir(shape_fp) if f.startswith("model_augmented")]
-#         augs.sort()
-#         # IPython.embed()
-#         for aug in augs:
-
-#             if rospy.is_shutdown():
-#                 return
-        
-#             with open(os.path.join(shape_fp, aug)) as f:
-#                 ko_vox = binvox_rw.read_as_3d_array(f).data
-    
-#             known_occ_pub.publish(to_msg(ko_vox))
-
-#             print("Publishing {}".format(aug))
-#             rospy.sleep(.5)
-
-
-
-
-# def publish_shapenet_tfrecords():
-#     data = data_tools.load_shapenet([data_tools.shape_map["mug"]], shuffle=False)
-#     data = data_tools.simulate_input(data, 5, 5, 5)
-
-#     # print(sum(1 for _ in data))
-
-#     print("")
-    
-#     for elem in data.batch(1):
-#         if rospy.is_shutdown():
-#             return
-#         publish_elem(elem)
-#         rospy.sleep(0.5)
-
-
-# def publish_completion():
-
-#     print("Loading...")
-#     data = data_tools.load_shapenet([data_tools.shape_map["mug"]], shuffle=False)
-#     data = data_tools.simulate_input(data, 0, 0, 0)
-    
-#     model = Network()
-#     # model.restore()
-#     # model.evaluate(data)
-#     print("")
-
-#     for elem in data:
-
-#         if rospy.is_shutdown():
-#             return
-        
-#         dim = elem['gt_occ'].shape[0]
-
-
-#         elem_expanded = {}
-#         for k in elem.keys():
-#             elem_expanded[k] = np.expand_dims(elem[k].numpy(), axis=0)
-
-#         inference = model.model(elem_expanded)['predicted_occ'].numpy()
-#         publish_elem(elem)
-
-#         completion_pub.publish(to_msg(inference))
-#         mismatch = np.abs(elem['gt_occ'].numpy() - inference)
-#         mismatch_pub.publish(to_msg(mismatch))
-#         # IPython.embed()
-
-#         rospy.sleep(0.5)
-
-
-# def layer_by_layer():
-#     print("Loading...")
-#     data = data_tools.load_shapenet([data_tools.shape_map["mug"]])
-    
-#     model = Network()
-#     model.restore()
-
-#     i = 0
-
-#     for elem in data:
-#         i += 1
-#         if i<8:
-#             continue
-
-#         if rospy.is_shutdown():
-#             return
-#         # IPython.embed()
-        
-#         print("Publishing")
-#         dim = elem['gt_occ'].shape[0]
-
-#         elem_expanded = {}
-#         for k in elem.keys():
-#             elem_expanded[k] = np.expand_dims(elem[k].numpy(), axis=0)
-
-#         elem_expanded['known_occ'][:,:,32:] = 0.0
-#         elem_expanded['known_free'][:,:,32:] = 0.0
-        
-#         d = 31
-#         inference = elem_expanded['known_occ'] * 0.0
-#         while d < 64:
-#             print("Layer {}".format(d))
-#             ko = elem_expanded['known_occ']
-#             # IPython.embed()
-#             ko[:,:,d] += inference[:,:,d]
-#             # IPython.embed()
-#             ko=ko.clip(min=0.0, max=1.0)
-#             elem_expanded['known_occ'] = ko
-#             # IPython.embed()
-            
-
-#             inference = model.model.predict(elem_expanded)
-
-#             gt_pub.publish(to_msg(elem['gt'].numpy()))
-#             known_occ_pub.publish(to_msg(elem_expanded['known_occ']))
-#             known_free_pub.publish(to_msg(elem_expanded['known_free']))
-#             completion_pub.publish(to_msg(inference))
-
-#             # if d==31:
-#             #     IPython.embed()
-            
-#             d += 1
-#             # rospy.sleep(0.5)
-            
-#         # IPython.embed()
-#         rospy.sleep(2.0)

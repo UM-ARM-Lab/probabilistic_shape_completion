@@ -271,7 +271,17 @@ def p_x_given_y(x, y):
 
 
 
+class Dropout(tf.keras.layers.Layer):
+    def __init__(self, name="dropout"):
+        super(Dropout, self).__init__(name=name)
 
+    @tf.function
+    def call(self, x, keep_prob, training=False):
+        if training:
+            x = x * tf.cast(tf.random.uniform(x.shape) < keep_prob, tf.float32)
+        return x
+
+    
 class MaskedConv3D(tf.keras.layers.Layer):
     def __init__(self, conv_size, in_channels, out_channels, name='masked_conv_3d', is_first_layer=False):
         super(MaskedConv3D, self).__init__(name=name)
@@ -299,10 +309,7 @@ class MaskedConv3D(tf.keras.layers.Layer):
                                  shape=[n_zeros],
                                  initializer='zeros',
                                  trainable=False)
-
-
-        
-
+    @tf.function
     def call(self, inputs):
         cs = self.conv_size
         f = tf.reshape(tf.concat([self.a,self.b], axis=0),
@@ -339,19 +346,22 @@ class VoxelCNN(tf.keras.Model):
             MaskedConv3D(conv_size, 32, 16,     name='masked_conv_7'),
             tfl.Activation(tf.nn.elu,           name='conv_7_activation'),
             MaskedConv3D(conv_size, 16, 1,      name='masked_conv_8'),
-            tfl.Activation(tf.nn.elu,           name='conv_8_activation'),
+            # tfl.Activation(tf.nn.elu,           name='conv_8_activation'),
+            tfl.Activation(tf.nn.sigmoid,       name='conv_8_activation'),
             ]
         # for l in conv_layers:
         #     self._add_layer(l)
 
+    @tf.function
+    def call(self, inputs, training = False):
+        if training:
+            x = inputs['gt_occ']
+            x = Dropout()(x, keep_prob=tf.random.uniform([1]), training=True)
+        else:
+            x = inputs['conditioned_occ']
 
-    def call(self, inputs):
-        gt = inputs['known_occ']
-
-        x = gt
         for l in self.conv_layers:
             x = l(x)
-            # x = tf.nn.elu(x)
         return {'predicted_occ':x, 'predicted_free':1.0-x}
 
 
@@ -478,9 +488,10 @@ class Network:
 
     def build_model(self, dataset):
         # self.model.evaluate(dataset.take(16))
-        elem = dataset.take(self.batch_size).batch(self.batch_size)
+        elem = next(dataset.take(self.batch_size).batch(self.batch_size).__iter__())
+        elem['conditioned_occ'] = elem['known_occ']
         tf.summary.trace_on(graph=True, profiler=False)
-        self.model.predict(elem)
+        self.model(elem)
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
