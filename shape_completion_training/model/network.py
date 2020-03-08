@@ -315,7 +315,6 @@ class MaskedConv3D(tf.keras.layers.Layer):
                                     initializer=tf.initializers.GlorotUniform(),
                                     trainable=True)
 
-    @tf.function
     def call(self, inputs):
         cs = self.conv_size
         f = tf.reshape(tf.concat([self.a,self.b], axis=0),
@@ -363,7 +362,6 @@ class VoxelCNN(tf.keras.Model):
         # for l in conv_layers:
         #     self._add_layer(l)
 
-    @tf.function
     def call(self, inputs, training = False):
         x = inputs['conditioned_occ']
 
@@ -497,10 +495,9 @@ class Network:
 
     def build_model(self, dataset):
         # self.model.evaluate(dataset.take(16))
-        elem = next(dataset.take(self.batch_size).batch(self.batch_size).__iter__())
-        elem['conditioned_occ'] = elem['known_occ']
+        elem = dataset.take(self.batch_size).batch(self.batch_size)
         tf.summary.trace_on(graph=True, profiler=False)
-        self.model(elem)
+        self.model.predict(elem)
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
