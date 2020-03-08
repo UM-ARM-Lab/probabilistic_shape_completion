@@ -310,13 +310,19 @@ class MaskedConv3D(tf.keras.layers.Layer):
                                  initializer='zeros',
                                  trainable=False)
 
+        self.bias = self.add_weight(name=self.name + 'bias',
+                                    shape=[self.out_channels],
+                                    initializer=tf.initializers.GlorotUniform(),
+                                    trainable=True)
+
     @tf.function
     def call(self, inputs):
         cs = self.conv_size
         f = tf.reshape(tf.concat([self.a,self.b], axis=0),
                        [cs, cs, cs, self.in_channels, self.out_channels])
 
-        return tf.nn.conv3d(inputs, f, strides=[1,1,1,1,1], padding='SAME')
+        x = tf.nn.conv3d(inputs, f, strides=[1,1,1,1,1], padding='SAME')
+        return tf.nn.bias_add(x, self.bias)
 
 class VoxelCNN(tf.keras.Model):
     def __init__(self, params, batch_size=16):
@@ -420,7 +426,8 @@ class VoxelCNN(tf.keras.Model):
                            "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
                            }
                 if self.params['loss'] == 'cross_entropy':
-                    loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'], output['predicted_occ']))
+                    loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                                             output['predicted_occ']))
                 elif self.params['loss'] == 'mse':
                     loss = self.mse_loss(metrics)
                 variables = self.trainable_variables
