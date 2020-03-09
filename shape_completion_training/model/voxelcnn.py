@@ -1,0 +1,129 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+import tensorflow as tf
+import tensorflow.keras.layers as tfl
+import data_tools
+import filepath_tools
+import nn_tools
+from nn_tools import MaskedConv3D
+
+import IPython
+
+
+class VoxelCNN(tf.keras.Model):
+    def __init__(self, params, batch_size=16):
+        super(VoxelCNN, self).__init__()
+        self.params = params
+        self.layers_dict = {}
+        self.layer_names = []
+        self.batch_size = batch_size
+        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.setup_model()
+
+    def setup_model(self):
+        conv_size = 3
+
+        self.conv_layers = [
+            MaskedConv3D(conv_size, 1, 16,      name='masked_conv_1', is_first_layer=True),
+            tfl.Activation(tf.nn.elu,           name='conv_1_activation'),
+            MaskedConv3D(conv_size, 16, 32,     name='masked_conv_2'),
+            tfl.Activation(tf.nn.elu,           name='conv_2_activation'),
+            MaskedConv3D(conv_size, 32, 64,     name='masked_conv_3'),
+            tfl.Activation(tf.nn.elu,           name='conv_3_activation'),
+            # MaskedConv3D(conv_size, 64, 128,  name='masked_conv_4'),
+            # tfl.Activation(tf.nn.elu,           name='conv_4_activation'),
+            # MaskedConv3D(conv_size, 128, 64,  name='masked_conv_5'),
+            # tfl.Activation(tf.nn.elu,           name='conv_5_activation'),
+            MaskedConv3D(conv_size, 64, 32,     name='masked_conv_6'),
+            tfl.Activation(tf.nn.elu,           name='conv_6_activation'),
+            MaskedConv3D(conv_size, 32, 16,     name='masked_conv_7'),
+            tfl.Activation(tf.nn.elu,           name='conv_7_activation'),
+            MaskedConv3D(conv_size, 16, 1,      name='masked_conv_8'),
+            # 
+            ]
+        if self.params['final_activation'] == 'sigmoid':
+            self.conv_layers.append(tfl.Activation(tf.nn.sigmoid,       name='conv_8_activation'))
+        elif self.params['final_activation'] == 'elu':
+            self.conv_layers.append(tfl.Activation(tf.nn.elu,           name='conv_8_activation'))
+        
+        # for l in conv_layers:
+        #     self._add_layer(l)
+
+    def call(self, inputs, training = False):
+        x = inputs['conditioned_occ']
+
+        for l in self.conv_layers:
+            x = l(x)
+        return {'predicted_occ':x, 'predicted_free':1.0-x}
+
+
+    @tf.function
+    def mse_loss(self, metrics):
+        l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
+        return l_occ
+
+    @tf.function
+    def train_step(self, batch):
+        def reduce(val):
+            return tf.reduce_mean(val)
+            
+        
+        def step_fn(batch):
+            with tf.GradientTape() as tape:
+                output = self(batch, training=True)
+                acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
+                mse_occ = tf.math.square(acc_occ)
+                acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
+                mse_free = tf.math.square(acc_free)
+
+                unknown_occ = batch['gt_occ'] - batch['known_occ']
+                unknown_free = batch['gt_free'] - batch['known_free']
+                
+                metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
+                           "mse/free": mse_free, "acc/free": acc_free,
+                           "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
+                                                                  batch['gt_occ']),
+                           "pred|gt/p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
+                                                                    batch['gt_free']),
+                           "pred|known/p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                batch['known_occ']),
+                           "pred|known/p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
+                                                                                  batch['known_free']),
+                           "pred|gt/p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
+                                                                           batch['gt_free']),
+                           "pred|gt/p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
+                                                                           batch['gt_occ']),
+                           "pred|known/p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
+                                                                                 batch['known_free']),
+                           "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
+                                                                                 batch['known_occ']),
+                           "pred|unknown/p(predicted_occ|unknown_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                    unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_occ)": p_x_given_y(output['predicted_free'],
+                                                                                     unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_free)": p_x_given_y(output['predicted_free'],
+                                                                                      unknown_free),
+                           "pred|unknown/p(predicted_occ|unknown_free)": p_x_given_y(output['predicted_occ'],
+                                                                                      unknown_free),
+                           "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
+                           "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
+                           "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
+                           "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
+                           }
+                if self.params['loss'] == 'cross_entropy':
+                    loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                                             output['predicted_occ']))
+                elif self.params['loss'] == 'mse':
+                    loss = self.mse_loss(metrics)
+                variables = self.trainable_variables
+                gradients = tape.gradient(loss, variables)
+
+                self.opt.apply_gradients(list(zip(gradients, variables)))
+                return loss, metrics
+            
+        loss, metrics = step_fn(batch)
+        m = {k: reduce(metrics[k]) for k in metrics}
+        m['loss'] = loss
+        return m
+
+
