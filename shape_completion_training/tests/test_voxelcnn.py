@@ -9,6 +9,9 @@ sys.path.append(sc_path)
 
 from model import data_tools
 from model.network import Network
+import model.nn_tools as nn
+import tensorflow.keras.layers as tfl
+import tensorflow as tf
 
 import numpy as np
 import IPython
@@ -61,7 +64,77 @@ def compare(net, data):
         e['known_occ'][i] = e['gt_occ'][i]
     if not mismatch:
         print("Everything matches between the completion given GT all at once, and the completion given masked gt")
-    
+
+
+class StackNet(tf.keras.Model):
+    def __init__(self):
+        super(StackNet, self).__init__()
+
+        self.net_layers = [
+            # nn.BackShift(),
+            # nn.BackShift(),
+            # tfl.Conv3D(1, [3,3,3], kernel_initializer='ones', bias_initializer='zeros',
+            #            padding='same')
+            # nn.BackShift(),
+            # nn.DownShift(),
+            # nn.RightShift(),
+            # nn.BackShiftConv3D(2),
+            # nn.BackShiftConv3D(2),
+            nn.BackDownRightShiftConv3D(1)
+        ]
+        self.back_shift = nn.BackShift()
+        self.down_shift = nn.DownShift()
+        self.right_shift = nn.RightShift()
+
+        self.b_convs = [
+            nn.BackShiftConv3D(1),
+            nn.BackShiftConv3D(1)
+        ]
+
+        self.bd_convs = [
+            nn.BackDownShiftConv3D(1)
+            ]
+
+        self.dbr_convs = [
+            nn.BackDownShiftConv3D(1)
+            ]
+
+    def call(self, x):
+
+        b = self.back_shift(self.b_convs[0](x))
+        db = self.back_shift(self.b_convs[1](x)) + self.down_shift(self.bd_convs[0](x))
+        
+        for l in self.net_layers:
+            x = l(x)
+        return x
+
+def make_stack_net(inp):
+    inputs = tf.keras.Input(shape=inp.get_shape()[1:], batch_size=inp.get_shape()[0])
+    x = inputs
+
+    #Front
+    f = nn.BackShift()(nn.BackShiftConv3D(1)(x))
+
+    #Upper Front
+    uf = nn.BackShift()(nn.BackShiftConv3D(1)(x)) + nn.DownShift()(nn.BackDownShiftConv3D(1)(x))
+
+    #Left Upper Front
+
+    luf = nn.BackShift()(nn.BackShiftConv3D(1)(x)) + \
+          nn.DownShift()(nn.BackDownShiftConv3D(1)(x)) + \
+          nn.RightShift()(nn.BackDownRightShiftConv3D(1)(x))
+
+    x = luf
+
+    return tf.keras.Model(inputs=inputs, outputs=x)
+            
+
+def test_stack_net():
+    inp = tf.ones([1,5,5,5,1])
+    # net = StackNet()
+    net = make_stack_net(inp)
+    out = net(inp)
+    IPython.embed()
 
 
 
@@ -80,9 +153,11 @@ if __name__ == "__main__":
                                      sim_input_fn=sim_input_fn)
 
     
-    net = Network(params, "VoxelCNN_only_mask_first_layer")
+    # net = Network(params, "VoxelCNN_only_mask_first_layer")
 
-    compare(net, data)
+
+    test_stack_net()
+    # compare(net, data)
     # IPython.embed()
 
     # sn.train_and_test(data)

@@ -42,27 +42,6 @@ def p_x_given_y(x, y):
 
 
 
-
-
-class Dropout(tf.keras.layers.Layer):
-    def __init__(self, name="dropout"):
-        super(Dropout, self).__init__(name=name)
-
-    @tf.function
-    def call(self, x, keep_prob, training=False):
-        if training:
-            x = x * tf.cast(tf.random.uniform(x.shape) < keep_prob, tf.float32)
-        return x
-
-    
-
-
-
-
-
-
-
-    
 class Network:
     def __init__(self, params=None, trial_name=None):
         self.batch_size = 16

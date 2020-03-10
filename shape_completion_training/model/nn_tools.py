@@ -7,6 +7,8 @@ import tensorflow as tf
 import tensorflow.keras.layers as tfl
 import nn_tools
 
+import IPython
+
 
 class MaskedConv3D(tf.keras.layers.Layer):
     def __init__(self, conv_size, in_channels, out_channels, name='masked_conv_3d', is_first_layer=False):
@@ -50,7 +52,101 @@ class MaskedConv3D(tf.keras.layers.Layer):
         return tf.nn.bias_add(x, self.bias)
 
 
+class Conv3D(tf.keras.layers.Layer):
+    def __init__(self, n_filters, filter_size, use_bias, name=None):
+        super(Conv3D, self).__init__(name=name)
+        self.filter_size = filter_size
+        self.n_filters = n_filters
+        self.b = None
+        self.padding='VALID'
+        self.use_bias = use_bias
 
+    def build(self, input_shape):
+        self.w = self.add_weight(name='weights',
+                                 shape=self.filter_size + [input_shape[-1], self.n_filters],
+                                 # shape=[3,3,3,1,1],
+                                 # initializer=tf.initializer.GlorotUniform(),
+                                 initializer=tf.initializers.ones(),
+                                 trainable=True)
+        if self.use_bias:
+            self.b = self.add_weight(name='bias',
+                                     shape=[self.n_filters],
+                                     initializer=tf.initializers.zeros(),
+                                     trainable=True)
+
+    def call(self, x):
+        x = tf.nn.conv3d(x, self.w, padding=self.padding, strides=[1,1,1,1,1])
+        if self.use_bias:
+            x = tf.nn.bias_add(x, self.b)
+        return x
+        
+
+class BackShiftConv3D(Conv3D):
+    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=False):
+        super(BackShiftConv3D, self).__init__(n_filters=n_filters,
+                                              filter_size=filter_size,
+                                              use_bias=use_bias)
+
+    def call(self, x):
+        x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
+                       [int((self.filter_size[1]-1)/2), int((self.filter_size[1]-1)/2)],
+                       [int((self.filter_size[2]-1)/2), int((self.filter_size[2]-1)/2)],
+                       [0,0]])
+
+        return super(BackShiftConv3D, self).call(x)
+
+    
+class BackDownShiftConv3D(Conv3D):
+    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=False):
+        super(BackDownShiftConv3D, self).__init__(n_filters=n_filters,
+                                              filter_size=filter_size,
+                                              use_bias=use_bias)
+
+    def call(self, x):
+        x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
+                       [self.filter_size[1]-1, 0],
+                       [int((self.filter_size[2]-1)/2), int((self.filter_size[2]-1)/2)],
+                       [0,0]])
+
+        return super(BackDownShiftConv3D, self).call(x)
+
+class BackDownRightShiftConv3D(Conv3D):
+    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=False):
+        super(BackDownRightShiftConv3D, self).__init__(n_filters=n_filters,
+                                                       filter_size=filter_size,
+                                                       use_bias=use_bias)
+
+    def call(self, x):
+        x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
+                       [self.filter_size[1]-1, 0],
+                       [self.filter_size[2]-1, 0],
+                       [0,0]])
+
+        return super(BackDownRightShiftConv3D, self).call(x)
+
+    
+
+class BackShift(tf.keras.layers.Layer):
+    def __init__(self):
+        super(BackShift, self).__init__(name='back_shift')
+
+    def call(self, x):
+        return back_shift(x)
+    
+class DownShift(tf.keras.layers.Layer):
+    def __init__(self):
+        super(DownShift, self).__init__(name='up_shift')
+
+    def call(self, x):
+        return up_shift(x)
+    
+class RightShift(tf.keras.layers.Layer):
+    def __init__(self):
+        super(RightShift, self).__init__(name='right_shift')
+
+    def call(self, x):
+        return right_shift(x)
+        
 
 
 def int_shape(x):
@@ -69,3 +165,4 @@ def right_shift(x):
     xs = int_shape(x)
     return tf.concat([tf.zeros([xs[0],xs[1],xs[2],1,xs[4]]), x[:,:,:,:xs[3]-1,:]],3)
 
+                    
