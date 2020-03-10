@@ -4,7 +4,7 @@ import tensorflow as tf
 import tensorflow.keras.layers as tfl
 import data_tools
 import filepath_tools
-import nn_tools
+import nn_tools as nn
 from nn_tools import MaskedConv3D
 
 import IPython
@@ -127,3 +127,153 @@ class VoxelCNN(tf.keras.Model):
         return m
 
 
+
+
+class StackedVoxelCNN:
+    def __init__(self, params, batch_size):
+        self.params = params
+        self.model=None
+        self.batch_size = batch_size
+        self.opt = tf.keras.optimizers.Adam(0.001)
+
+    def get_model(self):
+        return self.model
+
+
+    def make_stack_net(self, inp):
+        n_filters = 16
+        n_per_block = 4
+        
+        inputs = tf.keras.Input(shape=inp.get_shape()[1:], batch_size=inp.get_shape()[0])
+        x = inputs
+
+
+        def bs(x):
+            return nn.BackShiftConv3D(n_filters, use_bias=False,
+                                      nln=tf.nn.elu)(x)
+
+        def bds(x):
+            return nn.BackDownShiftConv3D(n_filters, use_bias=False,
+                                          nln=tf.nn.elu)(x)
+
+        def bdrs(x):
+            return nn.BackDownRightShiftConv3D(n_filters, use_bias=False,
+                                               nln=tf.nn.elu)(x)
+
+        #Front
+        f_list = [nn.BackShift()(bs(x))]
+
+        #Upper Front
+        uf_list = [nn.BackShift()(bs(x)) + \
+                  nn.DownShift()(bds(x))]
+        
+        #Left Upper Front
+        luf_list = [nn.BackShift()(bs(x)) + \
+                   nn.DownShift()(bds(x)) + \
+                   nn.RightShift()(bdrs(x))]
+
+
+        for _ in range(n_per_block):
+            f_list.append(bs(f_list[-1]))
+            uf_list.append(bds(uf_list[-1]) + f_list[-1])
+            luf_list.append(bdrs(luf_list[-1]) + uf_list[-1])
+                          
+
+        
+
+        x = luf_list[-1]
+
+
+        if self.params['final_activation'] == 'sigmoid':
+            x = tf.nn.sigmoid(x)
+        elif self.params['final_activation'] == 'elu':
+            x = tf.nn.elu(x)
+        elif self.params['final_activation'] == None:
+            pass
+        else:
+            raise("Unknown param valies for [final activation]: {}".format(self.params['final_activation']))
+
+
+        self.model = tf.keras.Model(inputs=inputs, outputs=x)
+
+    def predict(self, elem):
+        if self.model is None:
+            # IPython.embed()
+            # self.make_stack_net(next(elem.as_numpy_iterator())['gt_occ'])
+            self(next(elem.__iter__()))
+        return self.model.predict(elem)
+
+    def __call__(self, inp):
+        if self.model is None:
+            self.make_stack_net(inp['gt_occ'])
+        return self.model(inp['gt_occ'])
+
+    @tf.function
+    def mse_loss(self, metrics):
+        l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
+        return l_occ
+
+    @tf.function
+    def train_step(self, batch):
+        def reduce(val):
+            return tf.reduce_mean(val)
+            
+        
+        def step_fn(batch):
+            with tf.GradientTape() as tape:
+                output = self(batch, training=True)
+                acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
+                mse_occ = tf.math.square(acc_occ)
+                acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
+                mse_free = tf.math.square(acc_free)
+
+                unknown_occ = batch['gt_occ'] - batch['known_occ']
+                unknown_free = batch['gt_free'] - batch['known_free']
+                
+                metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
+                           "mse/free": mse_free, "acc/free": acc_free,
+                           "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
+                                                                  batch['gt_occ']),
+                           "pred|gt/p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
+                                                                    batch['gt_free']),
+                           "pred|known/p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                batch['known_occ']),
+                           "pred|known/p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
+                                                                                  batch['known_free']),
+                           "pred|gt/p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
+                                                                           batch['gt_free']),
+                           "pred|gt/p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
+                                                                           batch['gt_occ']),
+                           "pred|known/p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
+                                                                                 batch['known_free']),
+                           "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
+                                                                                 batch['known_occ']),
+                           "pred|unknown/p(predicted_occ|unknown_occ)": p_x_given_y(output['predicted_occ'],
+                                                                                    unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_occ)": p_x_given_y(output['predicted_free'],
+                                                                                     unknown_occ),
+                           "pred|unknown/p(predicted_free|unknown_free)": p_x_given_y(output['predicted_free'],
+                                                                                      unknown_free),
+                           "pred|unknown/p(predicted_occ|unknown_free)": p_x_given_y(output['predicted_occ'],
+                                                                                      unknown_free),
+                           "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
+                           "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
+                           "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
+                           "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
+                           }
+                if self.params['loss'] == 'cross_entropy':
+                    loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                                             output['predicted_occ']))
+                elif self.params['loss'] == 'mse':
+                    loss = self.mse_loss(metrics)
+                    
+                variables = self.trainable_variables
+                gradients = tape.gradient(loss, variables)
+
+                self.opt.apply_gradients(list(zip(gradients, variables)))
+                return loss, metrics
+            
+        loss, metrics = step_fn(batch)
+        m = {k: reduce(metrics[k]) for k in metrics}
+        m['loss'] = loss
+        return m

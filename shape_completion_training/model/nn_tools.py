@@ -53,20 +53,22 @@ class MaskedConv3D(tf.keras.layers.Layer):
 
 
 class Conv3D(tf.keras.layers.Layer):
-    def __init__(self, n_filters, filter_size, use_bias, name=None):
+    def __init__(self, n_filters, filter_size, use_bias,
+                 nln=None, name=None):
         super(Conv3D, self).__init__(name=name)
         self.filter_size = filter_size
         self.n_filters = n_filters
         self.b = None
         self.padding='VALID'
         self.use_bias = use_bias
+        self.nln = nln
 
     def build(self, input_shape):
         self.w = self.add_weight(name='weights',
                                  shape=self.filter_size + [input_shape[-1], self.n_filters],
                                  # shape=[3,3,3,1,1],
-                                 # initializer=tf.initializer.GlorotUniform(),
-                                 initializer=tf.initializers.ones(),
+                                 initializer=tf.initializers.GlorotUniform(),
+                                 # initializer=tf.initializers.ones(),
                                  trainable=True)
         if self.use_bias:
             self.b = self.add_weight(name='bias',
@@ -78,14 +80,17 @@ class Conv3D(tf.keras.layers.Layer):
         x = tf.nn.conv3d(x, self.w, padding=self.padding, strides=[1,1,1,1,1])
         if self.use_bias:
             x = tf.nn.bias_add(x, self.b)
+        if self.nln is not None:
+            x = self.nln(x)
         return x
         
 
 class BackShiftConv3D(Conv3D):
-    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=False):
+    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=True, nln=None):
         super(BackShiftConv3D, self).__init__(n_filters=n_filters,
                                               filter_size=filter_size,
-                                              use_bias=use_bias)
+                                              use_bias=use_bias,
+                                              nln=nln)
 
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
@@ -97,10 +102,11 @@ class BackShiftConv3D(Conv3D):
 
     
 class BackDownShiftConv3D(Conv3D):
-    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=False):
+    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=True, nln=None):
         super(BackDownShiftConv3D, self).__init__(n_filters=n_filters,
-                                              filter_size=filter_size,
-                                              use_bias=use_bias)
+                                                  filter_size=filter_size,
+                                                  use_bias=use_bias,
+                                                  nln=nln)
 
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
@@ -111,10 +117,11 @@ class BackDownShiftConv3D(Conv3D):
         return super(BackDownShiftConv3D, self).call(x)
 
 class BackDownRightShiftConv3D(Conv3D):
-    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=False):
+    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=True, nln=None):
         super(BackDownRightShiftConv3D, self).__init__(n_filters=n_filters,
                                                        filter_size=filter_size,
-                                                       use_bias=use_bias)
+                                                       use_bias=use_bias,
+                                                       nln=nln)
 
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
@@ -128,21 +135,21 @@ class BackDownRightShiftConv3D(Conv3D):
 
 class BackShift(tf.keras.layers.Layer):
     def __init__(self):
-        super(BackShift, self).__init__(name='back_shift')
+        super(BackShift, self).__init__()
 
     def call(self, x):
         return back_shift(x)
     
 class DownShift(tf.keras.layers.Layer):
     def __init__(self):
-        super(DownShift, self).__init__(name='up_shift')
+        super(DownShift, self).__init__()
 
     def call(self, x):
         return up_shift(x)
     
 class RightShift(tf.keras.layers.Layer):
     def __init__(self):
-        super(RightShift, self).__init__(name='right_shift')
+        super(RightShift, self).__init__()
 
     def call(self, x):
         return right_shift(x)

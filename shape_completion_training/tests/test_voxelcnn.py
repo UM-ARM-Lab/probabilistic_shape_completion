@@ -9,6 +9,7 @@ sys.path.append(sc_path)
 
 from model import data_tools
 from model.network import Network
+from model.voxelcnn import VoxelCNN, StackedVoxelCNN
 import model.nn_tools as nn
 import tensorflow.keras.layers as tfl
 import tensorflow as tf
@@ -119,7 +120,6 @@ def make_stack_net(inp):
     uf = nn.BackShift()(nn.BackShiftConv3D(1)(x)) + nn.DownShift()(nn.BackDownShiftConv3D(1)(x))
 
     #Left Upper Front
-
     luf = nn.BackShift()(nn.BackShiftConv3D(1)(x)) + \
           nn.DownShift()(nn.BackDownShiftConv3D(1)(x)) + \
           nn.RightShift()(nn.BackDownRightShiftConv3D(1)(x))
@@ -130,10 +130,15 @@ def make_stack_net(inp):
             
 
 def test_stack_net():
-    inp = tf.ones([1,5,5,5,1])
+    # inp = np.ones([1,5,5,5,1])
+    inp = np.zeros([1,5,5,5,1])
+    inp[0,0,0,4,0] = 1.0
     # net = StackNet()
-    net = make_stack_net(inp)
-    out = net(inp)
+    # net = make_stack_net(inp)
+    net = StackedVoxelCNN(params={'final_activation':None})
+    out = net(tf.convert_to_tensor(inp))
+    print(inp[0,:,:,:,0])
+    print(out[0,:,:,:,0])
     IPython.embed()
 
 

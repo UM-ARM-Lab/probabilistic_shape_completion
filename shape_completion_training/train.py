@@ -24,7 +24,7 @@ params = {
     'use_final_unet_layer': False,
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': True,
-    'network': 'VoxelCNN',
+    'network': 'StackedVoxelCNN',
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
     'loss':'cross_entropy'
