@@ -3,16 +3,17 @@ from __future__ import print_function
 
 import tensorflow as tf
 import random
+import numpy as np
 
 import IPython
 
 
 def prepare_for_sampling(elem):
-    elem['sampled_occ'] = elem['known_occ']
+    elem['sampled_occ'] = elem['known_occ'] + 0.0
     known = elem['known_occ'] + elem['known_free']
     rough_estimate = elem['gt_occ']
-    # elem['conditioned_occ'] = elem['known_occ'] + (1-known) * rough_estimate
-    elem['conditioned_occ'] = elem['known_occ']
+    elem['conditioned_occ'] = elem['known_occ'] + (1-known) * rough_estimate
+    # elem['conditioned_occ'] = elem['known_occ'] + 0.0
     return elem
 
 
@@ -55,15 +56,15 @@ class EfficientCNNSampler:
         ind = next(self.indices_iter)
         i = (0,ind[0],ind[1],ind[2],0)
 
-        need_resampling = False
-        
         p = self.pred_occ[i]
 
         if elem['known_occ'][i] == 1.0 or elem['known_free'][i] == 1.0:
             return elem, inference
 
+
         # if p > random.random():
         if p > 0.5:
+            # IPython.embed()
             elem, need_inference = update_from_sampling(elem, i, 1.0)
         else:
             elem, need_inference = update_from_sampling(elem, i, 0.0)

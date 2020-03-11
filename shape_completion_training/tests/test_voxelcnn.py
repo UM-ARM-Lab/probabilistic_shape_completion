@@ -20,9 +20,9 @@ import IPython
 
 params = {
     'num_latent_layers': 200,
-    'translation_pixel_range_x': 10,
-    'translation_pixel_range_y': 10,
-    'translation_pixel_range_z': 10,
+    'translation_pixel_range_x': 0,
+    'translation_pixel_range_y': 0,
+    'translation_pixel_range_z': 0,
     'is_u_connected': True,
     'final_activation': 'sigmoid',
     'unet_dropout_rate': 0.5,
@@ -49,7 +49,7 @@ def check_no_backflow(net, data):
 
     # e['known_occ'][0,:,:,:,0] = 0.0
     # IPython.embed()
-    e['known_occ'] = np.zeros(s, dtype=np.float32)
+    e['conditioned_occ'] = np.zeros(s, dtype=np.float32)
     indices = [(i,j,k) for i in range(s[1]) for j in range(s[2]) for k in range(s[3])]
 
 
@@ -57,18 +57,18 @@ def check_no_backflow(net, data):
     for ind in indices:
         i = (0, ind[0], ind[1], ind[2], 0)
 
-        # print("Checking: ({}, {}, {})".format(ind[0], ind[1], ind[2]))
-        # if e['gt_occ'][i] != 0:
         if True:
+        # if e['gt_occ'][i] == 1.0:
             print("Checking: ({}, {}, {})".format(ind[0], ind[1], ind[2]))
             completion_one_by_one = net.model(e)['predicted_occ']
             if completion_one_by_one[i] != completion_all_known[i]:
                 print("Completion Mismatch!")
                 mismatch = True
                 IPython.embed()
+            # IPython.embed()
 
-            
-        e['known_occ'][i] = e['gt_occ'][i]
+        if e['conditioned_occ'][i] != e['gt_occ'][i]:
+            e['conditioned_occ'][i] = e['gt_occ'][i]
     if not mismatch:
         print("Everything matches between the completion given GT all at once, and the completion given masked gt")
 
@@ -162,13 +162,16 @@ if __name__ == "__main__":
                                      params['translation_pixel_range_y'],
                                      params['translation_pixel_range_z'],
                                      sim_input_fn=sim_input_fn)
+    data = data_tools.simulate_condition_occ(data)
+
 
     
     # net = Network(params, "VoxelCNN_only_mask_first_layer")
+    net = Network(params=None, trial_name="VCNN_stacked")
 
 
-    test_stack_net()
-    # compare(net, data)
+    # test_stack_net()
+    check_no_backflow(net, data)
     # IPython.embed()
 
     # sn.train_and_test(data)
