@@ -5,7 +5,7 @@ import tensorflow.keras.layers as tfl
 import data_tools
 import filepath_tools
 import nn_tools as nn
-from nn_tools import MaskedConv3D
+from nn_tools import MaskedConv3D, p_x_given_y
 
 import IPython
 
@@ -136,15 +136,19 @@ class StackedVoxelCNN:
         self.batch_size = batch_size
         self.opt = tf.keras.optimizers.Adam(0.001)
 
+        self.make_stack_net(inp_shape = [64,64,64,1])
+
     def get_model(self):
         return self.model
 
 
-    def make_stack_net(self, inp):
+    def make_stack_net(self, inp_shape):
         n_filters = 16
-        n_per_block = 4
+        n_per_block = 3
         
-        inputs = tf.keras.Input(shape=inp.get_shape()[1:], batch_size=inp.get_shape()[0])
+        # inputs = tf.keras.Input(shape=inp.get_shape()[1:], batch_size=inp.get_shape()[0])
+        inputs = tf.keras.Input(batch_size=self.batch_size, shape=inp_shape)
+        # inputs = tf.keras.Input(batch_size=None, shape=inp_shape)
         x = inputs
 
 
@@ -179,9 +183,7 @@ class StackedVoxelCNN:
             luf_list.append(bdrs(luf_list[-1]) + uf_list[-1])
                           
 
-        
-
-        x = luf_list[-1]
+        x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf_list[-1])
 
 
         if self.params['final_activation'] == 'sigmoid':
@@ -193,20 +195,22 @@ class StackedVoxelCNN:
         else:
             raise("Unknown param valies for [final activation]: {}".format(self.params['final_activation']))
 
-
+        
+        
         self.model = tf.keras.Model(inputs=inputs, outputs=x)
 
     def predict(self, elem):
-        if self.model is None:
-            # IPython.embed()
-            # self.make_stack_net(next(elem.as_numpy_iterator())['gt_occ'])
-            self(next(elem.__iter__()))
-        return self.model.predict(elem)
+        # if self.model is None:
+        #     IPython.embed()
+        #     # self.make_stack_net(next(elem.as_numpy_iterator())['gt_occ'])
+        #     self(next(elem.__iter__()))
+        return self(next(elem.__iter__()))
 
     def __call__(self, inp):
         if self.model is None:
-            self.make_stack_net(inp['gt_occ'])
-        return self.model(inp['gt_occ'])
+            self.make_stack_net(tf.convert_to_tensor(inp['conditioned_occ']))
+        x = self.model(inp['conditioned_occ'])
+        return {'predicted_occ': x, 'predicted_free':1-x}
 
     @tf.function
     def mse_loss(self, metrics):
@@ -221,7 +225,7 @@ class StackedVoxelCNN:
         
         def step_fn(batch):
             with tf.GradientTape() as tape:
-                output = self(batch, training=True)
+                output = self(batch)
                 acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
                 mse_occ = tf.math.square(acc_occ)
                 acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
@@ -267,7 +271,7 @@ class StackedVoxelCNN:
                 elif self.params['loss'] == 'mse':
                     loss = self.mse_loss(metrics)
                     
-                variables = self.trainable_variables
+                variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)
 
                 self.opt.apply_gradients(list(zip(gradients, variables)))
@@ -277,3 +281,6 @@ class StackedVoxelCNN:
         m = {k: reduce(metrics[k]) for k in metrics}
         m['loss'] = loss
         return m
+
+    def summary(self):
+        return self.model.summary()

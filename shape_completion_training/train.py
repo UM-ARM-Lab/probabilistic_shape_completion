@@ -52,7 +52,7 @@ if __name__ == "__main__":
                                              turn_off_prob=params['turn_off_prob'])
 
     
-    sn = Network(params)
+    sn = Network(params, training=True)
     # IPython.embed()
 
     sn.train_and_test(data)

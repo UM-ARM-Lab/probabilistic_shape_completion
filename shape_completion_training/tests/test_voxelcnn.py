@@ -35,7 +35,13 @@ params = {
 
 
 
-def compare(net, data):
+def check_no_backflow(net, data):
+    """
+    Compares the inference value for each voxel for two inputs:
+    -Only previous voxels known
+    -All voxels known.
+    The structure of the network should mean these give identical results
+    """
     e = next(data.batch(1).__iter__())
     completion_all_known = net.model(e)['predicted_occ']
     s = completion_all_known.shape

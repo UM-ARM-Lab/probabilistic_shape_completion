@@ -13,7 +13,7 @@ import data_tools
 import filepath_tools
 import nn_tools
 from auto_encoder import AutoEncoder
-from voxelcnn import VoxelCNN
+from voxelcnn import VoxelCNN, StackedVoxelCNN
 import progressbar
 import datetime
 import time
@@ -25,15 +25,6 @@ import IPython
 
 
 
-@tf.function
-def p_x_given_y(x, y):
-    """
-    Returns the reduce p(x|y)
-    Clips x from 0 to one, then filters and normalizes by y
-    Assumes y is a tensor where every element is 0.0 or 1.0
-    """
-    clipped = tf.clip_by_value(x, 0.0, 1.0)
-    return tf.reduce_sum(clipped * y) / tf.reduce_sum(y)
 
 
 
@@ -43,8 +34,10 @@ def p_x_given_y(x, y):
 
 
 class Network:
-    def __init__(self, params=None, trial_name=None):
+    def __init__(self, params=None, trial_name=None, training=False):
         self.batch_size = 16
+        if not training:
+            self.batch_size = 1
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
@@ -63,19 +56,23 @@ class Network:
 
         if self.params['network'] == 'VoxelCNN':
             self.model = VoxelCNN(self.params, batch_size=self.batch_size)
+        if self.params['network'] == 'StackedVoxelCNN':
+            self.model = StackedVoxelCNN(self.params, batch_size=self.batch_size)
         elif self.params['network'] == 'AutoEncoder':
             self.model = AutoEncoder(self.params, batch_size=self.batch_size)
         else:
             raise Exception('Unknown Model Type')
 
+        self.num_batches = None
+
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1),
                                         epoch=tf.Variable(0),
                                         train_time=tf.Variable(0.0),
-                                        optimizer=self.model.opt, net=self.model)
+                                        optimizer=self.model.opt, net=self.model.get_model())
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
-
-        self.num_batches = None
         self.restore()
+
+
         
 
     def restore(self):

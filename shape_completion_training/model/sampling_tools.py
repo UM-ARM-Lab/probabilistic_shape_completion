@@ -11,7 +11,8 @@ def prepare_for_sampling(elem):
     elem['sampled_occ'] = elem['known_occ']
     known = elem['known_occ'] + elem['known_free']
     rough_estimate = elem['gt_occ']
-    elem['conditioned_occ'] = elem['known_occ'] + (1-known) * rough_estimate
+    # elem['conditioned_occ'] = elem['known_occ'] + (1-known) * rough_estimate
+    elem['conditioned_occ'] = elem['known_occ']
     return elem
 
 
