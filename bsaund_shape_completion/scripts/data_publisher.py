@@ -33,6 +33,8 @@ from std_msgs.msg import String
 
 import threading
 
+import tensorflow as tf
+
 import IPython
 
 
@@ -119,19 +121,25 @@ def publish_selection(metadata, str_msg):
     ds = metadata.skip(selection_map[str_msg.data]).take(1)
     ds = data_tools.load_voxelgrids(ds)
     # ds = data_tools.simulate_input(ds, 0, 0, 0)
-    sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3/2)
+    sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3 * 4/8)
+    # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3)
     
     ds = data_tools.simulate_input(ds, translation, translation, translation,
                                    sim_input_fn=sim_input_fn)
-    ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00001, turn_off_prob=0.1)
+    # ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00001, turn_off_prob=0.1)
+    # ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00000, turn_off_prob=0.0)
+    
     # ds = data_tools.simulate_partial_completion(ds)
     # ds = data_tools.simulate_random_partial_completion(ds)
 
-    # Note: there is only one elem in this ds
     elem_raw = next(ds.__iter__())
     elem = {}
+
     for k in elem_raw.keys():
-        elem[k] = np.expand_dims(elem_raw[k].numpy(), axis=0)
+        elem_raw[k] = tf.expand_dims(elem_raw[k], axis=0)
+    
+    for k in elem_raw.keys():
+        elem[k] = elem_raw[k].numpy()
     publish_np_elem(elem)
 
     
@@ -223,8 +231,9 @@ def load_network():
     print('Load network? (Y/n)')
     if raw_input().lower() == 'n':
         return
-    # model = Network(trial_name="VoxelCNN_only_mask_first_layer")
-    model = Network()
+    model = Network(trial_name="VCNN_stacked")
+    # model = Network()
+
     
 
 if __name__=="__main__":
