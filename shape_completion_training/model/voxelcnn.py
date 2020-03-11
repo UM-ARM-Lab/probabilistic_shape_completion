@@ -292,27 +292,65 @@ def make_stack_net_v2(inp_shape, batch_size, params):
     inputs = tf.keras.Input(batch_size=batch_size, shape=inp_shape)
     x = inputs
 
-    conv_args = {'use_bias': True, 'filter_size': filter_size, 'nln': tf.nn.elu}
+    conv_args_strided = {'use_bias': True,
+                 # 'filter_size': filter_size,
+                 'nln': tf.nn.elu,
+                 'strides':[1,2,2,2,1]}
+    
+    def bs_strided(x, n_filters):
+        return nn.BackShiftConv3D(n_filters, filter_size=filter_size, **conv_args_strided)(x)
+    def bds_strided(x, n_filters):
+        return nn.BackDownShiftConv3D(n_filters, filter_size=filter_size, **conv_args_strided)(x)
+    def bdrs_strided(x, n_filters):
+        return nn.BackDownRightShiftConv3D(n_filters, filter_size=filter_size, **conv_args_strided)(x)
+
+    conv_args = {'use_bias': True,
+                 # 'filter_size': filter_size,
+                 'nln': tf.nn.elu,
+                 'strides':[1,1,1,1,1]}
     
     def bs(x, n_filters):
-        return nn.BackShiftConv3D(n_filters, **conv_args)(x)
+        return nn.BackShiftConv3D(n_filters, filter_size=filter_size, **conv_args)(x)
     def bds(x, n_filters):
-        return nn.BackDownShiftConv3D(n_filters, **conv_args)(x)
+        return nn.BackDownShiftConv3D(n_filters, filter_size=filter_size, **conv_args)(x)
     def bdrs(x, n_filters):
-        return nn.BackDownRightShiftConv3D(n_filters, **conv_args)(x)
+        return nn.BackDownRightShiftConv3D(n_filters, filter_size=filter_size, **conv_args)(x)
+
+    flf = 4 # first_layer_filters
 
     #Front,     #Upper Front, and     #Left Upper Front
-    f_list = [nn.BackShift()(x)]
-    uf_list = [nn.DownShift()(x)]
-    luf_list = [nn.RightShift()(x)]
+    f_1 = nn.BackShift()(bs(x, flf))
+    uf_1 = nn.BackShift()(bs(x, flf)) + \
+           nn.DownShift()(bds(x, flf))
+    luf_1 = nn.BackShift()(bs(x, flf)) + \
+            nn.DownShift()(bds(x, flf)) + \
+            nn.RightShift()(bdrs(x, flf))
+
+    for i in range(2):
+        f_1 = bs(f_1, flf)
+        uf_1 = bds(uf_1, flf) + f_1
+        luf_1 = bdrs(luf_1, flf) + uf_1
+
+    f_list = [f_1]
+    uf_list = [uf_1]
+    luf_list = [luf_1]
     
     for fs in n_filters:
-        f_list.append(bs(f_list[-1], fs))
-        uf_list.append(bds(uf_list[-1], fs) + f_list[-1])
-        luf_list.append(bdrs(luf_list[-1], fs) + uf_list[-1])
+        f_list.append(bs_strided(f_list[-1], fs))
+        uf_list.append(bds_strided(uf_list[-1], fs) + f_list[-1])
+        luf_list.append(bdrs_strided(luf_list[-1], fs) + uf_list[-1])
+
+    f = f_list.pop()
+    uf = uf_list.pop()
+    luf = luf_list.pop()
+
+    
+    for fs in reversed(n_filters):
+        f = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(f), f_list.pop()], axis=4)
+        uf = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(uf), uf_list.pop()], axis=4)
+        luf = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(luf), luf_list.pop()], axis=4)
         
-        
-    x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf_list[-1])
+    x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf)
     
     
     if params['final_activation'] == 'sigmoid':

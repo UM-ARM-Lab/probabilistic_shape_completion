@@ -89,7 +89,7 @@ class Conv3D(tf.keras.layers.Layer):
                                      trainable=True)
 
     def call(self, x):
-        x = tf.nn.conv3d(x, self.w, padding=self.padding, strides=[1,1,1,1,1])
+        x = tf.nn.conv3d(x, self.w, padding=self.padding, strides=self.strides)
         if self.use_bias:
             x = tf.nn.bias_add(x, self.b)
         if self.nln is not None:
@@ -103,8 +103,8 @@ class BackShiftConv3D(Conv3D):
 
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
-                       [int((self.filter_size[1]-1)/2), int((self.filter_size[1]-1)/2)],
-                       [int((self.filter_size[2]-1)/2), int((self.filter_size[2]-1)/2)],
+                       [int((self.filter_size[1]-1)/2), int((self.filter_size[1])/2)],
+                       [int((self.filter_size[2]-1)/2), int((self.filter_size[2])/2)],
                        [0,0]])
 
         return super(BackShiftConv3D, self).call(x)
@@ -117,7 +117,7 @@ class BackDownShiftConv3D(Conv3D):
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
                        [self.filter_size[1]-1, 0],
-                       [int((self.filter_size[2]-1)/2), int((self.filter_size[2]-1)/2)],
+                       [int((self.filter_size[2]-1)/2), int((self.filter_size[2])/2)],
                        [0,0]])
 
         return super(BackDownShiftConv3D, self).call(x)

@@ -136,15 +136,18 @@ def make_stack_net(inp):
             
 
 def test_stack_net():
-    # inp = np.ones([1,5,5,5,1])
-    inp = np.zeros([1,5,5,5,1])
-    inp[0,0,0,4,0] = 1.0
-    # net = StackNet()
-    # net = make_stack_net(inp)
-    net = StackedVoxelCNN(params={'final_activation':None})
-    out = net(tf.convert_to_tensor(inp))
+    # inp = np.ones([1,64,64,64,1], dtype=np.float32)
+    inp = np.zeros([1,64,64,64,1], dtype=np.float32)
+    inp[0,0,0,3,0] = 1.0
+
+    net = StackedVoxelCNN(params={'final_activation':None, 'stacknet_version':'v2'}, batch_size=1)
+    e = {'conditioned_occ':tf.convert_to_tensor(inp)}
+    out = net(e)['predicted_occ'].numpy()
+    print("Input")
     print(inp[0,:,:,:,0])
-    print(out[0,:,:,:,0])
+    print("Output")
+    # print(out[0,:,:,:,0])
+    print((out[0,0:6,0:7,0:20,0] != 0)+0)
     IPython.embed()
 
 
@@ -166,13 +169,15 @@ if __name__ == "__main__":
 
 
     
-    # net = Network(params, "VoxelCNN_only_mask_first_layer")
-    net = Network(params=None, trial_name="VCNN_stacked")
 
-
-    # test_stack_net()
-    check_no_backflow(net, data)
+    test_stack_net()
+     # check_no_backflow(net, data)
     # IPython.embed()
 
     # sn.train_and_test(data)
+
+    # net = Network(params, "VoxelCNN_only_mask_first_layer")
+    # net = Network(params=None, trial_name="VCNN_stacked")
+    # net = StackedVoxelCNN(params={'final_activation':None})
+
 
