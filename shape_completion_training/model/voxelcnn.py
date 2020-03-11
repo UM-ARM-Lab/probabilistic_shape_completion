@@ -207,8 +207,6 @@ class StackedVoxelCNN:
         return self(next(elem.__iter__()))
 
     def __call__(self, inp):
-        if self.model is None:
-            self.make_stack_net(tf.convert_to_tensor(inp['conditioned_occ']))
         x = self.model(inp['conditioned_occ'])
         return {'predicted_occ': x, 'predicted_free':1-x}
 

@@ -47,6 +47,7 @@ class Network:
                                                 nick=trial_name)
         self.params = filepath_tools.handle_params(file_fp, fp, params)
 
+        self.trial_fp = fp
         self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
 
         train_log_dir = os.path.join(fp, 'logs/train')
@@ -92,6 +93,8 @@ class Network:
         self.model.predict(elem)
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
+
+        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_fp, 'network.png'))
 
 
 
