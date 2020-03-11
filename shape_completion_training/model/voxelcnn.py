@@ -143,67 +143,14 @@ class StackedVoxelCNN:
 
 
     def make_stack_net(self, inp_shape):
-        n_filters = 16
-        n_per_block = 3
-        
-        # inputs = tf.keras.Input(shape=inp.get_shape()[1:], batch_size=inp.get_shape()[0])
-        inputs = tf.keras.Input(batch_size=self.batch_size, shape=inp_shape)
-        # inputs = tf.keras.Input(batch_size=None, shape=inp_shape)
-        x = inputs
 
-
-        def bs(x):
-            return nn.BackShiftConv3D(n_filters, use_bias=False,
-                                      nln=tf.nn.elu)(x)
-
-        def bds(x):
-            return nn.BackDownShiftConv3D(n_filters, use_bias=False,
-                                          nln=tf.nn.elu)(x)
-
-        def bdrs(x):
-            return nn.BackDownRightShiftConv3D(n_filters, use_bias=False,
-                                               nln=tf.nn.elu)(x)
-
-        #Front
-        f_list = [nn.BackShift()(bs(x))]
-
-        #Upper Front
-        uf_list = [nn.BackShift()(bs(x)) + \
-                  nn.DownShift()(bds(x))]
-        
-        #Left Upper Front
-        luf_list = [nn.BackShift()(bs(x)) + \
-                   nn.DownShift()(bds(x)) + \
-                   nn.RightShift()(bdrs(x))]
-
-
-        for _ in range(n_per_block):
-            f_list.append(bs(f_list[-1]))
-            uf_list.append(bds(uf_list[-1]) + f_list[-1])
-            luf_list.append(bdrs(luf_list[-1]) + uf_list[-1])
-                          
-
-        x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf_list[-1])
-
-
-        if self.params['final_activation'] == 'sigmoid':
-            x = tf.nn.sigmoid(x)
-        elif self.params['final_activation'] == 'elu':
-            x = tf.nn.elu(x)
-        elif self.params['final_activation'] == None:
-            pass
-        else:
-            raise("Unknown param valies for [final activation]: {}".format(self.params['final_activation']))
-
-        
-        
-        self.model = tf.keras.Model(inputs=inputs, outputs=x)
+        model_selector = {
+            'v1': lambda: make_stack_net_v1(inp_shape, self.batch_size, self.params),
+            'v2': lambda: make_stack_net_v2(inp_shape, self.batch_size, self.params),
+        }
+        self.model = model_selector[self.params['stacknet_version']]()
 
     def predict(self, elem):
-        # if self.model is None:
-        #     IPython.embed()
-        #     # self.make_stack_net(next(elem.as_numpy_iterator())['gt_occ'])
-        #     self(next(elem.__iter__()))
         return self(next(elem.__iter__()))
 
     def __call__(self, inp):
@@ -282,3 +229,99 @@ class StackedVoxelCNN:
 
     def summary(self):
         return self.model.summary()
+
+
+
+def make_stack_net_v1(inp_shape, batch_size, params):
+    n_filters = 16
+    n_per_block = 3
+        
+    # inputs = tf.keras.Input(shape=inp.get_shape()[1:], batch_size=inp.get_shape()[0])
+    inputs = tf.keras.Input(batch_size=batch_size, shape=inp_shape)
+    # inputs = tf.keras.Input(batch_size=None, shape=inp_shape)
+    x = inputs
+
+    def bs(x):
+        return nn.BackShiftConv3D(n_filters, use_bias=False,
+                                  nln=tf.nn.elu)(x)
+    def bds(x):
+        return nn.BackDownShiftConv3D(n_filters, use_bias=False,
+                                      nln=tf.nn.elu)(x)
+    def bdrs(x):
+        return nn.BackDownRightShiftConv3D(n_filters, use_bias=False,
+                                           nln=tf.nn.elu)(x)
+
+    #Front
+    f_list = [nn.BackShift()(bs(x))]
+
+    #Upper Front
+    uf_list = [nn.BackShift()(bs(x)) + \
+               nn.DownShift()(bds(x))]
+    
+    #Left Upper Front
+    luf_list = [nn.BackShift()(bs(x)) + \
+                nn.DownShift()(bds(x)) + \
+                nn.RightShift()(bdrs(x))]
+    
+    
+    for _ in range(n_per_block):
+        f_list.append(bs(f_list[-1]))
+        uf_list.append(bds(uf_list[-1]) + f_list[-1])
+        luf_list.append(bdrs(luf_list[-1]) + uf_list[-1])
+        
+        
+    x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf_list[-1])
+    
+    
+    if params['final_activation'] == 'sigmoid':
+        x = tf.nn.sigmoid(x)
+    elif params['final_activation'] == 'elu':
+        x = tf.nn.elu(x)
+    elif params['final_activation'] == None:
+        pass
+    else:
+        raise("Unknown param valies for [final activation]: {}".format(params['final_activation']))
+
+    return tf.keras.Model(inputs=inputs, outputs=x)
+
+
+def make_stack_net_v2(inp_shape, batch_size, params):
+    filter_size = [2,2,2]
+    n_filters = [64, 128, 256, 512]
+
+    inputs = tf.keras.Input(batch_size=batch_size, shape=inp_shape)
+    x = inputs
+
+    conv_args = {'use_bias': True, 'filter_size': filter_size, 'nln': tf.nn.elu}
+    
+    def bs(x, n_filters):
+        return nn.BackShiftConv3D(n_filters, **conv_args)(x)
+    def bds(x, n_filters):
+        return nn.BackDownShiftConv3D(n_filters, **conv_args)(x)
+    def bdrs(x, n_filters):
+        return nn.BackDownRightShiftConv3D(n_filters, **conv_args)(x)
+
+    #Front,     #Upper Front, and     #Left Upper Front
+    f_list = [nn.BackShift()(x)]
+    uf_list = [nn.DownShift()(x)]
+    luf_list = [nn.RightShift()(x)]
+    
+    for fs in n_filters:
+        f_list.append(bs(f_list[-1], fs))
+        uf_list.append(bds(uf_list[-1], fs) + f_list[-1])
+        luf_list.append(bdrs(luf_list[-1], fs) + uf_list[-1])
+        
+        
+    x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf_list[-1])
+    
+    
+    if params['final_activation'] == 'sigmoid':
+        x = tf.nn.sigmoid(x)
+    elif params['final_activation'] == 'elu':
+        x = tf.nn.elu(x)
+    elif params['final_activation'] == None:
+        pass
+    else:
+        raise("Unknown param valies for [final activation]: {}".format(params['final_activation']))
+
+    return tf.keras.Model(inputs=inputs, outputs=x)

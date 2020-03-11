@@ -9,6 +9,7 @@
  "simulate_partial_completion": false,
  "simulate_random_partial_completion": false,
  "network": "VoxelCNN",
+ "stacknet_version": "v1",
  "turn_on_prob":0.0,
  "turn_off_prob":0.0,
  "loss":"mse"

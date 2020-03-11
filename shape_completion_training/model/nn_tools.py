@@ -64,8 +64,8 @@ class MaskedConv3D(tf.keras.layers.Layer):
 
 
 class Conv3D(tf.keras.layers.Layer):
-    def __init__(self, n_filters, filter_size, use_bias,
-                 nln=None, name=None):
+    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=True,
+                 nln=None, name=None, strides=[1,1,1,1,1]):
         super(Conv3D, self).__init__(name=name)
         self.filter_size = filter_size
         self.n_filters = n_filters
@@ -73,6 +73,7 @@ class Conv3D(tf.keras.layers.Layer):
         self.padding='VALID'
         self.use_bias = use_bias
         self.nln = nln
+        self.strides=strides
 
     def build(self, input_shape):
         self.w = self.add_weight(name='weights',
@@ -97,11 +98,8 @@ class Conv3D(tf.keras.layers.Layer):
         
 
 class BackShiftConv3D(Conv3D):
-    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=True, nln=None):
-        super(BackShiftConv3D, self).__init__(n_filters=n_filters,
-                                              filter_size=filter_size,
-                                              use_bias=use_bias,
-                                              nln=nln)
+    def __init__(self, n_filters, **kwargs):
+        super(BackShiftConv3D, self).__init__(n_filters, **kwargs)
 
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
@@ -113,11 +111,8 @@ class BackShiftConv3D(Conv3D):
 
     
 class BackDownShiftConv3D(Conv3D):
-    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=True, nln=None):
-        super(BackDownShiftConv3D, self).__init__(n_filters=n_filters,
-                                                  filter_size=filter_size,
-                                                  use_bias=use_bias,
-                                                  nln=nln)
+    def __init__(self, n_filters, **kwargs):
+        super(BackDownShiftConv3D, self).__init__(n_filters, **kwargs)
 
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
@@ -128,11 +123,8 @@ class BackDownShiftConv3D(Conv3D):
         return super(BackDownShiftConv3D, self).call(x)
 
 class BackDownRightShiftConv3D(Conv3D):
-    def __init__(self, n_filters, filter_size=[3,3,3], use_bias=True, nln=None):
-        super(BackDownRightShiftConv3D, self).__init__(n_filters=n_filters,
-                                                       filter_size=filter_size,
-                                                       use_bias=use_bias,
-                                                       nln=nln)
+    def __init__(self, n_filters, **kwargs):
+        super(BackDownRightShiftConv3D, self).__init__(n_filters, **kwargs)
 
     def call(self, x):
         x = tf.pad(x, [[0,0], [self.filter_size[0]-1, 0],
