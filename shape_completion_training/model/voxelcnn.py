@@ -111,6 +111,7 @@ class StackedVoxelCNN:
         model_selector = {
             'v1': lambda: make_stack_net_v1(inp_shape, self.batch_size, self.params),
             'v2': lambda: make_stack_net_v2(inp_shape, self.batch_size, self.params),
+            'v3': lambda: make_stack_net_v3(inp_shape, self.batch_size, self.params),
         }
         self.model = model_selector[self.params['stacknet_version']]()
 
@@ -296,4 +297,49 @@ def make_stack_net_v2(inp_shape, batch_size, params):
     else:
         raise("Unknown param valies for [final activation]: {}".format(params['final_activation']))
 
-    return tf.keras.Model(inputs=inputs, outputs=x)
+    output = {"predicted_occ":x, "predicted_free":1-x}
+    return tf.keras.Model(inputs=inputs, outputs=output)
+
+
+
+
+
+
+
+def make_stack_net_v3(inp_shape, batch_size, params):
+    filter_size = [2,2,2]
+    n_filters = [64, 128, 256, 512]
+
+    inputs = {'conditioned_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape),
+              'known_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape),
+              'known_free':tf.keras.Input(batch_size=batch_size, shape=inp_shape),
+    }
+
+    x = tfl.concatenate([inputs['known_occ'], inputs['known_free']], axis=4)
+
+
+    for n_filter in [64, 128, 256, 512]:
+        x = tfl.Conv3D(n_filter, (2,2,2,), use_bias=True, padding="same")(x)
+        x = tfl.Activation(tf.nn.relu)(x)
+        x = tfl.MaxPool3D((2,2,2))(x)
+
+    x = tfl.Flatten()(x)
+    x = tfl.Dense(200, activation='relu')(x)
+    x = tfl.Dense(32768, activation='relu')(x)
+    x = tfl.Reshape((4,4,4,512))(x)
+
+    for n_filter in [256, 128, 64, 12]:
+        x = tfl.Conv3DTranspose(n_filter, (2,2,2,), use_bias=True, strides=2)(x)
+        x = tfl.Activation(tf.nn.relu)(x)
+
+    x = tfl.Conv3D(1, (1,1,1), use_bias=True)(x)
+    x = tfl.Activation(tf.nn.sigmoid)(x)
+
+    
+    output = {"predicted_occ":x, "predicted_free":1 - x}
+    return tf.keras.Model(inputs=inputs, outputs=output)
+
+
+
+
+
