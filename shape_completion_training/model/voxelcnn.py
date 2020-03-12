@@ -71,45 +71,9 @@ class VoxelCNN(tf.keras.Model):
         def step_fn(batch):
             with tf.GradientTape() as tape:
                 output = self(batch, training=True)
-                acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
-                mse_occ = tf.math.square(acc_occ)
-                acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
-                mse_free = tf.math.square(acc_free)
 
-                unknown_occ = batch['gt_occ'] - batch['known_occ']
-                unknown_free = batch['gt_free'] - batch['known_free']
+                metrics = nn.calc_metrics(output, batch)
                 
-                metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
-                           "mse/free": mse_free, "acc/free": acc_free,
-                           "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
-                                                                  batch['gt_occ']),
-                           "pred|gt/p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
-                                                                    batch['gt_free']),
-                           "pred|known/p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
-                                                                                batch['known_occ']),
-                           "pred|known/p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
-                                                                                  batch['known_free']),
-                           "pred|gt/p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
-                                                                           batch['gt_free']),
-                           "pred|gt/p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
-                                                                           batch['gt_occ']),
-                           "pred|known/p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
-                                                                                 batch['known_free']),
-                           "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
-                                                                                 batch['known_occ']),
-                           "pred|unknown/p(predicted_occ|unknown_occ)": p_x_given_y(output['predicted_occ'],
-                                                                                    unknown_occ),
-                           "pred|unknown/p(predicted_free|unknown_occ)": p_x_given_y(output['predicted_free'],
-                                                                                     unknown_occ),
-                           "pred|unknown/p(predicted_free|unknown_free)": p_x_given_y(output['predicted_free'],
-                                                                                      unknown_free),
-                           "pred|unknown/p(predicted_occ|unknown_free)": p_x_given_y(output['predicted_occ'],
-                                                                                      unknown_free),
-                           "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
-                           "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
-                           "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
-                           "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
-                           }
                 if self.params['loss'] == 'cross_entropy':
                     loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
                                                                              output['predicted_occ']))
@@ -154,8 +118,9 @@ class StackedVoxelCNN:
         return self(next(elem.__iter__()))
 
     def __call__(self, inp):
-        x = self.model(inp['conditioned_occ'])
-        return {'predicted_occ': x, 'predicted_free':1-x}
+        model_inp = {k: inp[k] for k in self.model.input.keys()}
+        x = self.model(model_inp)
+        return x
 
     @tf.function
     def mse_loss(self, metrics):
@@ -171,45 +136,9 @@ class StackedVoxelCNN:
         def step_fn(batch):
             with tf.GradientTape() as tape:
                 output = self(batch)
-                acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
-                mse_occ = tf.math.square(acc_occ)
-                acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
-                mse_free = tf.math.square(acc_free)
 
-                unknown_occ = batch['gt_occ'] - batch['known_occ']
-                unknown_free = batch['gt_free'] - batch['known_free']
+                metrics = nn.calc_metrics(output, batch)
                 
-                metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
-                           "mse/free": mse_free, "acc/free": acc_free,
-                           "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
-                                                                  batch['gt_occ']),
-                           "pred|gt/p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
-                                                                    batch['gt_free']),
-                           "pred|known/p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
-                                                                                batch['known_occ']),
-                           "pred|known/p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
-                                                                                  batch['known_free']),
-                           "pred|gt/p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
-                                                                           batch['gt_free']),
-                           "pred|gt/p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
-                                                                           batch['gt_occ']),
-                           "pred|known/p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
-                                                                                 batch['known_free']),
-                           "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
-                                                                                 batch['known_occ']),
-                           "pred|unknown/p(predicted_occ|unknown_occ)": p_x_given_y(output['predicted_occ'],
-                                                                                    unknown_occ),
-                           "pred|unknown/p(predicted_free|unknown_occ)": p_x_given_y(output['predicted_free'],
-                                                                                     unknown_occ),
-                           "pred|unknown/p(predicted_free|unknown_free)": p_x_given_y(output['predicted_free'],
-                                                                                      unknown_free),
-                           "pred|unknown/p(predicted_occ|unknown_free)": p_x_given_y(output['predicted_occ'],
-                                                                                      unknown_free),
-                           "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
-                           "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
-                           "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
-                           "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
-                           }
                 if self.params['loss'] == 'cross_entropy':
                     loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
                                                                              output['predicted_occ']))
@@ -220,7 +149,7 @@ class StackedVoxelCNN:
                 variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)
 
-                clipped_gradients = [tf.clip_by_value(g, -1., 1.) for g in gradients]
+                clipped_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in gradients]
 
                 self.opt.apply_gradients(list(zip(clipped_gradients, variables)))
                 return loss, metrics
@@ -239,10 +168,8 @@ def make_stack_net_v1(inp_shape, batch_size, params):
     n_filters = 16
     n_per_block = 3
         
-    # inputs = tf.keras.Input(shape=inp.get_shape()[1:], batch_size=inp.get_shape()[0])
-    inputs = tf.keras.Input(batch_size=batch_size, shape=inp_shape)
-    # inputs = tf.keras.Input(batch_size=None, shape=inp_shape)
-    x = inputs
+    inputs = {'conditioned_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape)}
+    x = inputs['conditioned_occ']
 
     def bs(x):
         return nn.BackShiftConv3D(n_filters, use_bias=False,
@@ -285,15 +212,19 @@ def make_stack_net_v1(inp_shape, batch_size, params):
     else:
         raise("Unknown param valies for [final activation]: {}".format(params['final_activation']))
 
-    return tf.keras.Model(inputs=inputs, outputs=x)
+    output = {"predicted_occ":x, "predicted_free":1-x}
+    return tf.keras.Model(inputs=inputs, output=x)
 
 
 def make_stack_net_v2(inp_shape, batch_size, params):
     filter_size = [2,2,2]
     n_filters = [64, 128, 256, 512]
 
-    inputs = tf.keras.Input(batch_size=batch_size, shape=inp_shape)
-    x = inputs
+    inputs = {'conditioned_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape)}
+    x = inputs['conditioned_occ']
+
+    # inputs = tf.keras.Input(batch_size=batch_size, shape=inp_shape)
+    # x = inputs
 
     conv_args_strided = {'use_bias': True,
                  # 'filter_size': filter_size,
@@ -350,8 +281,8 @@ def make_stack_net_v2(inp_shape, batch_size, params):
     
     for fs in reversed(n_filters):
         f = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(f), f_list.pop()], axis=4)
-        uf = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(uf), uf_list.pop()], axis=4)
-        luf = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(luf), luf_list.pop()], axis=4)
+        uf = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(uf), uf_list.pop()], axis=4) + f
+        luf = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(luf), luf_list.pop()], axis=4) + uf
         
     x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf)
     
