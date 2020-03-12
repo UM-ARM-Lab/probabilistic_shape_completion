@@ -87,14 +87,14 @@ class Network:
         self.model.summary()
 
     def build_model(self, dataset):
-        # self.model.evaluate(dataset.take(16))
         elem = dataset.take(self.batch_size).batch(self.batch_size)
         tf.summary.trace_on(graph=True, profiler=False)
         self.model.predict(elem)
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
-        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_fp, 'network.png'))
+        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_fp, 'network.png'),
+                                  show_shapes=True)
 
 
 

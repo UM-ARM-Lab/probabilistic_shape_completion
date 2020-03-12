@@ -213,8 +213,9 @@ class StackedVoxelCNN:
                 if self.params['loss'] == 'cross_entropy':
                     loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
                                                                              output['predicted_occ']))
+                    loss = loss / self.batch_size
                 elif self.params['loss'] == 'mse':
-                    loss = self.mse_loss(metrics)
+                    loss = self.mse_loss(metrics) / self.batch_size
                     
                 variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)

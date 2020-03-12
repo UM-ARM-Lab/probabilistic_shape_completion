@@ -28,7 +28,7 @@ params = {
     'stacknet_version': 'v2',
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
-    'loss':'cross_entropy'
+    'loss':'cross_entropy',
 }
 
 

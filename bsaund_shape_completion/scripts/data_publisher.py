@@ -231,7 +231,7 @@ def load_network():
     print('Load network? (Y/n)')
     if raw_input().lower() == 'n':
         return
-    model = Network(trial_name="VCNN_stacked", training=False)
+    model = Network(trial_name="VCNN_stacked_hourglass", training=False)
     # model = Network()
 
     
