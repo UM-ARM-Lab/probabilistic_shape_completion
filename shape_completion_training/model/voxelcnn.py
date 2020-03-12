@@ -220,7 +220,9 @@ class StackedVoxelCNN:
                 variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)
 
-                self.opt.apply_gradients(list(zip(gradients, variables)))
+                clipped_gradients = [tf.clip_by_value(g, -1., 1.) for g in gradients]
+
+                self.opt.apply_gradients(list(zip(clipped_gradients, variables)))
                 return loss, metrics
             
         loss, metrics = step_fn(batch)
