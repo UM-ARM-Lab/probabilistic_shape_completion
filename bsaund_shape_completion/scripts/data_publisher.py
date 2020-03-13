@@ -201,6 +201,7 @@ def sampler_worker(elem):
             prev_ct = sampler.ct
             publish_np_elem(elem)
             completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
+            # completion_pub.publish(to_msg(inference['aux_occ'].numpy()))
             completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
     print("Sampling complete")
     # IPython.embed()

@@ -151,6 +151,8 @@ class StackedVoxelCNN:
                 if self.params['stacknet_version'] == 'v4':
                     ae_loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
                                                                                 output['aux_occ']))
+                    metrics['loss/aux_loss'] = ae_loss
+                    metrics['loss/vcnn_loss'] = loss
                     loss = loss + 0.1*ae_loss
                     
                 variables = self.model.trainable_variables
@@ -381,6 +383,7 @@ def make_stack_net_v4(inp_shape, batch_size, params):
         x = tfl.Activation(tf.nn.relu)(x)
 
     x = tfl.Conv3D(1, (1,1,1), use_bias=True)(x)
+    ae_output_before_activation = x
     autoencoder_output = tfl.Activation(tf.nn.sigmoid)(x)
 
 
@@ -448,8 +451,9 @@ def make_stack_net_v4(inp_shape, batch_size, params):
         uf = tfl.Activation(tf.nn.elu)(uf)
         luf = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(luf), luf_list.pop(), uf], axis=4)
         luf = tfl.Activation(tf.nn.elu)(luf)
-        
-    x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf)
+
+    x = luf
+    x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(x)
     
     
     if params['final_activation'] == 'sigmoid':
