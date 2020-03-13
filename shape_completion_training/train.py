@@ -23,7 +23,7 @@ params = {
     'unet_dropout_rate': 0.5,
     'use_final_unet_layer': False,
     'simulate_partial_completion': False,
-    'simulate_random_partial_completion': True,
+    'simulate_random_partial_completion': False,
     'network': 'StackedVoxelCNN',
     'stacknet_version': 'v3',
     'turn_on_prob':0.00000,
@@ -51,6 +51,12 @@ if __name__ == "__main__":
     data = data_tools.simulate_condition_occ(data,
                                              turn_on_prob=params['turn_on_prob'],
                                              turn_off_prob=params['turn_off_prob'])
+
+    if params['simulate_partial_completion']:
+        train_ds = data_tools.simulate_partial_completion(train_ds)
+    if params['simulate_random_partial_completion']:
+        train_ds = data_tools.simulate_random_partial_completion(train_ds)
+
 
     
     sn = Network(params, training=True)
