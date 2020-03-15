@@ -25,7 +25,7 @@ params = {
     'use_final_unet_layer': False,
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': False,
-    'network': 'VAE',
+    'network': 'StackedVoxelCNN',
     'stacknet_version': 'v2',
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
@@ -60,10 +60,8 @@ if __name__ == "__main__":
         train_ds = data_tools.simulate_random_partial_completion(train_ds)
 
 
-    with tf.device('/GPU:1'):
-        
-        sn = Network(params, training=True)
-        # IPython.embed()
+    sn = Network(params, training=True)
+    # IPython.embed()
 
-        sn.train_and_test(data)
+    sn.train_and_test(data)
 

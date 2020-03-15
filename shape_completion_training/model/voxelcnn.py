@@ -2,8 +2,6 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
-import data_tools
-import filepath_tools
 import nn_tools as nn
 from nn_tools import MaskedConv3D, p_x_given_y
 
@@ -173,7 +171,8 @@ class StackedVoxelCNN:
                 metrics['loss/0_step'] = loss
                 m = metrics
 
-                for i in range(1):
+                if metrics['pred|gt/p(predicted_occ|gt_occ)'] > 0.95:
+                # for i in range(1):
                     b = {'conditioned_occ': output['predicted_occ']}
                     output = self(b)
                     step_loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
