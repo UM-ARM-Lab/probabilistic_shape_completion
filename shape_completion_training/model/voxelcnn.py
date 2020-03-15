@@ -162,8 +162,40 @@ class StackedVoxelCNN:
 
                 self.opt.apply_gradients(list(zip(clipped_gradients, variables)))
                 return loss, metrics
+
+        def step_fn_multiloss(batch):
+            with tf.GradientTape() as tape:
+                output = self(batch)
+                metrics = nn.calc_metrics(output, batch)
+                loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                                         output['predicted_occ']))
+                loss = loss / self.batch_size
+                metrics['loss/0_step'] = loss
+                m = metrics
+
+                for i in range(1):
+                    b = {'conditioned_occ': output['predicted_occ']}
+                    output = self(b)
+                    step_loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                                                  output['predicted_occ']))
+                    step_loss = step_loss / self.batch_size
+                    metrics['loss/{}_step'.format(i+1)] = step_loss
+
+                    loss = step_loss + loss
+
+                    
+                variables = self.model.trainable_variables
+                gradients = tape.gradient(loss, variables)
+
+                clipped_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in gradients]
+
+                self.opt.apply_gradients(list(zip(clipped_gradients, variables)))
+                return loss, metrics
             
-        loss, metrics = step_fn(batch)
+        if self.params['multistep_loss']:
+            loss, metrics = step_fn_multiloss(batch)
+        else:
+            loss, metrics = step_fn(batch)
         m = {k: reduce(metrics[k]) for k in metrics}
         m['loss'] = loss
         return m
@@ -174,6 +206,7 @@ class StackedVoxelCNN:
 
 
 def make_stack_net_v1(inp_shape, batch_size, params):
+    """Basic Stacked VCNN. Like maskedCNN, but moving layers around to remove blind spots"""
     n_filters = 16
     n_per_block = 3
         
@@ -226,6 +259,7 @@ def make_stack_net_v1(inp_shape, batch_size, params):
 
 
 def make_stack_net_v2(inp_shape, batch_size, params):
+    """Stacked VCNN with hourglass shape and unet connections"""
     filter_size = [2,2,2]
     n_filters = [64, 128, 256, 512]
 
@@ -453,6 +487,7 @@ def make_stack_net_v4(inp_shape, batch_size, params):
         luf = tfl.Activation(tf.nn.elu)(luf)
 
     x = luf
+    
     x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(x)
     
     
