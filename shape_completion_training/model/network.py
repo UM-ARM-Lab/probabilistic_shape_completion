@@ -14,6 +14,7 @@ import filepath_tools
 import nn_tools
 from auto_encoder import AutoEncoder
 from voxelcnn import VoxelCNN, StackedVoxelCNN
+from vae import VAE
 import progressbar
 import datetime
 import time
@@ -61,6 +62,8 @@ class Network:
             self.model = StackedVoxelCNN(self.params, batch_size=self.batch_size)
         elif self.params['network'] == 'AutoEncoder':
             self.model = AutoEncoder(self.params, batch_size=self.batch_size)
+        elif self.params['network'] == 'VAE':
+            self.model = VAE(self.params, batch_size=self.batch_size)
         else:
             raise Exception('Unknown Model Type')
 

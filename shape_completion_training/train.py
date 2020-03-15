@@ -9,6 +9,7 @@ sys.path.append(sc_path)
 
 from model import data_tools
 from model.network import Network
+import tensorflow as tf
 import IPython
 
 
@@ -24,11 +25,12 @@ params = {
     'use_final_unet_layer': False,
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': False,
-    'network': 'StackedVoxelCNN',
-    'stacknet_version': 'v4',
+    'network': 'VAE',
+    'stacknet_version': 'v2',
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
     'loss':'cross_entropy',
+    'multistep_loss': True,
 }
 
 
@@ -58,9 +60,10 @@ if __name__ == "__main__":
         train_ds = data_tools.simulate_random_partial_completion(train_ds)
 
 
-    
-    sn = Network(params, training=True)
-    # IPython.embed()
+    with tf.device('/GPU:1'):
+        
+        sn = Network(params, training=True)
+        # IPython.embed()
 
-    sn.train_and_test(data)
+        sn.train_and_test(data)
 
