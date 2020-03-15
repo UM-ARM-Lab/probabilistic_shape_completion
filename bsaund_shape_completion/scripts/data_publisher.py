@@ -120,12 +120,12 @@ def publish_selection(metadata, str_msg):
     
     ds = metadata.skip(selection_map[str_msg.data]).take(1)
     ds = data_tools.load_voxelgrids(ds)
-    # ds = data_tools.simulate_input(ds, 0, 0, 0)
-    sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3 * 4/8)
+    ds = data_tools.simulate_input(ds, 0, 0, 0)
+    # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3 * 4/8)
     # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3)
     
-    ds = data_tools.simulate_input(ds, translation, translation, translation,
-                                   sim_input_fn=sim_input_fn)
+    # ds = data_tools.simulate_input(ds, translation, translation, translation,
+    #                                sim_input_fn=sim_input_fn)
     # ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00001, turn_off_prob=0.1)
     # ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00000, turn_off_prob=0.0)
     
@@ -155,6 +155,16 @@ def publish_selection(metadata, str_msg):
     completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
     mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
     mismatch_pub.publish(to_msg(mismatch))
+
+    def multistep_error(elem, inference):
+        elem['conditioned_occ'] = inference['predicted_occ']
+        inference = model.model(elem)
+        mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
+        mismatch_pub.publish(to_msg(mismatch))
+        return elem, inference
+        
+
+    # IPython.embed()
 
 
     if SAMPLING:
