@@ -2,7 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
-import nn_tools
+import nn_tools as nn
 
 import IPython
 
@@ -17,6 +17,9 @@ class AutoEncoder(tf.keras.Model):
         self.setup_model()
         self.batch_size = batch_size
         self.opt = tf.keras.optimizers.Adam(0.001)
+
+    def get_model(self):
+        return self
 
     def _add_layer(self, layer):
         self.layers_dict[layer.name] = layer
@@ -157,53 +160,14 @@ class AutoEncoder(tf.keras.Model):
         def step_fn(batch):
             with tf.GradientTape() as tape:
                 output = self(batch, training=True)
-                # loss = tf.reduce_mean(tf.abs(output - example['gt']))
-                # loss = tf.reduce_mean(tf.mse(output - example['gt']))
-                # mse = tf.keras.losses.MSE(batch['gt'], output)
 
-                # mse_occ = tf.losses.mean_squared_error(batch['gt_occ'], output['predicted_occ'])
-                acc_occ = tf.math.abs(batch['gt_occ'] - output['predicted_occ'])
-                mse_occ = tf.math.square(acc_occ)
-                # mse_free = tf.losses.mean_squared_error(batch['gt_free'], output['predicted_free'])
-                acc_free = tf.math.abs(batch['gt_free'] - output['predicted_free'])
-                mse_free = tf.math.square(acc_free)
+                metrics = nn.calc_metrics(output, batch)
 
-                unknown_occ = batch['gt_occ'] - batch['known_occ']
-                unknown_free = batch['gt_free'] - batch['known_free']
+                if self.params['loss'] == 'mse':
+                    loss = self.mse_loss(metrics)
+                # elif self.params['loss'] == 'cross_entropy':
+                #     loss = tf.nn.sigmoid_cross_entropy(
                 
-                metrics = {"mse/occ": mse_occ, "acc/occ": acc_occ,
-                           "mse/free": mse_free, "acc/free": acc_free,
-                           "pred|gt/p(predicted_occ|gt_occ)": p_x_given_y(output['predicted_occ'],
-                                                                  batch['gt_occ']),
-                           "pred|gt/p(predicted_free|gt_free)": p_x_given_y(output['predicted_free'],
-                                                                    batch['gt_free']),
-                           "pred|known/p(predicted_occ|known_occ)": p_x_given_y(output['predicted_occ'],
-                                                                                batch['known_occ']),
-                           "pred|known/p(predicted_free|known_free)": p_x_given_y(output['predicted_free'],
-                                                                                  batch['known_free']),
-                           "pred|gt/p(predicted_occ|gt_free)": p_x_given_y(output['predicted_occ'],
-                                                                           batch['gt_free']),
-                           "pred|gt/p(predicted_free|gt_occ)": p_x_given_y(output['predicted_free'],
-                                                                           batch['gt_occ']),
-                           "pred|known/p(predicted_occ|known_free)": p_x_given_y(output['predicted_occ'],
-                                                                                 batch['known_free']),
-                           "pred|known/p(predicted_free|known_occ)": p_x_given_y(output['predicted_free'],
-                                                                                 batch['known_occ']),
-                           "pred|unknown/p(predicted_occ|unknown_occ)": p_x_given_y(output['predicted_occ'],
-                                                                                    unknown_occ),
-                           "pred|unknown/p(predicted_free|unknown_occ)": p_x_given_y(output['predicted_free'],
-                                                                                     unknown_occ),
-                           "pred|unknown/p(predicted_free|unknown_free)": p_x_given_y(output['predicted_free'],
-                                                                                      unknown_free),
-                           "pred|unknown/p(predicted_occ|unknown_free)": p_x_given_y(output['predicted_occ'],
-                                                                                      unknown_free),
-                           "sanity/p(gt_occ|known_occ)": p_x_given_y(batch['gt_occ'], batch['known_occ']),
-                           "sanity/p(gt_free|known_occ)": p_x_given_y(batch['gt_free'], batch['known_occ']),
-                           "sanity/p(gt_occ|known_free)": p_x_given_y(batch['gt_occ'], batch['known_free']),
-                           "sanity/p(gt_free|known_free)": p_x_given_y(batch['gt_free'], batch['known_free']),
-                           }
-                
-                loss = self.mse_loss(metrics)
                 variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
 
