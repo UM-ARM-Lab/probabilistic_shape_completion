@@ -48,6 +48,7 @@ class Network:
         fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
                                                 expect_reuse = (params is None),
                                                 nick=trial_name)
+        self.trial_name = fp.split('/')[-1]
         self.params = filepath_tools.handle_params(file_fp, fp, params)
 
         self.trial_fp = fp
@@ -158,9 +159,10 @@ class Network:
         while self.ckpt.epoch < num_epochs:
             self.ckpt.epoch.assign_add(1)
             print('')
-            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '='*65)
+            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '='*25\
+                   + ' ' + self.trial_name + ' ' + '='*20)
             self.train_batch(batched_ds)
-            print('='*80)
+            print('='*48)
         
         
 
