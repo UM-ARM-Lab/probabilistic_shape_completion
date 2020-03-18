@@ -171,8 +171,11 @@ class StackedVoxelCNN:
                 metrics['loss/0_step'] = loss
                 m = metrics
 
-                if metrics['pred|gt/p(predicted_occ|gt_occ)'] > 0.95:
+
                 # for i in range(1):
+                # Multistep part
+                if True:
+                    i = 0
                     b = {'conditioned_occ': output['predicted_occ']}
                     output = self(b)
                     step_loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
@@ -180,7 +183,9 @@ class StackedVoxelCNN:
                     step_loss = step_loss / self.batch_size
                     metrics['loss/{}_step'.format(i+1)] = step_loss
 
-                    loss = step_loss + loss
+                    loss = tf.cond(metrics['pred|gt/p(predicted_occ|gt_occ)'] > 0.95,
+                                   lambda: tf.add(step_loss, loss),
+                                   lambda: loss)
 
                     
                 variables = self.model.trainable_variables
