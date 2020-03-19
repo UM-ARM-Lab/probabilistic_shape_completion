@@ -61,8 +61,11 @@ class AutoEncoder(tf.keras.Model):
             tfl.Activation(tf.nn.relu,                    name='deconv_2_activation'),
             tfl.Conv3DTranspose(64, (2,2,2,), strides=2,  name='deconv_3_deconv'),
             tfl.Activation(tf.nn.relu,                    name='deconv_3_activation'),
-            tfl.Conv3DTranspose(2, (2,2,2,), strides=2,   name='deconv_4_deconv'),
-            tfl.Activation(tf.nn.relu,                    name='deconv_4_activation')
+            
+            tfl.Conv3DTranspose(32, (2,2,2,), strides=2,   name='deconv_4_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_4_activation'),
+            
+            tfl.Conv3DTranspose(1, (2,2,2,), strides=1,   name='deconv_5_deconv', padding="same"),
         ]
         if self.params['is_u_connected'] and self.params['use_final_unet_layer']:
             extra_unet_layers = [
@@ -133,14 +136,21 @@ class AutoEncoder(tf.keras.Model):
             x = tfl.concatenate([x, u4], axis=4, name='u_4')
         x = self.layers_dict['deconv_4_deconv'](x)
         x = self.layers_dict['deconv_4_activation'](x)
+
         if(unet and self.params['use_final_unet_layer']):
             x = tfl.concatenate([x, u5], axis=4, name='u_5')
             x = self.layers_dict['unet_combine'](x)
             x = self.layers_dict['unet_final_activation'](x)
 
-        
+        x = self.layers_dict['deconv_5_deconv'](x)
 
-        occ, free = tf.split(x, 2, axis=4)
+
+        #Get logits if training, probabilities if inference
+        if not training:
+            x = tf.nn.sigmoid(x)
+        occ = x
+        free = 1 - x
+        # occ, free = tf.split(x, 2, axis=4)
         
         return {'predicted_occ':occ, 'predicted_free':free}
 
@@ -165,8 +175,12 @@ class AutoEncoder(tf.keras.Model):
 
                 if self.params['loss'] == 'mse':
                     loss = self.mse_loss(metrics)
-                # elif self.params['loss'] == 'cross_entropy':
-                #     loss = tf.nn.sigmoid_cross_entropy(
+                elif self.params['loss'] == 'cross_entropy':
+                    cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=output['predicted_occ'],
+                                                                   labels=batch['gt_occ'])
+                    loss = tf.reduce_sum(cross_ent, axis=[1, 2, 3])
+                    loss = tf.reduce_mean(loss)
+
                 
                 variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
