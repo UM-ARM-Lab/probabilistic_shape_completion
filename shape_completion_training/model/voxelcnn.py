@@ -338,7 +338,7 @@ def make_stack_net_v2(inp_shape, batch_size, params):
         x = tf.nn.sigmoid(x)
     elif params['final_activation'] == 'elu':
         x = tf.nn.elu(x)
-    elif params['final_activation'] == None:
+    elif params['final_activation'] == None or params['final_activation'] == 'None':
         pass
     else:
         raise("Unknown param valies for [final activation]: {}".format(params['final_activation']))

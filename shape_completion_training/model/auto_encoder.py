@@ -62,10 +62,10 @@ class AutoEncoder(tf.keras.Model):
             tfl.Conv3DTranspose(64, (2,2,2,), strides=2,  name='deconv_3_deconv'),
             tfl.Activation(tf.nn.relu,                    name='deconv_3_activation'),
             
-            tfl.Conv3DTranspose(32, (2,2,2,), strides=2,   name='deconv_4_deconv'),
-            tfl.Activation(tf.nn.relu,                    name='deconv_4_activation'),
+            tfl.Conv3DTranspose(1, (2,2,2,), strides=2,   name='deconv_4_deconv'),
+            # tfl.Activation(tf.nn.relu,                    name='deconv_4_activation'),
             
-            tfl.Conv3DTranspose(1, (2,2,2,), strides=1,   name='deconv_5_deconv', padding="same"),
+            # tfl.Conv3DTranspose(1, (2,2,2,), strides=1,   name='deconv_5_deconv', padding="same"),
         ]
         if self.params['is_u_connected'] and self.params['use_final_unet_layer']:
             extra_unet_layers = [
@@ -135,14 +135,14 @@ class AutoEncoder(tf.keras.Model):
         if(unet):
             x = tfl.concatenate([x, u4], axis=4, name='u_4')
         x = self.layers_dict['deconv_4_deconv'](x)
-        x = self.layers_dict['deconv_4_activation'](x)
+        # x = self.layers_dict['deconv_4_activation'](x)
 
         if(unet and self.params['use_final_unet_layer']):
             x = tfl.concatenate([x, u5], axis=4, name='u_5')
             x = self.layers_dict['unet_combine'](x)
             x = self.layers_dict['unet_final_activation'](x)
 
-        x = self.layers_dict['deconv_5_deconv'](x)
+        # x = self.layers_dict['deconv_5_deconv'](x)
 
 
         #Get logits if training, probabilities if inference

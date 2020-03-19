@@ -38,7 +38,7 @@ import tensorflow as tf
 import IPython
 
 
-SAMPLING = True
+SAMPLING = False
 
 
 
