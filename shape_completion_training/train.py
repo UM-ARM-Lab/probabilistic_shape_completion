@@ -19,18 +19,18 @@ params = {
     'translation_pixel_range_x': 10,
     'translation_pixel_range_y': 10,
     'translation_pixel_range_z': 10,
-    'is_u_connected': True,
-    'final_activation': 'sigmoid',
+    'is_u_connected': False, 
+    'final_activation': 'None',
     'unet_dropout_rate': 0.5,
     'use_final_unet_layer': False,
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': False,
-    'network': 'StackedVoxelCNN',
+    'network': 'VoxelCNN',
     'stacknet_version': 'v2',
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
     'loss':'cross_entropy',
-    'multistep_loss': True,
+    'multistep_loss': False,
 }
 
 

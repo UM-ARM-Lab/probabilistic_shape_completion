@@ -8,43 +8,57 @@ from nn_tools import MaskedConv3D, p_x_given_y
 import IPython
 
 
-
-    
-
 class VoxelCNN(tf.keras.Model):
-    def __init__(self, params, batch_size):
+    def __init__(self, params, batch_size=16):
         super(VoxelCNN, self).__init__()
         self.params = params
-        self.model=None
+        self.layers_dict = {}
+        self.layer_names = []
         self.batch_size = batch_size
         self.opt = tf.keras.optimizers.Adam(0.001)
-        self.make_stack_net(inp_shape = [64,64,64,1])
+        self.setup_model()
 
-    def get_model(self):
-        return self.model
+    def setup_model(self):
+        conv_size = 3
+
+        self.conv_layers = [
+            MaskedConv3D(conv_size, 1, 16,      name='masked_conv_1', is_first_layer=True),
+            tfl.Activation(tf.nn.elu,           name='conv_1_activation'),
+            MaskedConv3D(conv_size, 16, 32,     name='masked_conv_2'),
+            tfl.Activation(tf.nn.elu,           name='conv_2_activation'),
+            MaskedConv3D(conv_size, 32, 64,     name='masked_conv_3'),
+            tfl.Activation(tf.nn.elu,           name='conv_3_activation'),
+            # MaskedConv3D(conv_size, 64, 128,  name='masked_conv_4'),
+            # tfl.Activation(tf.nn.elu,           name='conv_4_activation'),
+            # MaskedConv3D(conv_size, 128, 64,  name='masked_conv_5'),
+            # tfl.Activation(tf.nn.elu,           name='conv_5_activation'),
+            MaskedConv3D(conv_size, 64, 32,     name='masked_conv_6'),
+            tfl.Activation(tf.nn.elu,           name='conv_6_activation'),
+            MaskedConv3D(conv_size, 32, 16,     name='masked_conv_7'),
+            tfl.Activation(tf.nn.elu,           name='conv_7_activation'),
+            MaskedConv3D(conv_size, 16, 1,      name='masked_conv_8'),
+            # 
+            ]
+        if self.params['final_activation'] == 'sigmoid':
+            self.conv_layers.append(tfl.Activation(tf.nn.sigmoid,       name='conv_8_activation'))
+        elif self.params['final_activation'] == 'elu':
+            self.conv_layers.append(tfl.Activation(tf.nn.elu,           name='conv_8_activation'))
+        
+        # for l in conv_layers:
+        #     self._add_layer(l)
+
+    def call(self, inputs, training = False):
+        x = inputs['conditioned_occ']
+
+        for l in self.conv_layers:
+            x = l(x)
+        return {'predicted_occ':x, 'predicted_free':1.0-x}
 
 
-    def make_stack_net(self, inp_shape):
-
-        model_selector = {
-            # 'v1': lambda: make_stack_net_v1(inp_shape, self.batch_size, self.params),
-            'v2': lambda: make_stack_net_v2(inp_shape, self.batch_size, self.params),
-            # 'v3': lambda: make_stack_net_v3(inp_shape, self.batch_size, self.params),
-            # 'v4': lambda: make_stack_net_v4(inp_shape, self.batch_size, self.params),
-        }
-        self.model = model_selector[self.params['stacknet_version']]()
-
-    def predict(self, elem):
-        return self(next(elem.__iter__()))
-
-    def prep_input(self, inp):
-        return {k: inp[k] for k in self.model.input.keys()}
-
-    def call(self, inp, training=False):
-        model_inp = self.prep_input(inp)
-        x = self.model(model_inp)
-        x = tf.nn.sigmoid(x)
-        return {'predicted_occ': x, 'predicted_free': 1 - x}
+    @tf.function
+    def mse_loss(self, metrics):
+        l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
+        return l_occ
 
     @tf.function
     def train_step(self, batch):
@@ -54,17 +68,97 @@ class VoxelCNN(tf.keras.Model):
         
         def step_fn(batch):
             with tf.GradientTape() as tape:
-                output_logits = self.model(self.prep_input(batch))
-                sample = tf.nn.sigmoid(output_logits)
-                output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
+                output = self(batch, training=True)
+
                 metrics = nn.calc_metrics(output, batch)
                 
-                cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=output_logits,
-                                                                    labels=batch['gt_occ'])
-                loss = nn.reduce_sum_batch(cross_ent)
+                if self.params['loss'] == 'cross_entropy':
+                    loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                                             output['predicted_occ']))
+                elif self.params['loss'] == 'mse':
+                    loss = self.mse_loss(metrics)
+                variables = self.trainable_variables
+                gradients = tape.gradient(loss, variables)
+
+                self.opt.apply_gradients(list(zip(gradients, variables)))
+                return loss, metrics
+            
+        loss, metrics = step_fn(batch)
+        m = {k: reduce(metrics[k]) for k in metrics}
+        m['loss'] = loss
+        return m
+
+
+
+    
+
+class StackedVoxelCNN:
+    def __init__(self, params, batch_size):
+        self.params = params
+        self.model=None
+        self.batch_size = batch_size
+        self.opt = tf.keras.optimizers.Adam(0.001)
+
+        self.make_stack_net(inp_shape = [64,64,64,1])
+
+    def get_model(self):
+        return self.model
+
+
+    def make_stack_net(self, inp_shape):
+
+        model_selector = {
+            'v1': lambda: make_stack_net_v1(inp_shape, self.batch_size, self.params),
+            'v2': lambda: make_stack_net_v2(inp_shape, self.batch_size, self.params),
+            'v3': lambda: make_stack_net_v3(inp_shape, self.batch_size, self.params),
+            'v4': lambda: make_stack_net_v4(inp_shape, self.batch_size, self.params),
+        }
+        self.model = model_selector[self.params['stacknet_version']]()
+
+    def predict(self, elem):
+        return self(next(elem.__iter__()))
+
+    def __call__(self, inp):
+        model_inp = {k: inp[k] for k in self.model.input.keys()}
+        x = self.model(model_inp)
+        return x
+
+    @tf.function
+    def mse_loss(self, metrics):
+        l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
+        return l_occ
+
+    @tf.function
+    def train_step(self, batch):
+        def reduce(val):
+            return tf.reduce_mean(val)
+            
+        
+        def step_fn(batch):
+            with tf.GradientTape() as tape:
+                output = self(batch)
+
+                metrics = nn.calc_metrics(output, batch)
+                
+                if self.params['loss'] == 'cross_entropy':
+                    cross_ent = tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                               output['predicted_occ']))
+                    loss = nn.reduce_sum_batch(cross_ent)
+
+
+                if self.params['stacknet_version'] == 'v4':
+                    ae_loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
+                                                                                output['aux_occ']))
+
+                    metrics['loss/aux_loss'] = ae_loss
+                    metrics['loss/vcnn_loss'] = loss
+                    loss = loss + 0.1*ae_loss
+                    
                 variables = self.model.trainable_variables
                 gradients = tape.gradient(loss, variables)
+
                 clipped_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in gradients]
+
                 self.opt.apply_gradients(list(zip(clipped_gradients, variables)))
                 return loss, metrics
 
@@ -116,6 +210,57 @@ class VoxelCNN(tf.keras.Model):
 
 
 
+def make_stack_net_v1(inp_shape, batch_size, params):
+    """Basic Stacked VCNN. Like maskedCNN, but moving layers around to remove blind spots"""
+    n_filters = 16
+    n_per_block = 3
+        
+    inputs = {'conditioned_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape)}
+    x = inputs['conditioned_occ']
+
+    def bs(x):
+        return nn.BackShiftConv3D(n_filters, use_bias=False,
+                                  nln=tf.nn.elu)(x)
+    def bds(x):
+        return nn.BackDownShiftConv3D(n_filters, use_bias=False,
+                                      nln=tf.nn.elu)(x)
+    def bdrs(x):
+        return nn.BackDownRightShiftConv3D(n_filters, use_bias=False,
+                                           nln=tf.nn.elu)(x)
+
+    #Front
+    f_list = [nn.BackShift()(bs(x))]
+
+    #Upper Front
+    uf_list = [nn.BackShift()(bs(x)) + \
+               nn.DownShift()(bds(x))]
+    
+    #Left Upper Front
+    luf_list = [nn.BackShift()(bs(x)) + \
+                nn.DownShift()(bds(x)) + \
+                nn.RightShift()(bdrs(x))]
+    
+    
+    for _ in range(n_per_block):
+        f_list.append(bs(f_list[-1]))
+        uf_list.append(bds(uf_list[-1]) + f_list[-1])
+        luf_list.append(bdrs(luf_list[-1]) + uf_list[-1])
+        
+        
+    x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(luf_list[-1])
+    
+    
+    if params['final_activation'] == 'sigmoid':
+        x = tf.nn.sigmoid(x)
+    elif params['final_activation'] == 'elu':
+        x = tf.nn.elu(x)
+    elif params['final_activation'] == None:
+        pass
+    else:
+        raise("Unknown param valies for [final activation]: {}".format(params['final_activation']))
+
+    output = {"predicted_occ":x, "predicted_free":1-x}
+    return tf.keras.Model(inputs=inputs, output=x)
 
 
 def make_stack_net_v2(inp_shape, batch_size, params):
@@ -199,7 +344,48 @@ def make_stack_net_v2(inp_shape, batch_size, params):
     else:
         raise("Unknown param valies for [final activation]: {}".format(params['final_activation']))
 
-    output = x
+    output = {"predicted_occ":x, "predicted_free":1-x}
+    return tf.keras.Model(inputs=inputs, outputs=output)
+
+
+
+
+
+
+def make_stack_net_v3(inp_shape, batch_size, params):
+    """
+    Just an Autoencoder. Used to verify against v4
+    """
+    filter_size = [2,2,2]
+    n_filters = [64, 128, 256, 512]
+
+    inputs = {'conditioned_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape),
+              'known_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape),
+              'known_free':tf.keras.Input(batch_size=batch_size, shape=inp_shape),
+    }
+
+
+    # Autoencoder
+    x = tfl.concatenate([inputs['known_occ'], inputs['known_free']], axis=4)
+
+    for n_filter in [64, 128, 256, 512]:
+        x = tfl.Conv3D(n_filter, (2,2,2,), use_bias=True, padding="same")(x)
+        x = tfl.Activation(tf.nn.relu)(x)
+        x = tfl.MaxPool3D((2,2,2))(x)
+
+    x = tfl.Flatten()(x)
+    x = tfl.Dense(params['num_latent_layers'], activation='relu')(x)
+    x = tfl.Dense(32768, activation='relu')(x)
+    x = tfl.Reshape((4,4,4,512))(x)
+
+    for n_filter in [256, 128, 64, 12]:
+        x = tfl.Conv3DTranspose(n_filter, (2,2,2,), use_bias=True, strides=2)(x)
+        x = tfl.Activation(tf.nn.relu)(x)
+
+    x = tfl.Conv3D(1, (1,1,1), use_bias=True)(x)
+    x = tfl.Activation(tf.nn.sigmoid)(x)
+
+    output = {"predicted_occ":x, "predicted_free":1 - x}
     return tf.keras.Model(inputs=inputs, outputs=output)
 
 

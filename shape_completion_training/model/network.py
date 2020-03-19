@@ -15,7 +15,8 @@ import data_tools
 import filepath_tools
 import nn_tools
 from auto_encoder import AutoEncoder
-from voxelcnn import VoxelCNN, StackedVoxelCNN
+# from voxelcnn import VoxelCNN, StackedVoxelCNN
+from voxelcnn import VoxelCNN
 from vae import VAE
 import progressbar
 import datetime
@@ -61,8 +62,8 @@ class Network:
 
         if self.params['network'] == 'VoxelCNN':
             self.model = VoxelCNN(self.params, batch_size=self.batch_size)
-        if self.params['network'] == 'StackedVoxelCNN':
-            self.model = StackedVoxelCNN(self.params, batch_size=self.batch_size)
+        # if self.params['network'] == 'StackedVoxelCNN':
+        #     self.model = StackedVoxelCNN(self.params, batch_size=self.batch_size)
         elif self.params['network'] == 'AutoEncoder':
             self.model = AutoEncoder(self.params, batch_size=self.batch_size)
         elif self.params['network'] == 'VAE':

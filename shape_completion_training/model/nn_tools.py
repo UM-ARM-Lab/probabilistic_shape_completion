@@ -177,6 +177,10 @@ def right_shift(x):
 
                     
 
+def reduce_sum_batch(value):
+    v1 = tf.reduce_mean(value, axis=[0])
+    return tf.reduce_sum(v1)
+
 
 
 def calc_metrics(output, batch):
