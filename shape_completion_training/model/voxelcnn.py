@@ -17,7 +17,7 @@ class VoxelCNN(tf.keras.Model):
         self.params = params
         self.model=None
         self.batch_size = batch_size
-        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.opt = tf.keras.optimizers.Adam(0.00001)
         self.make_stack_net(inp_shape = [64,64,64,1])
 
     def get_model(self):
@@ -70,11 +70,15 @@ class VoxelCNN(tf.keras.Model):
 
         def step_fn_multiloss(batch):
             with tf.GradientTape() as tape:
-                output = self(batch)
+                output_logits = self.model(self.prep_input(batch))
+                sample = tf.nn.sigmoid(output_logits)
+                output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
                 metrics = nn.calc_metrics(output, batch)
-                loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
-                                                                         output['predicted_occ']))
-                loss = loss / self.batch_size
+
+                cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=output_logits,
+                                                                    labels=batch['gt_occ'])
+                loss = nn.reduce_sum_batch(cross_ent)
+
                 metrics['loss/0_step'] = loss
                 m = metrics
 
@@ -83,16 +87,18 @@ class VoxelCNN(tf.keras.Model):
                 # Multistep part
                 if True:
                     i = 0
-                    b = {'conditioned_occ': output['predicted_occ']}
-                    output = self(b)
-                    step_loss = tf.reduce_sum(tf.keras.losses.binary_crossentropy(batch['gt_occ'],
-                                                                                  output['predicted_occ']))
-                    step_loss = step_loss / self.batch_size
+                    b = {'conditioned_occ': tf.cast(output_logits>0, tf.float32)}
+                    output_logits = self.model(b)
+                    cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=output_logits,
+                                                                        labels=batch['gt_occ'])
+                    step_loss = nn.reduce_sum_batch(cross_ent)
                     metrics['loss/{}_step'.format(i+1)] = step_loss
 
-                    loss = tf.cond(metrics['pred|gt/p(predicted_occ|gt_occ)'] > 0.95,
-                                   lambda: tf.add(step_loss, loss),
-                                   lambda: loss)
+                    loss = loss + step_loss
+
+                    # loss = tf.cond(metrics['pred|gt/p(predicted_occ|gt_occ)'] > 0.95,
+                    #                lambda: tf.add(step_loss, loss),
+                    #                lambda: loss)
 
                     
                 variables = self.model.trainable_variables

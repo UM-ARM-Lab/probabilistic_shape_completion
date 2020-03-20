@@ -30,7 +30,7 @@ params = {
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
     'loss':'cross_entropy',
-    'multistep_loss': False,
+    'multistep_loss': True,
 }
 
 

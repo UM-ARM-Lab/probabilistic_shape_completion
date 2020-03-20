@@ -156,8 +156,8 @@ class AutoEncoder(tf.keras.Model):
 
     @tf.function
     def mse_loss(self, metrics):
-        l_occ = tf.reduce_sum(metrics['mse/occ']) * (1.0/self.batch_size)
-        l_free = tf.reduce_sum(metrics['mse/free']) * (1.0/self.batch_size)
+        l_occ = nn.reduce_sum_batch(metrics['mse/occ'])
+        l_free = nn.reduce_sum_batch(metrics['mse/free'])
         return l_occ + l_free
 
 
@@ -169,17 +169,21 @@ class AutoEncoder(tf.keras.Model):
         
         def step_fn(batch):
             with tf.GradientTape() as tape:
-                output = self(batch, training=True)
+                output_logits = self(batch, training=True)
+
+                x = tf.nn.sigmoid(output_logits['predicted_occ'])
+                
+                output = {'predicted_occ': x, 'predicted_free':1-x}
 
                 metrics = nn.calc_metrics(output, batch)
 
                 if self.params['loss'] == 'mse':
                     loss = self.mse_loss(metrics)
+                    
                 elif self.params['loss'] == 'cross_entropy':
-                    cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=output['predicted_occ'],
+                    cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=output_logits['predicted_occ'],
                                                                    labels=batch['gt_occ'])
-                    loss = tf.reduce_sum(cross_ent, axis=[1, 2, 3])
-                    loss = tf.reduce_mean(loss)
+                    loss = nn.reduce_sum_batch(cross_ent)
 
                 
                 variables = self.trainable_variables
