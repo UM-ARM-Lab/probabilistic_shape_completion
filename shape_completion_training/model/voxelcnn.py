@@ -83,10 +83,10 @@ class VoxelCNN(tf.keras.Model):
                 m = metrics
 
 
-                # for i in range(1):
+                for i in range(5):
                 # Multistep part
-                if True:
-                    i = 0
+                # if True:
+                    # i = 0
                     b = {'conditioned_occ': tf.cast(output_logits>0, tf.float32)}
                     output_logits = self.model(b)
                     cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=output_logits,
