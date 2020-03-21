@@ -30,7 +30,6 @@ def compute_vae_loss(z, mean, logvar, sample_logit, labels):
     return -tf.reduce_mean(logpx_z + logpz - logqz_x)
 
 
-
 class VAE(tf.keras.Model):
     def __init__(self, params, batch_size):
         super(VAE, self).__init__()
@@ -79,8 +78,6 @@ class VAE(tf.keras.Model):
             return probs
         return logits
 
-
-
     @tf.function
     def train_step(self, batch):
         def reduce(val):
@@ -116,13 +113,25 @@ class VAE(tf.keras.Model):
 class VAE_GAN(VAE):
     def __init__(self, params, batch_size):
         super(VAE_GAN, self).__init__(params, batch_size)
-        self.gan_opt = tf.keras.optimizers.Adam(0.001)
+        self.gan_opt = tf.keras.optimizers.Adam(0.00001)
         self.discriminator = make_discriminator([64,64,64,3], self.params)
         
 
     def discriminate(self, known_input, output):
         inp = tf.concat([known_input, output], axis=4)
         return self.discriminator(inp)
+
+    def gradient_penalty(self, known, real, fake):
+        alpha = tf.random.uniform([self.batch_size, 1, 1, 1, 1], 0.0, 1.0)
+        diff = fake-real
+        interp = real + (alpha * diff)
+        with tf.GradientTape() as t:
+            t.watch(interp)
+            pred = self.discriminate(known, interp)
+            grad = t.gradient(pred, [interp])[0]
+        slopes = tf.sqrt(tf.reduce_sum(tf.square(grad), axis=[1,2,3,4]))
+        gp = tf.reduce_mean((slopes -1.)**2)
+        return gp
 
 
     # @tf.function
@@ -150,18 +159,27 @@ class VAE_GAN(VAE):
                 fake_occ = tf.cast(sample_logit > 0, tf.float32)
                 real_pair_est = self.discriminate(known, batch['gt_occ'])
                 fake_pair_est = self.discriminate(known, fake_occ)
-                gan_loss_g = tf.reduce_mean(-fake_pair_est)
-                gan_loss_d = tf.reduce_mean(fake_pair_est - real_pair_est)
+                gan_loss_g = 5000 * (1 + tf.reduce_mean(-fake_pair_est))
+                gan_loss_d_no_gp = 1 + tf.reduce_mean(fake_pair_est - real_pair_est)
+                
+                # gradient penalty
+                gp = self.gradient_penalty(known, batch['gt_occ'], fake_occ)
+                gan_loss_d = gan_loss_d_no_gp + gp
+                
                 metrics['loss/gan_g'] = gan_loss_g
                 metrics['loss/gan_d'] = gan_loss_d
+                metrics['loss/gan_gp'] = gp
+                metrics['loss/gan_d_no_gp'] = gan_loss_d_no_gp
+
+                
 
                 ### apply
                 generator_loss = vae_loss + gan_loss_g
                 dis_loss = gan_loss_d
 
                 vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
-                gradients = tape.gradient(generator_loss, vae_variables)
-                self.opt.apply_gradients(list(zip(gradients, vae_variables)))
+                vae_gradients = tape.gradient(generator_loss, vae_variables)
+                self.opt.apply_gradients(list(zip(vae_gradients, vae_variables)))
 
                 dis_variables = self.discriminator.trainable_variables
                 dis_gradients = tape.gradient(dis_loss, dis_variables)
@@ -244,19 +262,20 @@ def make_discriminator(inp_shape, params):
             tfl.InputLayer(input_shape=inp_shape),
 
             tfl.Conv3D(16, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
+            tfl.Activation(tf.nn.leaky_relu),
 
             tfl.Conv3D(32, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
+            tfl.Activation(tf.nn.leaky_relu),
 
             tfl.Conv3D(64, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
+            tfl.Activation(tf.nn.leaky_relu),
 
             tfl.Conv3D(128, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
+            tfl.Activation(tf.nn.leaky_relu),
 
             tfl.Flatten(),
-            tfl.Dense(1),
+            # tfl.Dense(1),
+            tfl.Lambda(lambda x: tf.reduce_mean(x, axis=[1])),
             tfl.Activation(tf.nn.sigmoid)
         ]
     )
