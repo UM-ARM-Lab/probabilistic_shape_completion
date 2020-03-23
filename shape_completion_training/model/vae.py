@@ -113,7 +113,7 @@ class VAE(tf.keras.Model):
 class VAE_GAN(VAE):
     def __init__(self, params, batch_size):
         super(VAE_GAN, self).__init__(params, batch_size)
-        self.gan_opt = tf.keras.optimizers.Adam(0.00001)
+        self.gan_opt = tf.keras.optimizers.Adam(0.0005)
         self.discriminator = make_discriminator([64,64,64,3], self.params)
         
 
@@ -159,7 +159,7 @@ class VAE_GAN(VAE):
                 fake_occ = tf.cast(sample_logit > 0, tf.float32)
                 real_pair_est = self.discriminate(known, batch['gt_occ'])
                 fake_pair_est = self.discriminate(known, fake_occ)
-                gan_loss_g = 5000 * (1 + tf.reduce_mean(-fake_pair_est))
+                gan_loss_g = 10000 * (1 + tf.reduce_mean(-fake_pair_est))
                 gan_loss_d_no_gp = 1 + tf.reduce_mean(fake_pair_est - real_pair_est)
                 
                 # gradient penalty
@@ -179,11 +179,13 @@ class VAE_GAN(VAE):
 
                 vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
                 vae_gradients = tape.gradient(generator_loss, vae_variables)
-                self.opt.apply_gradients(list(zip(vae_gradients, vae_variables)))
+                clipped_vae_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in vae_gradients]
+                self.opt.apply_gradients(list(zip(clipped_vae_gradients, vae_variables)))
 
                 dis_variables = self.discriminator.trainable_variables
                 dis_gradients = tape.gradient(dis_loss, dis_variables)
-                self.gan_opt.apply_gradients(list(zip(dis_gradients, dis_variables)))
+                clipped_dis_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in dis_gradients]
+                self.gan_opt.apply_gradients(list(zip(clipped_dis_gradients, dis_variables)))
 
                 return generator_loss, metrics
 
