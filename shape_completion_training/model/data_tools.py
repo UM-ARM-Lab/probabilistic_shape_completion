@@ -381,6 +381,20 @@ def simulate_condition_occ(dataset, turn_on_prob = 0.0, turn_off_prob=0.0):
     return dataset.map(_add_conditional)
 
 
+
+
+def add_angle(dataset):
+    def _augmentation_to_angle(augmentation):
+        return np.float32(augmentation.split("_")[-1])
+
+    def _extract_angle(elem):
+        angle = tf.numpy_function(_augmentation_to_angle, [elem['augmentation']], tf.float32)
+        elem['angle'] = angle
+        return elem
+
+    return dataset.map(_extract_angle)
+
+
 ###################################################################
 ##   OLD WAY OF TFRECORDS
 ###################################################################

@@ -15,6 +15,7 @@ import data_tools
 import filepath_tools
 import nn_tools
 from auto_encoder import AutoEncoder
+from augmented_ae import Augmented_VAE
 # from voxelcnn import VoxelCNN, StackedVoxelCNN
 from voxelcnn import VoxelCNN
 from vae import VAE, VAE_GAN
@@ -70,6 +71,8 @@ class Network:
             self.model = VAE(self.params, batch_size=self.batch_size)
         elif self.params['network'] == 'VAE_GAN':
             self.model = VAE_GAN(self.params, batch_size=self.batch_size)
+        elif self.params['network'] == 'Augmented_VAE':
+            self.model = Augmented_VAE(self.params, batch_size=self.batch_size)
         else:
             raise Exception('Unknown Model Type')
 

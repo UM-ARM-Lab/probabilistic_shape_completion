@@ -10,6 +10,7 @@ sys.path.append(sc_path)
 from model import data_tools
 from model.network import Network
 import tensorflow as tf
+import numpy as np
 import IPython
 
 
@@ -26,7 +27,8 @@ params = {
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': False,
     # 'network': 'VoxelCNN',
-    'network': 'VAE_GAN',
+    # 'network': 'VAE_GAN',
+    'network': 'Augmented_VAE',
     'stacknet_version': 'v2',
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
@@ -56,11 +58,15 @@ if __name__ == "__main__":
                                              turn_off_prob=params['turn_off_prob'])
 
     if params['simulate_partial_completion']:
-        train_ds = data_tools.simulate_partial_completion(train_ds)
+        data = data_tools.simulate_partial_completion(data)
     if params['simulate_random_partial_completion']:
-        train_ds = data_tools.simulate_random_partial_completion(train_ds)
+        data = data_tools.simulate_random_partial_completion(data)
 
+    data = data_tools.add_angle(data)
+    # e = next(data.__iter__())
+    # IPython.embed()
 
+    
     sn = Network(params, training=True)
     # IPython.embed()
 
