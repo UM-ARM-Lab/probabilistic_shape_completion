@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import argparse
 
 import rospy
 import tf2_ros
@@ -38,8 +39,7 @@ import tensorflow as tf
 import IPython
 
 
-SAMPLING = False
-
+ARGS = None
 
 
 # DIM = 64
@@ -163,11 +163,15 @@ def publish_selection(metadata, str_msg):
         mismatch_pub.publish(to_msg(mismatch))
         return elem, inference
         
+    if ARGS.multistep:
 
-    # IPython.embed()
+        for _ in range(10):
+            rospy.sleep(1)
+            elem, inference = multistep_error(elem, inference)
+        
 
 
-    if SAMPLING:
+    if ARGS.sample:
         global stop_current_sampler
         global sampling_thread
         
@@ -240,14 +244,27 @@ def publish_object_transform():
 def load_network():
     global model
     print('Load network? (Y/n)')
-    if raw_input().lower() == 'n':
+    if ARGS.trial is None and raw_input().lower() == 'n':
         return
     # model = Network(trial_name="VCNN_v2", training=False)
-    model = Network()
+    model = Network(trial_name=ARGS.trial)
+
+
+
+def parser():
+    global ARGS
+    parser = argparse.ArgumentParser(description='Publish shape data to RViz for viewing')
+    parser.add_argument('--sample', help='foo help', action='store_true')
+    parser.add_argument('--multistep', action='store_true')
+    parser.add_argument('--trial')
+
+    ARGS = parser.parse_args()
 
     
 
 if __name__=="__main__":
+    parser()
+    
     rospy.init_node('shape_publisher')
     rospy.loginfo("Data Publisher")
 

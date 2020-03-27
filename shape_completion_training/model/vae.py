@@ -35,7 +35,7 @@ class VAE(tf.keras.Model):
         super(VAE, self).__init__()
         self.params = params
         self.batch_size = batch_size
-        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.opt = tf.keras.optimizers.Adam(0.0001)
 
         self.make_vae(inp_shape = [64,64,64,2])
 
@@ -113,7 +113,7 @@ class VAE(tf.keras.Model):
 class VAE_GAN(VAE):
     def __init__(self, params, batch_size):
         super(VAE_GAN, self).__init__(params, batch_size)
-        self.gan_opt = tf.keras.optimizers.Adam(0.0005)
+        self.gan_opt = tf.keras.optimizers.Adam(0.00005)
         self.discriminator = make_discriminator([64,64,64,3], self.params)
         
 
