@@ -28,7 +28,7 @@ class ConditionalVCNN(tf.keras.Model):
         self.make_stack_net(inp_shape = [64,64,64,1])
 
     def get_model(self):
-        return self.cvcnn
+        return self
 
 
     def make_stack_net(self, inp_shape):
