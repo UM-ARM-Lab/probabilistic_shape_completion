@@ -157,7 +157,9 @@ def publish_selection(metadata, str_msg):
     mismatch_pub.publish(to_msg(mismatch))
 
     def multistep_error(elem, inference):
-        elem['conditioned_occ'] = inference['predicted_occ']
+        a = inference['predicted_occ']
+        # a = inference['predicted_occ'] +  elem['known_occ'] - elem['known_free']
+        elem['conditioned_occ'] = np.float32(a > 0.5)
         inference = model.model(elem)
         mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
         mismatch_pub.publish(to_msg(mismatch))
@@ -165,7 +167,7 @@ def publish_selection(metadata, str_msg):
         
     if ARGS.multistep:
 
-        for _ in range(10):
+        for _ in range(5):
             rospy.sleep(1)
             elem, inference = multistep_error(elem, inference)
         
