@@ -52,6 +52,7 @@ completion_free_pub = None
 sampled_occ_pub = None
 conditioned_occ_pub = None
 mismatch_pub = None
+aux_pub = None
 
 options_pub = None
 selected_sub = None
@@ -151,8 +152,14 @@ def publish_selection(metadata, str_msg):
     
 
     inference = model.model(elem)
+    # IPython.embed()
     completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
     completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
+    if inference.has_key('aux_occ'):
+        aux_pub.publish(to_msg(inference['aux_occ'].numpy()))
+
+
+
     mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
     mismatch_pub.publish(to_msg(mismatch))
 
@@ -281,6 +288,7 @@ if __name__=="__main__":
     sampled_occ_pub = rospy.Publisher('sampled_occ_voxel_grid', OccupancyStamped, queue_size=1)
     conditioned_occ_pub = rospy.Publisher('conditioned_occ_voxel_grid', OccupancyStamped, queue_size=1)
     mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
+    aux_pub = rospy.Publisher('aux_grid', OccupancyStamped, queue_size=1)
     options_pub = rospy.Publisher('shapenet_options', TextSelectionOptions, queue_size=1)
     selected_sub = rospy.Subscriber('/shapenet_selection', String,
                                     lambda x: publish_selection(records, x))

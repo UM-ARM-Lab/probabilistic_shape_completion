@@ -50,7 +50,8 @@ class ConditionalVCNN(tf.keras.Model):
         ae_features = self.encoder(self.prep_ae_input(inp))
         x = self.cvcnn(self.prep_cvcnn_inputs(inp['conditioned_occ'], ae_features))
         p_occ = tf.nn.sigmoid(x['p_occ_logits'])
-        return {'predicted_occ': p_occ, 'predicted_free': 1 - p_occ}
+        ae_occ = tf.nn.sigmoid(self.decoder(ae_features))
+        return {'predicted_occ': p_occ, 'predicted_free': 1 - p_occ, 'aux_occ': ae_occ}
 
     @tf.function
     def train_step(self, batch):
