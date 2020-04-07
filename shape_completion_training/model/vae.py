@@ -17,18 +17,26 @@ def log_normal_pdf(sample, mean, logvar, raxis=1):
         -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
         axis=raxis)
 
-
 def compute_vae_loss(z, mean, logvar, sample_logit, labels):
-    # mean, logvar = model.encode(x)
-    # z = model.reparameterize(mean, logvar)
-    # x_logit = model.decode(z)
+    """Computes vae loss given:
+    z: latent space sample
+    mean: mean of the feature space outputed by the encoder
+    logvar: logvar of the feature space outputed by the endocer
+    sample_logits: logits (before sigmoid) output of the decoder
+    labels: ground truth voxels
+    
+    mean, logvar = model.encode(x)
+    z = model.reparameterize(mean, logvar)
+    sample_logit = model.decode(z)
+
+    See https://tensorflow.org/tutorials/generative/cvae for more details
+    """
     
     cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=sample_logit, labels=labels)
     logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
     logpz = log_normal_pdf(z, 0., 0.)
     logqz_x = log_normal_pdf(z, mean, logvar)
     return -tf.reduce_mean(logpx_z + logpz - logqz_x)
-
 
 class VAE(tf.keras.Model):
     def __init__(self, params, batch_size):
@@ -82,7 +90,6 @@ class VAE(tf.keras.Model):
     def train_step(self, batch):
         def reduce(val):
             return tf.reduce_mean(val)
-            
         
         def step_fn(batch):
             with tf.GradientTape() as tape:
@@ -109,13 +116,11 @@ class VAE(tf.keras.Model):
 
 
 
-
 class VAE_GAN(VAE):
     def __init__(self, params, batch_size):
         super(VAE_GAN, self).__init__(params, batch_size)
         self.gan_opt = tf.keras.optimizers.Adam(0.00005)
         self.discriminator = make_discriminator([64,64,64,3], self.params)
-        
 
     def discriminate(self, known_input, output):
         inp = tf.concat([known_input, output], axis=4)
@@ -133,13 +138,11 @@ class VAE_GAN(VAE):
         gp = tf.reduce_mean((slopes -1.)**2)
         return gp
 
-
     # @tf.function
     def train_step(self, batch):
         def reduce(val):
             return tf.reduce_mean(val)
             
-        
         def step_fn(batch):
             with tf.GradientTape(persistent=True) as tape:
                 ##### Forward pass
@@ -171,8 +174,6 @@ class VAE_GAN(VAE):
                 metrics['loss/gan_gp'] = gp
                 metrics['loss/gan_d_no_gp'] = gan_loss_d_no_gp
 
-                
-
                 ### apply
                 generator_loss = vae_loss + gan_loss_g
                 dis_loss = gan_loss_d
@@ -196,16 +197,9 @@ class VAE_GAN(VAE):
 
 
 
-
-
-
-
-
 def make_encoder(inp_shape, params):
     """Basic VAE encoder"""
     n_features = params['num_latent_layers']
-
-
     return tf.keras.Sequential(
         [
             tfl.InputLayer(input_shape=inp_shape),
