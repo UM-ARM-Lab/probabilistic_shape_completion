@@ -20,6 +20,7 @@ from augmented_ae import Augmented_VAE
 from voxelcnn import VoxelCNN
 from vae import VAE, VAE_GAN
 from conditional_vcnn import ConditionalVCNN
+from ae_vcnn import AE_VCNN
 import progressbar
 import datetime
 import time
@@ -76,6 +77,8 @@ class Network:
             self.model = Augmented_VAE(self.params, batch_size=self.batch_size)
         elif self.params['network'] == 'Conditional_VCNN':
             self.model = ConditionalVCNN(self.params, batch_size=self.batch_size)
+        elif self.params['network'] == 'AE_VCNN':
+            self.model = AE_VCNN(self.params, batch_size=self.batch_size)
         else:
             raise Exception('Unknown Model Type')
 

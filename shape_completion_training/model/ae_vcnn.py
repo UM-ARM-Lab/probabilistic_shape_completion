@@ -10,16 +10,16 @@ import IPython
 
 
 
-class ConditionalVCNN(tf.keras.Model):
+class AE_VCNN(tf.keras.Model):
     """
-    Autoencoder combined with VCNN by encoding to feature space and passing features to VCNN
+    Autoencoder combined with VCNN by running the AE and VCNN separately, then combining the outputs
     """
 
     def __init__(self, params, batch_size):
-        super(ConditionalVCNN, self).__init__()
+        super(AE_VCNN, self).__init__()
         self.params = params
         self.batch_size = batch_size
-        self.opt = tf.keras.optimizers.Adam(0.00001)
+        self.opt = tf.keras.optimizers.Adam(0.0001)
         self.make_stack_net(inp_shape = [64,64,64,1])
 
     def get_model(self):
@@ -38,14 +38,15 @@ class ConditionalVCNN(tf.keras.Model):
     def prep_ae_input(self, inp):
         return {k: inp[k] for k in self.encoder.input.keys()}
 
-    def prep_cvcnn_inputs(self, conditioned_occ, ae_features):
-        return {'conditioned_occ':conditioned_occ, 'ae_features':ae_features}
+    def prep_cvcnn_inputs(self, conditioned_occ, ae_logits):
+        return {'conditioned_occ':conditioned_occ, 'ae_logits':ae_logits}
 
     def call(self, inp, training=False):
         ae_features = self.encoder(self.prep_ae_input(inp))
-        x = self.cvcnn(self.prep_cvcnn_inputs(inp['conditioned_occ'], ae_features))
+        ae_logits = self.decoder(ae_features)
+        x = self.cvcnn(self.prep_cvcnn_inputs(inp['conditioned_occ'], ae_logits))
         p_occ = tf.nn.sigmoid(x['p_occ_logits'])
-        ae_occ = tf.nn.sigmoid(self.decoder(ae_features))
+        ae_occ = tf.nn.sigmoid(ae_logits)
         return {'predicted_occ': p_occ, 'predicted_free': 1 - p_occ, 'aux_occ': ae_occ}
 
     @tf.function
@@ -57,8 +58,9 @@ class ConditionalVCNN(tf.keras.Model):
         def step_fn(batch):
             with tf.GradientTape() as tape:
                 ae_features = self.encoder(self.prep_ae_input(batch))
-                cvcnn = self.cvcnn(self.prep_cvcnn_inputs(batch['conditioned_occ'], ae_features))
-                ae_output = self.decoder(ae_features)
+                ae_logits = self.decoder(ae_features)
+
+                cvcnn = self.cvcnn(self.prep_cvcnn_inputs(batch['conditioned_occ'], ae_logits))
 
                 p_occ = tf.nn.sigmoid(cvcnn['p_occ_logits'])
                 output = {'predicted_occ': p_occ, 'predicted_free': 1 - p_occ}
@@ -69,11 +71,11 @@ class ConditionalVCNN(tf.keras.Model):
                 vcnn_loss = nn.reduce_sum_batch(cross_ent)
 
                 ae_loss = nn.reduce_sum_batch(
-                    tf.nn.sigmoid_cross_entropy_with_logits(logits=ae_output,
+                    tf.nn.sigmoid_cross_entropy_with_logits(logits=ae_logits,
                                                             labels=batch['gt_occ']))
                 metrics['loss/aux_loss'] = ae_loss
                 
-                loss = vcnn_loss + 0.1 * ae_loss
+                loss = vcnn_loss + 10 * ae_loss
                 
                 variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
@@ -82,6 +84,7 @@ class ConditionalVCNN(tf.keras.Model):
                 return loss, metrics
 
         def step_fn_multiloss(batch):
+            raise Exception("Not Implemented Yet")
             with tf.GradientTape() as tape:
                 ae_features = self.encoder(self.prep_ae_input(batch))
                 ae_output = self.decoder(ae_features)
@@ -169,10 +172,10 @@ def make_decoder(inp_shape, batch_size, params):
 
 def make_cvcnn(inp_shape, batch_size, params):
     inputs = {'conditioned_occ':tf.keras.Input(batch_size=batch_size, shape=inp_shape),
-              'ae_features':tf.keras.Input(batch_size=batch_size, shape=(4,4,4,512))
+              'ae_logits':tf.keras.Input(batch_size=batch_size, shape=inp_shape)
               }
 
-    auto_encoder_features = inputs['ae_features']
+    ae_logits = inputs['ae_logits']
               
     # VCNN
     filter_size = [2,2,2]
@@ -227,7 +230,7 @@ def make_cvcnn(inp_shape, batch_size, params):
 
     f = f_list.pop()
     uf = uf_list.pop()
-    luf = tf.concat([luf_list.pop(), auto_encoder_features], axis=4)
+    luf = luf_list.pop()
     
     for fs in [256, 128, 64, 4]:
         f = tf.concat([tfl.Conv3DTranspose(fs, [2,2,2], strides=[2,2,2])(f), f_list.pop()], axis=4)
@@ -238,6 +241,7 @@ def make_cvcnn(inp_shape, batch_size, params):
         luf = tfl.Activation(tf.nn.elu)(luf)
 
     x = luf
+    x = tf.concat([x, ae_logits], axis=4)
     
     x = nn.Conv3D(n_filters=1, filter_size=[1,1,1], use_bias=True)(x)
 

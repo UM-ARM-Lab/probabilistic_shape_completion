@@ -8,6 +8,13 @@ import numpy as np
 
 import IPython
 
+
+"""
+VAE that explicitly tries to predict angle loss as a feature
+"""
+
+
+
 def stack_known(inp):
     return tf.concat([inp['known_occ'], inp['known_free']], axis=4)
 

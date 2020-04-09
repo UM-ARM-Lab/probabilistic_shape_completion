@@ -29,12 +29,13 @@ params = {
     # 'network': 'VoxelCNN',
     # 'network': 'VAE_GAN',
     # 'network': 'Augmented_VAE',
-    'network': 'Conditional_VCNN',
+    # 'network': 'Conditional_VCNN',
+    'network': 'AE_VCNN',
     'stacknet_version': 'v2',
     'turn_on_prob':0.00000,
     'turn_off_prob':0.0,
     'loss':'cross_entropy',
-    'multistep_loss': True,
+    'multistep_loss': False,
 }
 
 
