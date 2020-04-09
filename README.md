@@ -21,6 +21,7 @@ The code is developed and tested on
 - [`TensorFlow`](https://github.com/tensorflow/tensorflow) 2.0
 - [`numpy`](http://www.numpy.org/) 1.14.2
 - [`ROS`](http://wiki.ros.org/kinetic) kinetic
+- For visualization in RViz: https://github.com/bsaund/rviz_text_selection_panel
 
 ### Initial Demo
 
