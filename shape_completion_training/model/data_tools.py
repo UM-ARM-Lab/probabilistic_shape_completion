@@ -7,17 +7,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from shape_completion_training import binvox_rw
 import numpy as np
-import sys
-import progressbar
-
-import IPython
-
-
 
 shape_map = {"airplane":"02691156",
              "mug":"03797390"}
-
-
 
 cur_path = os.path.dirname(__file__)
 shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
@@ -26,19 +18,16 @@ shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
 shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/filepath")
 
 
-
-
-
-
 def shapenet_labels(human_names):
     return [shape_map[hn] for hn in human_names]
 
 
-"""
-Given a single ground truth mask occupied list, return ground truth occupied and free, as well as simulate the known occupied and free
-"""
 def simulate_omniscient_input(gt):
+    """
+    Given a single ground truth mask occupied list, return ground truth occupied and free, as well as simulate the known occupied and free
+    """
     return gt, 1.0 - gt
+
 
 def simulate_2_5D_input(gt):
     gt_occ = gt
@@ -91,17 +80,13 @@ def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
 
     return t
 
+
 # @tf.function
 def simulate_first_n_input(gt, n):
     gt_occ = gt
     gt_free = 1.0 - gt
-
-
-
     mask = tf.concat([tf.ones(n), tf.zeros(tf.size(gt) - n)], axis=0)
-
     shape = gt.shape
-
     gt_occ_masked = tf.reshape(tf.reshape(gt_occ, [-1]) * mask, shape)
     gt_free_masked = tf.reshape(tf.reshape(gt_free, [-1]) * mask, shape)
     return gt_occ_masked, gt_free_masked
@@ -111,6 +96,7 @@ def simulate_first_n_input(gt, n):
 def simulate_first_random_input(gt):
     n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
     return simulate_first_n_input(gt, n)
+
 
 def simulate_random_partial_completion_input(gt):
     gt_occ = gt
@@ -131,14 +117,13 @@ def simulate_random_partial_completion_input(gt):
     return gt_occ_masked, gt_free_masked
 
 
-
-"""
-Loads ground truth voxels into a np.array
-
-filepath: string filepath to the "models" folder for this shape
-augmentation: string identifying the augmentation
-"""
 def load_gt_voxels(filepath, augmentation):
+    """
+    Loads ground truth voxels into a np.array
+
+    filepath: string filepath to the "models" folder for this shape
+    augmentation: string identifying the augmentation
+    """
     binvox_wire_fp = join(filepath, 'model_augmented_' + augmentation + '.wire.binvox')    
     with open(binvox_wire_fp) as f:
         wire_vox = binvox_rw.read_as_3d_array(f).data
@@ -164,6 +149,7 @@ class ShapenetRecord:
         self.category = None
         self.id = None
         self.augmentation = None
+
 
 def get_all_shapenet_files(shape_ids):
     shapenet_files = []
@@ -195,11 +181,12 @@ def get_all_shapenet_files(shape_ids):
                 shapenet_files.append(sr)
     return shapenet_files
 
-"""
-Groups a single list of ShapenetRecords into groups of lists. 
-Each group contains only one category and is at most group_size long
-"""
+
 def group_shapenet_files(shapenet_files, group_size):
+    """
+    Groups a single list of ShapenetRecords into groups of lists.
+    Each group contains only one category and is at most group_size long
+    """
     groups = []
     group = []
     category = shapenet_files[0].category
@@ -256,6 +243,7 @@ def write_shapenet_to_tfrecord(shape_ids = "all"):
     ds = tf.data.Dataset.from_tensor_slices(data)
     write_to_tfrecord(ds, join(shapenet_record_path, "filepaths.tfrecord"))
 
+
 def write_to_tfrecord(dataset, record_file):
     def _bytes_feature(value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
@@ -267,24 +255,21 @@ def write_to_tfrecord(dataset, record_file):
             writer.write(example.SerializeToString())
 
 
-"""
-Reads from a tfrecord file of paths and augmentations
-Loads the binvox files, simulates the input tensors, and returns a dataset
-"""
 def read_metadata_from_tfrecord(record_file, shuffle):
+    """
+    Reads from a tfrecord file of paths and augmentations
+    Loads the binvox files, simulates the input tensors, and returns a dataset
+    """
     print("Reading from filepath record")
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
     keys = ['id', 'shape_category', 'fp', 'augmentation']
     tfrecord_description = {k: tf.io.FixedLenFeature([], tf.string) for k in keys}
 
-
-
     def _parse_record_function(example_proto):
         # Parse the input tf.Example proto using the dictionary above.
         example = tf.io.parse_single_example(example_proto, tfrecord_description)
         return example
-
 
     cache_name = "ds.cache"
     if shuffle:
@@ -296,6 +281,7 @@ def read_metadata_from_tfrecord(record_file, shuffle):
     # parsed_dataset = parsed_dataset.cache(cache_fp)
     return parsed_dataset
 
+
 def load_voxelgrids(metadata_ds):
     def _get_shape(_raw_dataset):
         e = next(_raw_dataset.__iter__())
@@ -303,7 +289,6 @@ def load_voxelgrids(metadata_ds):
         return gt.shape
     shape = _get_shape(metadata_ds)
 
-    
     def _load_voxelgrids(elem):
         aug = elem['augmentation']
         fp = elem['fp']
@@ -316,8 +301,6 @@ def load_voxelgrids(metadata_ds):
         return elem
     return metadata_ds.map(_load_voxelgrids)
 
-
-    
 
 def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
     def _simulate_input(example):
@@ -347,7 +330,6 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
                   .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
 
-
 def simulate_partial_completion(dataset):
     def _add_partial_gt(elem):
         partial_occ, partial_free = simulate_first_random_input(elem['gt_occ'])
@@ -368,7 +350,6 @@ def simulate_random_partial_completion(dataset):
     return dataset.map(_add_partial_gt)
 
 
-
 def simulate_condition_occ(dataset, turn_on_prob = 0.0, turn_off_prob=0.0):
     def _add_conditional(elem):
         x = elem['gt_occ']
@@ -379,8 +360,6 @@ def simulate_condition_occ(dataset, turn_on_prob = 0.0, turn_off_prob=0.0):
         return elem
 
     return dataset.map(_add_conditional)
-
-
 
 
 def add_angle(dataset):
