@@ -37,6 +37,9 @@ def shapenet_labels(human_names):
 """
 Given a single ground truth mask occupied list, return ground truth occupied and free, as well as simulate the known occupied and free
 """
+def simulate_omniscient_input(gt):
+    return gt, 1.0 - gt
+
 def simulate_2_5D_input(gt):
     gt_occ = gt
     gt_free = 1.0 - gt
@@ -94,8 +97,8 @@ def simulate_first_n_input(gt, n):
     gt_free = 1.0 - gt
 
 
-    mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
-    mask = tf.concat([tf.ones(mask_n), tf.zeros(tf.size(gt) - mask_n)], axis=0)
+
+    mask = tf.concat([tf.ones(n), tf.zeros(tf.size(gt) - n)], axis=0)
 
     shape = gt.shape
 
@@ -106,7 +109,8 @@ def simulate_first_n_input(gt, n):
 
 # @tf.function
 def simulate_first_random_input(gt):
-    return simulate_first_n_input(gt, tf.size(gt))
+    n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
+    return simulate_first_n_input(gt, n)
 
 def simulate_random_partial_completion_input(gt):
     gt_occ = gt
@@ -315,9 +319,9 @@ def load_voxelgrids(metadata_ds):
 
     
 
-def simulate_input(dataset, x, y, z):
+def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
     def _simulate_input(example):
-        known_occ, known_free = tf.numpy_function(simulate_2_5D_input, [example['gt_occ']],
+        known_occ, known_free = tf.numpy_function(sim_input_fn, [example['gt_occ']],
                                                   [tf.float32, tf.float32])
         known_occ.set_shape(example['gt_occ'].shape)
         known_free.set_shape(example['gt_occ'].shape)
@@ -344,8 +348,6 @@ def simulate_input(dataset, x, y, z):
 
 
 
-
-
 def simulate_partial_completion(dataset):
     def _add_partial_gt(elem):
         partial_occ, partial_free = simulate_first_random_input(elem['gt_occ'])
@@ -365,6 +367,32 @@ def simulate_random_partial_completion(dataset):
 
     return dataset.map(_add_partial_gt)
 
+
+
+def simulate_condition_occ(dataset, turn_on_prob = 0.0, turn_off_prob=0.0):
+    def _add_conditional(elem):
+        x = elem['gt_occ']
+        x = x + tf.cast(tf.random.uniform(x.shape) < turn_on_prob, tf.float32)
+        x = x - tf.cast(tf.random.uniform(x.shape) < turn_off_prob, tf.float32)
+        x = tf.clip_by_value(x, 0.0, 1.0)
+        elem['conditioned_occ'] = x
+        return elem
+
+    return dataset.map(_add_conditional)
+
+
+
+
+def add_angle(dataset):
+    def _augmentation_to_angle(augmentation):
+        return np.float32(augmentation.split("_")[-1])
+
+    def _extract_angle(elem):
+        angle = tf.numpy_function(_augmentation_to_angle, [elem['augmentation']], tf.float32)
+        elem['angle'] = angle
+        return elem
+
+    return dataset.map(_extract_angle)
 
 
 ###################################################################
