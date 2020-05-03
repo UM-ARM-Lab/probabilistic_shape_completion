@@ -8,11 +8,10 @@ sc_path = join(dirname(abspath(__file__)), "..")
 sys.path.append(sc_path)
 
 from model import data_tools
-from model.network import AutoEncoderWrapper
+from shape_completion_training.model.network import AutoEncoderWrapper
 import time
 import tensorflow as tf
 import progressbar
-import IPython
 
 shape_map = {"airplane":"02691156",
              "mug":"03797390"}

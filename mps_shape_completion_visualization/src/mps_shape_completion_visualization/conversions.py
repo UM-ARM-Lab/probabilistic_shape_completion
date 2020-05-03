@@ -1,4 +1,4 @@
-import rospy
+# import rospy
 from mps_shape_completion_msgs.msg import OccupancyStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
