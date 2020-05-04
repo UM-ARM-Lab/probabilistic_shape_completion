@@ -24,8 +24,6 @@ from shape_completion_training.model import obj_tools
 from shape_completion_training.model import nn_tools
 from shape_completion_training import binvox_rw
 
-
-
 # from bsaund_shape_completion import sampling_tools
 from shape_completion_training.model import sampling_tools
 
@@ -36,7 +34,7 @@ import threading
 
 import tensorflow as tf
 
-import IPython
+
 
 
 ARGS = None
