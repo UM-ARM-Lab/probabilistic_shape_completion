@@ -6,7 +6,6 @@ import nn_tools as nn
 import numpy as np
 # from nn_tools import MaskedConv3D, p_x_given_y
 
-import IPython
 
 
 """

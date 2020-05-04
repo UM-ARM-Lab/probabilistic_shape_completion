@@ -16,8 +16,8 @@ import numpy as np
 import sys
 import os
 
-sc_path = os.path.join(os.path.dirname(__file__), "../../")
-sys.path.append(sc_path)
+# sc_path = os.path.join(os.path.dirname(__file__), "../../")
+# sys.path.append(sc_path)
 from shape_completion_training.model.network import Network
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import obj_tools

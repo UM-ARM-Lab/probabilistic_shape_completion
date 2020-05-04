@@ -5,9 +5,6 @@ import tensorflow.keras.layers as tfl
 import nn_tools as nn
 from nn_tools import MaskedConv3D, p_x_given_y
 
-import IPython
-
-
 
     
 

@@ -7,8 +7,7 @@ Tensorflow 2.0 (instead of 1.0)
 
 import os
 import utils
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-os.environ["CUDA_VISIBLE_DEVICES"] = str(utils.pick_gpu_lowest_memory())
+utils.set_gpu_with_lowest_memory()
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
 import data_tools
@@ -24,20 +23,6 @@ from ae_vcnn import AE_VCNN
 import progressbar
 import datetime
 import time
-
-import IPython
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class Network:

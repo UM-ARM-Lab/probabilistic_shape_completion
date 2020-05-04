@@ -4,8 +4,6 @@ import tensorflow as tf
 import tensorflow.keras.layers as tfl
 import nn_tools as nn
 
-import IPython
-
 
 
 class AutoEncoder(tf.keras.Model):

@@ -6,7 +6,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
 
-import IPython
 
 
 @tf.function

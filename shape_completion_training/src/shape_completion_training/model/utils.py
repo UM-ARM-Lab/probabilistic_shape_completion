@@ -1,22 +1,26 @@
 """Some useful Utils for tensorflow"""
 
 
-import subprocess, re
-
+import subprocess, re, os
 
 
 # Nvidia-smi GPU memory parsing.
 # Tested on nvidia-smi 370.23
+
 
 def run_command(cmd):
     """Run command, return output as string."""
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True).communicate()[0]
     return output.decode("ascii")
 
+
 def list_available_gpus():
     """Returns list of available GPU ids."""
     output = run_command("nvidia-smi -L")
     # lines of the form GPU 0: TITAN X
+    if output == "":
+        return []
+
     gpu_regex = re.compile(r"GPU (?P<gpu_id>\d+):")
     result = []
     for line in output.strip().split("\n"):
@@ -25,10 +29,14 @@ def list_available_gpus():
         result.append(int(m.group("gpu_id")))
     return result
 
+
 def gpu_memory_map():
     """Returns map of GPU id to memory allocated on that GPU."""
 
     output = run_command("nvidia-smi")
+    if output == "":
+        return {}
+
     gpu_output = output[output.find("GPU Memory"):]
     # lines of the form
     # |    0      8734    C   python                                       11705MiB |
@@ -44,9 +52,20 @@ def gpu_memory_map():
         result[gpu_id] += gpu_memory
     return result
 
+
 def pick_gpu_lowest_memory():
     """Returns GPU with the least allocated memory"""
 
     memory_gpu_map = [(memory, gpu_id) for (gpu_id, memory) in gpu_memory_map().items()]
+    if len(memory_gpu_map) == 0:
+        return ""
     best_memory, best_gpu = sorted(memory_gpu_map)[0]
     return best_gpu
+
+
+def set_gpu_with_lowest_memory():
+    best_gpu = str(pick_gpu_lowest_memory())
+    if best_gpu == "":
+        return
+    os.environ["CUDA_VISIBLE_DEVICES"] = best_gpu
+

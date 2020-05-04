@@ -3,7 +3,6 @@
 # import pymesh
 # import pywavefront
 import pyassimp
-import IPython
 import numpy as np
 import os
 
