@@ -3,7 +3,7 @@ from copy import deepcopy
 import tensorflow as tf
 
 
-class MyModel(tf.keras.Model):
+class MyKerasModel(tf.keras.Model):
 
     def __init__(self, hparams, batch_size, *args, **kwargs):
         super().__init__(*args, **kwargs)
