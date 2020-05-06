@@ -8,11 +8,10 @@ sc_path = join(dirname(abspath(__file__)), "..")
 sys.path.append(sc_path)
 
 from model import data_tools
-from model.network import Network
+from model.modelrunner import ModelRunner
 import tensorflow as tf
 import numpy as np
 import IPython
-
 
 
 params = {
@@ -69,7 +68,7 @@ if __name__ == "__main__":
     # IPython.embed()
 
     
-    sn = Network(params, training=True)
+    sn = ModelRunner(params, training=True)
     # IPython.embed()
 
     sn.train_and_test(data)

@@ -25,7 +25,7 @@ import datetime
 import time
 
 
-class Network:
+class ModelRunner:
     def __init__(self, params=None, trial_name=None, training=False):
         self.batch_size = 16
         if not training:
@@ -76,9 +76,6 @@ class Network:
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
         self.restore()
 
-
-        
-
     def restore(self):
         status = self.ckpt.restore(self.manager.latest_checkpoint)
 
@@ -99,14 +96,10 @@ class Network:
         tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_fp, 'network.png'),
                                   show_shapes=True)
 
-
-
-
     def write_summary(self, summary_dict):
         with self.train_summary_writer.as_default():
             for k in summary_dict:
                 tf.summary.scalar(k, summary_dict[k].numpy(), step=self.ckpt.step.numpy())
-
 
     def train_batch(self, dataset):
         if self.num_batches is not None:
@@ -121,7 +114,6 @@ class Network:
             ' [', progressbar.Variable("TrainTime"), '] ',
             ' (', progressbar.ETA(), ') ',
             ]
-
 
         with progressbar.ProgressBar(widgets=widgets, max_value=self.num_batches) as bar:
             self.num_batches = 0
@@ -138,7 +130,6 @@ class Network:
                 self.ckpt.train_time.assign_add(time.time() - t0)
                 t0 = time.time()
 
-        
         save_path = self.manager.save()
         print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
         print("loss {:1.3f}".format(ret['loss'].numpy()))
@@ -147,8 +138,6 @@ class Network:
         self.build_model(dataset)
         self.count_params()
         # dataset = dataset.shuffle(10000)
-
-
         # batched_ds = dataset.batch(self.batch_size, drop_remainder=True).prefetch(64)
         batched_ds = dataset.batch(self.batch_size).prefetch(64)
         
@@ -160,13 +149,9 @@ class Network:
                    + ' ' + self.trial_name + ' ' + '='*20)
             self.train_batch(batched_ds)
             print('='*48)
-        
-        
 
     def train_and_test(self, dataset):
         train_ds = dataset
-
-        
         self.train(train_ds)
         self.count_params()
 

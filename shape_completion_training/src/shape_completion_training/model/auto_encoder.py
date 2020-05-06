@@ -23,7 +23,6 @@ class AutoEncoder(tf.keras.Model):
         self.layers_dict[layer.name] = layer
         self.layer_names.append(layer.name)
 
-
     def setup_model(self):
 
         nl = self.params['num_latent_layers']
@@ -80,10 +79,6 @@ class AutoEncoder(tf.keras.Model):
 
         for l in autoencoder_layers:
             self._add_layer(l)
-
-
-
-
 
 
     def call(self, inputs, training=False):

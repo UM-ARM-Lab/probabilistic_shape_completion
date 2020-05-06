@@ -166,20 +166,20 @@ def back_shift(x):
     xs = int_shape(x)
     return tf.concat([tf.zeros([xs[0],1,xs[2],xs[3],xs[4]]), x[:,:xs[1]-1,:,:,:]],1)
 
+
 def up_shift(x):
     xs = int_shape(x)
     return tf.concat([tf.zeros([xs[0],xs[1],1,xs[3],xs[4]]), x[:,:,:xs[2]-1,:,:]],2)
+
 
 def right_shift(x):
     xs = int_shape(x)
     return tf.concat([tf.zeros([xs[0],xs[1],xs[2],1,xs[4]]), x[:,:,:,:xs[3]-1,:]],3)
 
-                    
 
 def reduce_sum_batch(value):
     v1 = tf.reduce_mean(value, axis=[0])
     return tf.reduce_sum(v1)
-
 
 
 def calc_metrics(output, batch):

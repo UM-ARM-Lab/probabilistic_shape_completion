@@ -8,7 +8,7 @@ sc_path = join(dirname(abspath(__file__)), "..")
 sys.path.append(sc_path)
 
 from model import data_tools
-from model.network import AutoEncoderWrapper
+from model.modelrunner import AutoEncoderWrapper
 import time
 import tensorflow as tf
 import progressbar

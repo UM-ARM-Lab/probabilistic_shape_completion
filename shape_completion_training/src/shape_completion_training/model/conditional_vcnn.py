@@ -23,7 +23,6 @@ class ConditionalVCNN(tf.keras.Model):
     def get_model(self):
         return self
 
-
     def make_stack_net(self, inp_shape):
         # self.model = make_stack_net_v4(inp_shape, self.batch_size, self.params)
         self.encoder = make_encoder(inp_shape, self.batch_size, self.params)

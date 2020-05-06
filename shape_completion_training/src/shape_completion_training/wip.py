@@ -8,7 +8,7 @@ sc_path = join(dirname(abspath(__file__)), "..")
 sys.path.append(sc_path)
 
 from model import data_tools
-from model.network import Network, VoxelCNN
+from model.modelrunner import ModelRunner, VoxelCNN
 import tensorflow as tf
 import IPython
 

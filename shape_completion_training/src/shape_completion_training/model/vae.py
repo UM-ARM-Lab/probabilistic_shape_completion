@@ -10,11 +10,13 @@ import numpy as np
 def stack_known(inp):
     return tf.concat([inp['known_occ'], inp['known_free']], axis=4)
 
+
 def log_normal_pdf(sample, mean, logvar, raxis=1):
     log2pi = tf.math.log(2. * np.pi)
     return tf.reduce_sum(
         -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
         axis=raxis)
+
 
 def compute_vae_loss(z, mean, logvar, sample_logit, labels):
     """Computes vae loss given:
@@ -36,6 +38,7 @@ def compute_vae_loss(z, mean, logvar, sample_logit, labels):
     logpz = log_normal_pdf(z, 0., 0.)
     logqz_x = log_normal_pdf(z, mean, logvar)
     return -tf.reduce_mean(logpx_z + logpz - logqz_x)
+
 
 class VAE(tf.keras.Model):
     def __init__(self, params, batch_size):
@@ -112,7 +115,6 @@ class VAE(tf.keras.Model):
         m = {k: reduce(metrics[k]) for k in metrics}
         m['loss'] = loss
         return m
-
 
 
 class VAE_GAN(VAE):
@@ -195,7 +197,6 @@ class VAE_GAN(VAE):
         return m
 
 
-
 def make_encoder(inp_shape, params):
     """Basic VAE encoder"""
     n_features = params['num_latent_layers']
@@ -224,6 +225,7 @@ def make_encoder(inp_shape, params):
         ]
     )
 
+
 def make_generator(params):
     """Basic VAE decoder"""
     n_features = params['num_latent_layers']
@@ -249,6 +251,7 @@ def make_generator(params):
             tfl.Conv3DTranspose(1, (2,2,2), strides=(1,1,1), padding="same"),
         ]
     )
+
 
 def make_discriminator(inp_shape, params):
     """Basic Descriminator"""
