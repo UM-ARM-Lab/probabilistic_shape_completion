@@ -30,7 +30,9 @@ class MyKerasModel(tf.keras.Model):
         """
         raise NotImplementedError()
 
-    @tf.function
+    # No tf.function is needed here, since train_step is decorated
+    # adding tf.function here kills the gradients for some unknown reason, something to due with "losses" being passed in
+    # potentially it gets copied?
     def apply_gradients(self, tape, train_element, train_outputs, losses):
         """
         Applies gradients to the optimizers and returns metrics for losses and gradients
@@ -47,18 +49,18 @@ class MyKerasModel(tf.keras.Model):
         self.optimizer.apply_gradients(zip(gradients, variables))
 
         # By default, the losses are assumed to be a dictionary, and all losses will be treated as metrics
-        return losses
+        return {}
 
     @tf.function
     def train_step(self, train_element):
         all_metrics = {}
         with tf.GradientTape() as tape:
             train_outputs = self.call(train_element, training=True)
-            train_losses, loss_metrics = self.loss_function(train_element, train_outputs)
+            train_losses = self.compute_loss(train_element, train_outputs)
 
         gradient_metrics = self.apply_gradients(tape, train_element, train_outputs, train_losses)
 
-        all_metrics.update(loss_metrics)
+        all_metrics.update(train_losses)
         all_metrics.update(gradient_metrics)
 
         return train_outputs, all_metrics
