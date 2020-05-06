@@ -6,6 +6,7 @@ import subprocess, re, os
 
 # Nvidia-smi GPU memory parsing.
 # Tested on nvidia-smi 370.23
+import tensorflow as tf
 
 
 def run_command(cmd):
@@ -69,3 +70,9 @@ def set_gpu_with_lowest_memory():
         return
     os.environ["CUDA_VISIBLE_DEVICES"] = best_gpu
 
+
+def reduce_mean_dict(dict):
+    reduced_dict = {}
+    for k, v in dict.items():
+        reduced_dict[k] = tf.reduce_mean(v)
+    return reduced_dict
