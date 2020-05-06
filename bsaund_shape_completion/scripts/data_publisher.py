@@ -18,7 +18,7 @@ import os
 
 # sc_path = os.path.join(os.path.dirname(__file__), "../../")
 # sys.path.append(sc_path)
-from shape_completion_training.model.network import Network
+from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import obj_tools
 from shape_completion_training.model import nn_tools
@@ -71,15 +71,15 @@ def to_msg(voxel_grid):
                                                 scale=0.01,
                                                 frame_id = "object")
 
+
 def publish_elem(elem):
     gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
     known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
     known_free_pub.publish(to_msg(elem['known_free'].numpy()))
-    sys.stdout.write('\033[2K\033[1G')
     print("Category: {}, id: {}, aug: {}".format(elem['shape_category'].numpy(),
                                                  elem['id'].numpy(),
-                                                 elem['augmentation'].numpy()), end="")
-    sys.stdout.flush()
+                                                 elem['augmentation'].numpy()))
+
 
 def publish_np_elem(elem):
     gt_pub.publish(to_msg(elem["gt_occ"]))
@@ -94,12 +94,9 @@ def publish_np_elem(elem):
         elem['conditioned_occ'] = np.zeros(elem['gt_occ'].shape)
     conditioned_occ_pub.publish(to_msg(elem['conditioned_occ']))
 
-    
-    sys.stdout.write('\033[2K\033[1G')
     print("Category: {}, id: {}, aug: {}".format(elem['shape_category'],
                                                  elem['id'],
-                                                 elem['augmentation']), end="")
-    sys.stdout.flush()
+                                                 elem['augmentation']))
 
 
 
@@ -141,13 +138,10 @@ def publish_selection(metadata, str_msg):
         elem[k] = elem_raw[k].numpy()
     publish_np_elem(elem)
 
-    
     if model is None:
         return
-    
-        
+
     elem = sampling_tools.prepare_for_sampling(elem)
-    
 
     inference = model.model(elem)
     # IPython.embed()
@@ -155,8 +149,6 @@ def publish_selection(metadata, str_msg):
     completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
     if inference.has_key('aux_occ'):
         aux_pub.publish(to_msg(inference['aux_occ'].numpy()))
-
-
 
     mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
     mismatch_pub.publish(to_msg(mismatch))
@@ -175,8 +167,6 @@ def publish_selection(metadata, str_msg):
         for _ in range(5):
             rospy.sleep(1)
             elem, inference = multistep_error(elem, inference)
-        
-
 
     if ARGS.sample:
         global stop_current_sampler
@@ -190,7 +180,6 @@ def publish_selection(metadata, str_msg):
         
         sampling_thread = threading.Thread(target=sampler_worker, args=(elem,))
         sampling_thread.start()
-        
 
 
 def sampler_worker(elem):
@@ -207,7 +196,6 @@ def sampler_worker(elem):
     sampler = sampling_tools.EfficientCNNSampler(elem)
     # sampler = sampling_tools.MostConfidentSampler(elem)
     inference = model.model(elem)
-
 
     finished = False
     prev_ct = 0
@@ -228,10 +216,6 @@ def sampler_worker(elem):
     # IPython.embed()
 
 
-
-            
-
-
 def publish_object_transform():
     # Transform so shapes appear upright in rviz
     br = tf2_ros.TransformBroadcaster()
@@ -248,14 +232,14 @@ def publish_object_transform():
     rospy.sleep(1)
     br.sendTransform(t)
 
+
 def load_network():
     global model
     print('Load network? (Y/n)')
     if ARGS.trial is None and raw_input().lower() == 'n':
         return
     # model = Network(trial_name="VCNN_v2", training=False)
-    model = Network(trial_name=ARGS.trial)
-
+    model = ModelRunner(trial_name=ARGS.trial)
 
 
 def parser():
@@ -267,7 +251,6 @@ def parser():
 
     ARGS = parser.parse_args()
 
-    
 
 if __name__=="__main__":
     parser()
