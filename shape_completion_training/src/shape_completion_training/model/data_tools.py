@@ -12,10 +12,10 @@ shape_map = {"airplane":"02691156",
              "mug":"03797390"}
 
 cur_path = os.path.dirname(__file__)
-shapenet_load_path = join(cur_path, "../data/ShapeNetCore.v2_augmented")
+shapenet_load_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
-shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/filepath")
+shapenet_record_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented/tfrecords/filepath")
 
 
 def shapenet_labels(human_names):
