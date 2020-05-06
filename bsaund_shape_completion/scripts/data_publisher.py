@@ -22,6 +22,7 @@ from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import obj_tools
 from shape_completion_training.model import nn_tools
+from shape_completion_training.model import voxelgrid_tools
 from shape_completion_training import binvox_rw
 
 # from bsaund_shape_completion import sampling_tools
@@ -111,6 +112,31 @@ def publish_options(metadata):
     options_pub.publish(tso)
 
 
+def publish_inference(inference):
+    completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
+    completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
+    if inference.has_key('aux_occ'):
+        aux_pub.publish(to_msg(inference['aux_occ'].numpy()))
+
+
+def run_inference(elem):
+    if not ARGS.use_best_iou:
+        return model.model(elem)
+
+    best_iou = 0.0
+    best_inference = None
+    for _ in range(300):
+        inference = model.model(elem)
+        iou = voxelgrid_tools.iou(elem['gt_occ'], inference['predicted_occ'])
+        if ARGS.publish_each_sample:
+            publish_inference(inference)
+        if iou > best_iou:
+            best_iou = iou
+            best_inference = inference
+    return best_inference
+        
+        
+
 def publish_selection(metadata, str_msg):
     translation = 0
     
@@ -140,18 +166,15 @@ def publish_selection(metadata, str_msg):
 
     if model is None:
         return
-
+        
     elem = sampling_tools.prepare_for_sampling(elem)
 
-    inference = model.model(elem)
-    # IPython.embed()
-    completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
-    completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
-    if inference.has_key('aux_occ'):
-        aux_pub.publish(to_msg(inference['aux_occ'].numpy()))
+    inference = run_inference(elem)
+    publish_inference(inference)
 
     mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
     mismatch_pub.publish(to_msg(mismatch))
+    print("There are {} mismatches".format(np.sum(mismatch > 0.5)))
 
     def multistep_error(elem, inference):
         a = inference['predicted_occ']
@@ -163,16 +186,19 @@ def publish_selection(metadata, str_msg):
         return elem, inference
         
     if ARGS.multistep:
-
         for _ in range(5):
             rospy.sleep(1)
             elem, inference = multistep_error(elem, inference)
+
+    metric = voxelgrid_tools.p_correct_geometric_mean(inference['predicted_occ'], elem['gt_occ'])
+    print("p_correct_geometric_mean: {}".format(metric.numpy()))
+    print("p_correct: {}".format(voxelgrid_tools.p_correct(inference['predicted_occ'], elem['gt_occ'])))
+    print("iou: {}".format(voxelgrid_tools.iou(elem['gt_occ'], inference['predicted_occ'])))
 
     if ARGS.sample:
         global stop_current_sampler
         global sampling_thread
         
-        print()
         # print("Stopping old worker")
         stop_current_sampler = True
         if sampling_thread is not None:
@@ -209,9 +235,7 @@ def sampler_worker(elem):
         if sampler.ct - prev_ct >= 100 or finished:
             prev_ct = sampler.ct
             publish_np_elem(elem)
-            completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
-            # completion_pub.publish(to_msg(inference['aux_occ'].numpy()))
-            completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
+            publish_inference(inference)
     print("Sampling complete")
     # IPython.embed()
 
@@ -231,6 +255,7 @@ def publish_object_transform():
 
     rospy.sleep(1)
     br.sendTransform(t)
+    
 
 
 def load_network():
@@ -241,11 +266,12 @@ def load_network():
     # model = Network(trial_name="VCNN_v2", training=False)
     model = ModelRunner(trial_name=ARGS.trial)
 
-
 def parser():
     global ARGS
     parser = argparse.ArgumentParser(description='Publish shape data to RViz for viewing')
     parser.add_argument('--sample', help='foo help', action='store_true')
+    parser.add_argument('--use_best_iou', help='foo help', action='store_true')
+    parser.add_argument('--publish_each_sample', help='foo help', action='store_true')
     parser.add_argument('--multistep', action='store_true')
     parser.add_argument('--trial')
 

@@ -41,7 +41,7 @@ def p_correct_geometric_mean(estimate_voxelgrid, gt_voxelgrid):
     gt_voxelgrid contains the occupancy {0,1.0}
     """
     gt = tf.cast(gt_voxelgrid > 0.5, tf.float32)
-    p_voxel_correct = 1.0 - (gt - estimate_voxelgrid)
+    p_voxel_correct = 1.0 - tf.math.abs(gt - estimate_voxelgrid)
     num_elements = tf.cast(tf.size(p_voxel_correct), tf.float32)
     p_correct = tf.exp(tf.reduce_sum(tf.math.log(p_voxel_correct))/num_elements)
     return p_correct

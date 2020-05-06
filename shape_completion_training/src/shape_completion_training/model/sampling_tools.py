@@ -70,7 +70,8 @@ class EfficientCNNSampler:
 
         if need_inference:
             self.ct += 1
-            print("Inference after {}: ({}, {}, {})".format(self.ct, ind[0], ind[1], ind[2]))
+            if self.ct % 100 == 0:
+                print("Performing inference number {}: ({}, {}, {})".format(self.ct, ind[0], ind[1], ind[2]))
 
             inference = model.model(elem)
             self.pred_free = inference['predicted_free'].numpy()
