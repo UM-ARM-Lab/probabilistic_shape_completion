@@ -9,13 +9,14 @@ import json
 
 
 
-"""
-Returns the filepath to the directory for the trial, prompting the user for information if necessary.
-The directory is created if it does not exist.
 
-Call as: get_trial_directory("/path/to/trials/directory/")
-"""
 def get_trial_directory(base_directory, nick=None, expect_reuse=False):
+    """
+    Returns the filepath to the directory for the trial, prompting the user for information if necessary.
+    The directory is created if it does not exist.
+
+    Call as: get_trial_directory("/path/to/trials/directory/")
+    """
     if not os.path.isdir(base_directory):
         _make_new_trials_directory(base_directory)
 
@@ -35,16 +36,17 @@ def get_trial_directory(base_directory, nick=None, expect_reuse=False):
     print("Running trial {} at {}".format(nick, fp))
     return fp
 
-"""
-Handles loading and saving of the params
-If params is None it will load from params from the directory
-Otherwise it save params to the directory
-Returns the params loaded or saved
-Prompts user if default parameters do not match the given parameters
 
-TODO: If given_params is specified this will silently overwrite any params already part of the model.
-"""
 def handle_params(default_params_fp, model_params_fp, given_params):
+    """
+    Handles loading and saving of the params
+    If params is None it will load from params from the directory
+    Otherwise it save params to the directory
+    Returns the params loaded or saved
+    Prompts user if default parameters do not match the given parameters
+
+    TODO: If given_params is specified this will silently overwrite any params already part of the model.
+    """
     if given_params is None:
         return _load_params(default_params_fp, model_params_fp)
 
@@ -58,7 +60,8 @@ def handle_params(default_params_fp, model_params_fp, given_params):
     if given_keys != default_keys:
         print()
         print("!! Warning !!")
-        print("Default params and given params have different keys. The defaults should have the same entry names as the specified params. This difference may prevent properly reloading after future changes!")
+        print("Default params and given params have different keys. The defaults should have the same entry names as "
+              "the specified params. This difference may prevent properly reloading after future changes!")
         for missing_default_key in given_keys - default_keys:
             print("{} missing from defaults".format(missing_default_key))
         print()
@@ -75,6 +78,7 @@ def _write_params(filepath, params_dict):
     with open(join(filepath, 'params.json'), 'w') as f:
         json.dump(params_dict, f, sort_keys=True)
 
+
 def _load_params(default_params_fp, filepath):
     with open(join(default_params_fp, 'default_params.json'), 'r') as f:
         params = json.load(f)
@@ -82,7 +86,6 @@ def _load_params(default_params_fp, filepath):
     with open(join(filepath, 'params.json'), 'r') as f:
         params.update(json.load(f))
         return params
-
 
 
 def _make_new_trials_directory(trials_directory):
@@ -128,6 +131,7 @@ def _check_reuse_existing_directory(fp, nick, expect_reuse):
             print()
             raise RuntimeError("No load directory specified. Trial {} exists and not reusing".format(nick))
     return True
+
 
 def _write_summary(fp, nick, summary=None):
     with open(join(fp, "readme.txt"), "w") as f:

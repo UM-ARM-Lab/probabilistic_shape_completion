@@ -22,7 +22,7 @@ from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import obj_tools
 from shape_completion_training.model import nn_tools
-from shape_completion_training.model import voxelgrid_tools
+from shape_completion_training.model import metrics
 from shape_completion_training import binvox_rw
 
 # from bsaund_shape_completion import sampling_tools
@@ -127,7 +127,7 @@ def run_inference(elem):
     best_inference = None
     for _ in range(300):
         inference = model.model(elem)
-        iou = voxelgrid_tools.iou(elem['gt_occ'], inference['predicted_occ'])
+        iou = metrics.iou(elem['gt_occ'], inference['predicted_occ'])
         if ARGS.publish_each_sample:
             publish_inference(inference)
         if iou > best_iou:
@@ -190,10 +190,10 @@ def publish_selection(metadata, str_msg):
             rospy.sleep(1)
             elem, inference = multistep_error(elem, inference)
 
-    metric = voxelgrid_tools.p_correct_geometric_mean(inference['predicted_occ'], elem['gt_occ'])
+    metric = metrics.p_correct_geometric_mean(inference['predicted_occ'], elem['gt_occ'])
     print("p_correct_geometric_mean: {}".format(metric.numpy()))
-    print("p_correct: {}".format(voxelgrid_tools.p_correct(inference['predicted_occ'], elem['gt_occ'])))
-    print("iou: {}".format(voxelgrid_tools.iou(elem['gt_occ'], inference['predicted_occ'])))
+    print("p_correct: {}".format(metrics.p_correct(inference['predicted_occ'], elem['gt_occ'])))
+    print("iou: {}".format(metrics.iou(elem['gt_occ'], inference['predicted_occ'])))
 
     if ARGS.sample:
         global stop_current_sampler

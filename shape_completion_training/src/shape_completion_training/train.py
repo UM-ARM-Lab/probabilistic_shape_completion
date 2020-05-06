@@ -67,9 +67,7 @@ if __name__ == "__main__":
     # e = next(data.__iter__())
     # IPython.embed()
 
-    
     sn = ModelRunner(params, training=True)
     # IPython.embed()
 
     sn.train_and_test(data)
-
