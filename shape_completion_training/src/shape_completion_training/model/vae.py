@@ -1,10 +1,8 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
-import nn_tools as nn
-import numpy as np
-# from nn_tools import MaskedConv3D, p_x_given_y
+
+import shape_completion_training.model.nn_tools as nn
 
 
 def stack_known(inp):
@@ -32,7 +30,7 @@ def compute_vae_loss(z, mean, logvar, sample_logit, labels):
 
     See https://tensorflow.org/tutorials/generative/cvae for more details
     """
-    
+
     cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=sample_logit, labels=labels)
     logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
     logpz = log_normal_pdf(z, 0., 0.)
@@ -47,7 +45,7 @@ class VAE(tf.keras.Model):
         self.batch_size = batch_size
         self.opt = tf.keras.optimizers.Adam(0.0001)
 
-        self.make_vae(inp_shape = [64,64,64,2])
+        self.make_vae(inp_shape=[64, 64, 64, 2])
 
     def get_model(self):
         return self
@@ -55,7 +53,7 @@ class VAE(tf.keras.Model):
     def make_vae(self, inp_shape):
         self.encoder = make_encoder(inp_shape, self.params)
         self.generator = make_generator(self.params)
-        
+
     def predict(self, elem):
         return self(next(elem.__iter__()))
 
@@ -92,7 +90,7 @@ class VAE(tf.keras.Model):
     def train_step(self, batch):
         def reduce(val):
             return tf.reduce_mean(val)
-        
+
         def step_fn(batch):
             with tf.GradientTape() as tape:
                 known = stack_known(batch)
@@ -121,7 +119,7 @@ class VAE_GAN(VAE):
     def __init__(self, params, batch_size):
         super(VAE_GAN, self).__init__(params, batch_size)
         self.gan_opt = tf.keras.optimizers.Adam(0.00005)
-        self.discriminator = make_discriminator([64,64,64,3], self.params)
+        self.discriminator = make_discriminator([64, 64, 64, 3], self.params)
 
     def discriminate(self, known_input, output):
         inp = tf.concat([known_input, output], axis=4)
@@ -129,21 +127,21 @@ class VAE_GAN(VAE):
 
     def gradient_penalty(self, known, real, fake):
         alpha = tf.random.uniform([self.batch_size, 1, 1, 1, 1], 0.0, 1.0)
-        diff = fake-real
+        diff = fake - real
         interp = real + (alpha * diff)
         with tf.GradientTape() as t:
             t.watch(interp)
             pred = self.discriminate(known, interp)
             grad = t.gradient(pred, [interp])[0]
-        slopes = tf.sqrt(tf.reduce_sum(tf.square(grad), axis=[1,2,3,4]))
-        gp = tf.reduce_mean((slopes -1.)**2)
+        slopes = tf.sqrt(tf.reduce_sum(tf.square(grad), axis=[1, 2, 3, 4]))
+        gp = tf.reduce_mean((slopes - 1.) ** 2)
         return gp
 
     # @tf.function
     def train_step(self, batch):
         def reduce(val):
             return tf.reduce_mean(val)
-            
+
         def step_fn(batch):
             with tf.GradientTape(persistent=True) as tape:
                 ##### Forward pass
@@ -165,11 +163,11 @@ class VAE_GAN(VAE):
                 fake_pair_est = self.discriminate(known, fake_occ)
                 gan_loss_g = 10000 * (1 + tf.reduce_mean(-fake_pair_est))
                 gan_loss_d_no_gp = 1 + tf.reduce_mean(fake_pair_est - real_pair_est)
-                
+
                 # gradient penalty
                 gp = self.gradient_penalty(known, batch['gt_occ'], fake_occ)
                 gan_loss_d = gan_loss_d_no_gp + gp
-                
+
                 metrics['loss/gan_g'] = gan_loss_g
                 metrics['loss/gan_d'] = gan_loss_d
                 metrics['loss/gan_gp'] = gp
@@ -204,21 +202,21 @@ def make_encoder(inp_shape, params):
         [
             tfl.InputLayer(input_shape=inp_shape),
 
-            tfl.Conv3D(64, (2,2,2), padding="same"),
+            tfl.Conv3D(64, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
-            tfl.Conv3D(128, (2,2,2), padding="same"),
+            tfl.Conv3D(128, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
-            tfl.Conv3D(256, (2,2,2), padding="same"),
+            tfl.Conv3D(256, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
-            tfl.Conv3D(512, (2,2,2), padding="same"),
+            tfl.Conv3D(512, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
             tfl.Flatten(),
             tfl.Dense(n_features * 2)
@@ -232,23 +230,23 @@ def make_generator(params):
     return tf.keras.Sequential(
         [
             tfl.InputLayer(input_shape=(n_features,)),
-            tfl.Dense(4*4*4*512),
+            tfl.Dense(4 * 4 * 4 * 512),
             tfl.Activation(tf.nn.relu),
-            tfl.Reshape(target_shape=(4,4,4,512)),
+            tfl.Reshape(target_shape=(4, 4, 4, 512)),
 
-            tfl.Conv3DTranspose(256, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
-
-            tfl.Conv3DTranspose(128, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
-            
-            tfl.Conv3DTranspose(64, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3DTranspose(256, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.relu),
 
-            tfl.Conv3DTranspose(32, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3DTranspose(128, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.relu),
 
-            tfl.Conv3DTranspose(1, (2,2,2), strides=(1,1,1), padding="same"),
+            tfl.Conv3DTranspose(64, (2, 2, 2), strides=(2, 2, 2)),
+            tfl.Activation(tf.nn.relu),
+
+            tfl.Conv3DTranspose(32, (2, 2, 2), strides=(2, 2, 2)),
+            tfl.Activation(tf.nn.relu),
+
+            tfl.Conv3DTranspose(1, (2, 2, 2), strides=(1, 1, 1), padding="same"),
         ]
     )
 
@@ -259,16 +257,16 @@ def make_discriminator(inp_shape, params):
         [
             tfl.InputLayer(input_shape=inp_shape),
 
-            tfl.Conv3D(16, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(16, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
-            tfl.Conv3D(32, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(32, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
-            tfl.Conv3D(64, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(64, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
-            tfl.Conv3D(128, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(128, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
             tfl.Flatten(),

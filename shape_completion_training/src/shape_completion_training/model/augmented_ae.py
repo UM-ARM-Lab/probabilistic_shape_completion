@@ -1,21 +1,18 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
-import nn_tools as nn
+import shape_completion_training.model.nn_tools as nn
 import numpy as np
-# from nn_tools import MaskedConv3D, p_x_given_y
-
-
 
 """
 VAE that explicitly tries to predict angle loss as a feature
 """
 
 
-
 def stack_known(inp):
     return tf.concat([inp['known_occ'], inp['known_free']], axis=4)
+
 
 def log_normal_pdf(sample, mean, logvar, raxis=1):
     log2pi = tf.math.log(2. * np.pi)
@@ -28,12 +25,13 @@ def compute_vae_loss(z, mean, logvar, sample_logit, labels):
     # mean, logvar = model.encode(x)
     # z = model.reparameterize(mean, logvar)
     # x_logit = model.decode(z)
-    
+
     cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=sample_logit, labels=labels)
     logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
     logpz = log_normal_pdf(z, 0., 0.)
     logqz_x = log_normal_pdf(z, mean, logvar)
     return -tf.reduce_mean(logpx_z + logpz - logqz_x)
+
 
 def compute_angle_loss(true, mean, logvar):
     return tf.reduce_mean(-log_normal_pdf(true, mean, logvar))
@@ -46,7 +44,7 @@ class Augmented_VAE(tf.keras.Model):
         self.batch_size = batch_size
         self.opt = tf.keras.optimizers.Adam(0.001)
 
-        self.make_vae(inp_shape = [64,64,64,2])
+        self.make_vae(inp_shape=[64, 64, 64, 2])
 
     def get_model(self):
         return self
@@ -54,7 +52,7 @@ class Augmented_VAE(tf.keras.Model):
     def make_vae(self, inp_shape):
         self.encoder = make_encoder(inp_shape, self.params)
         self.generator = make_generator(self.params)
-        
+
     def predict(self, elem):
         return self(next(elem.__iter__()))
 
@@ -90,46 +88,43 @@ class Augmented_VAE(tf.keras.Model):
         return logits
 
     def split_angle(self, inp):
-        features, angle = tf.split(inp, num_or_size_splits=[self.params['num_latent_layers']-1, 1], axis=1)
+        features, angle = tf.split(inp, num_or_size_splits=[self.params['num_latent_layers'] - 1, 1], axis=1)
         return features, angle
 
     def replace_true_angle(self, z, true_angle, mean, logvar):
         nf = self.params['num_latent_layers']
-        f, sampled_angle = tf.split(z, num_or_size_splits=[nf-1, 1], axis=1)
+        f, sampled_angle = tf.split(z, num_or_size_splits=[nf - 1, 1], axis=1)
         f_corrected = tf.concat([f, tf.expand_dims(true_angle, axis=1)], axis=1)
 
-        _, mean_angle = tf.split(mean, num_or_size_splits=[nf-1, 1], axis=1)
-        _, logvar_angle = tf.split(logvar, num_or_size_splits=[nf-1, 1], axis=1)
-        
-        return f_corrected, sampled_angle, mean_angle, logvar_angle
+        _, mean_angle = tf.split(mean, num_or_size_splits=[nf - 1, 1], axis=1)
+        _, logvar_angle = tf.split(logvar, num_or_size_splits=[nf - 1, 1], axis=1)
 
+        return f_corrected, sampled_angle, mean_angle, logvar_angle
 
     @tf.function
     def train_step(self, batch):
         def reduce(val):
             return tf.reduce_mean(val)
-            
-        
+
         def step_fn(batch):
             with tf.GradientTape() as tape:
                 known = stack_known(batch)
                 mean, logvar = self.encode(known)
                 true_angle = batch['angle']
-                
+
                 z = self.reparameterize(mean, logvar)
 
                 z_corrected, sampled_angle, mean_angle, logvar_angle = self.replace_true_angle(z, true_angle, mean, logvar)
-                
+
                 sample_logit = self.decode(z_corrected)
 
                 z_f, sampled_angle = self.split_angle(z)
                 mean_f, mean_angle = self.split_angle(mean)
                 logvar_f, logvar_angle = self.split_angle(logvar)
-                
+
                 vae_loss = compute_vae_loss(z_f, mean_f, logvar_f, sample_logit, labels=batch['gt_occ'])
                 angle_loss = compute_angle_loss(true_angle, mean_angle, logvar_angle)
                 loss = vae_loss + angle_loss
-                
 
                 sample = tf.nn.sigmoid(sample_logit)
                 output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
@@ -150,41 +145,35 @@ class Augmented_VAE(tf.keras.Model):
         return m
 
 
-
-
-
-
-
-
 def make_encoder(inp_shape, params):
     """Basic VAE encoder"""
     n_features = params['num_latent_layers']
-
 
     return tf.keras.Sequential(
         [
             tfl.InputLayer(input_shape=inp_shape),
 
-            tfl.Conv3D(64, (2,2,2), padding="same"),
+            tfl.Conv3D(64, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
-            tfl.Conv3D(128, (2,2,2), padding="same"),
+            tfl.Conv3D(128, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
-            tfl.Conv3D(256, (2,2,2), padding="same"),
+            tfl.Conv3D(256, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
-            tfl.Conv3D(512, (2,2,2), padding="same"),
+            tfl.Conv3D(512, (2, 2, 2), padding="same"),
             tfl.Activation(tf.nn.relu),
-            tfl.MaxPool3D((2,2,2)),
+            tfl.MaxPool3D((2, 2, 2)),
 
             tfl.Flatten(),
             tfl.Dense(n_features * 2)
         ]
     )
+
 
 def make_generator(params):
     """Basic VAE decoder"""
@@ -192,25 +181,26 @@ def make_generator(params):
     return tf.keras.Sequential(
         [
             tfl.InputLayer(input_shape=(n_features,)),
-            tfl.Dense(4*4*4*512),
+            tfl.Dense(4 * 4 * 4 * 512),
             tfl.Activation(tf.nn.relu),
-            tfl.Reshape(target_shape=(4,4,4,512)),
+            tfl.Reshape(target_shape=(4, 4, 4, 512)),
 
-            tfl.Conv3DTranspose(256, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
-
-            tfl.Conv3DTranspose(128, (2,2,2), strides=(2,2,2)),
-            tfl.Activation(tf.nn.relu),
-            
-            tfl.Conv3DTranspose(64, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3DTranspose(256, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.relu),
 
-            tfl.Conv3DTranspose(32, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3DTranspose(128, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.relu),
 
-            tfl.Conv3DTranspose(1, (2,2,2), strides=(1,1,1), padding="same"),
+            tfl.Conv3DTranspose(64, (2, 2, 2), strides=(2, 2, 2)),
+            tfl.Activation(tf.nn.relu),
+
+            tfl.Conv3DTranspose(32, (2, 2, 2), strides=(2, 2, 2)),
+            tfl.Activation(tf.nn.relu),
+
+            tfl.Conv3DTranspose(1, (2, 2, 2), strides=(1, 1, 1), padding="same"),
         ]
     )
+
 
 def make_discriminator(inp_shape, params):
     """Basic Descriminator"""
@@ -218,16 +208,16 @@ def make_discriminator(inp_shape, params):
         [
             tfl.InputLayer(input_shape=inp_shape),
 
-            tfl.Conv3D(16, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(16, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
-            tfl.Conv3D(32, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(32, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
-            tfl.Conv3D(64, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(64, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
-            tfl.Conv3D(128, (2,2,2), strides=(2,2,2)),
+            tfl.Conv3D(128, (2, 2, 2), strides=(2, 2, 2)),
             tfl.Activation(tf.nn.leaky_relu),
 
             tfl.Flatten(),

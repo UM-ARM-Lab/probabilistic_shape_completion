@@ -6,27 +6,26 @@ Tensorflow 2.0 (instead of 1.0)
 '''
 
 import os
-import utils
+
+from shape_completion_training.model import utils
+
 utils.set_gpu_with_lowest_memory()
 import tensorflow as tf
-import tensorflow.keras.layers as tfl
-import data_tools
-import filepath_tools
-import nn_tools
-from auto_encoder import AutoEncoder
-from augmented_ae import Augmented_VAE
+from shape_completion_training.model import filepath_tools
+from shape_completion_training.model.auto_encoder import AutoEncoder
+from shape_completion_training.model.augmented_ae import Augmented_VAE
 # from voxelcnn import VoxelCNN, StackedVoxelCNN
-from voxelcnn import VoxelCNN
-from vae import VAE, VAE_GAN
-from conditional_vcnn import ConditionalVCNN
-from ae_vcnn import AE_VCNN
+from shape_completion_training.model.voxelcnn import VoxelCNN
+from shape_completion_training.model.vae import VAE, VAE_GAN
+from shape_completion_training.model.conditional_vcnn import ConditionalVCNN
+from shape_completion_training.model.ae_vcnn import AE_VCNN
 import progressbar
 import datetime
 import time
 
 
 class ModelRunner:
-    def __init__(self, params=None, trial_name=None, training=False):
+    def __init__(self, params=None, trial_name=None, training=False, write_summary=True):
         self.batch_size = 16
         if not training:
             self.batch_size = 1
@@ -35,8 +34,9 @@ class ModelRunner:
 
         file_fp = os.path.dirname(__file__)
         fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
-                                                expect_reuse = (params is None),
-                                                nick=trial_name)
+                                                expect_reuse=(params is None),
+                                                nick=trial_name,
+                                                write_summary=write_summary)
         self.trial_name = fp.split('/')[-1]
         self.params = filepath_tools.handle_params(file_fp, fp, params)
 
@@ -106,22 +106,22 @@ class ModelRunner:
             max_size = str(self.num_batches)
         else:
             max_size = '???'
-        
-        widgets=[
+
+        widgets = [
             '  ', progressbar.Counter(), '/', max_size,
             ' ', progressbar.Variable("Loss"), ' ',
             progressbar.Bar(),
             ' [', progressbar.Variable("TrainTime"), '] ',
             ' (', progressbar.ETA(), ') ',
-            ]
+        ]
 
         with progressbar.ProgressBar(widgets=widgets, max_value=self.num_batches) as bar:
             self.num_batches = 0
             t0 = time.time()
             for batch in dataset:
-                self.num_batches+=1
+                self.num_batches += 1
                 self.ckpt.step.assign_add(1)
-                
+
                 ret = self.model.train_step(batch)
                 time_str = str(datetime.timedelta(seconds=int(self.ckpt.train_time.numpy())))
                 bar.update(self.num_batches, Loss=ret['loss'].numpy(),
@@ -133,22 +133,22 @@ class ModelRunner:
         save_path = self.manager.save()
         print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
         print("loss {:1.3f}".format(ret['loss'].numpy()))
-        
+
     def train(self, dataset):
         self.build_model(dataset)
         self.count_params()
         # dataset = dataset.shuffle(10000)
         # batched_ds = dataset.batch(self.batch_size, drop_remainder=True).prefetch(64)
         batched_ds = dataset.batch(self.batch_size).prefetch(64)
-        
+
         num_epochs = 1000
         while self.ckpt.epoch < num_epochs:
             self.ckpt.epoch.assign_add(1)
             print('')
-            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '='*25\
-                   + ' ' + self.trial_name + ' ' + '='*20)
+            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '=' * 25 \
+                  + ' ' + self.trial_name + ' ' + '=' * 20)
             self.train_batch(batched_ds)
-            print('='*48)
+            print('=' * 48)
 
     def train_and_test(self, dataset):
         train_ds = dataset
@@ -157,6 +157,3 @@ class ModelRunner:
 
     def evaluate(self, dataset):
         self.model.evaluate(dataset.batch(self.batch_size))
-        
-
-
