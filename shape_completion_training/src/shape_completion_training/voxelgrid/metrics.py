@@ -40,3 +40,29 @@ def p_correct_geometric_mean(estimate_voxelgrid, gt_voxelgrid):
     num_elements = tf.cast(tf.size(p_voxel_correct), tf.float32)
     p_correct = tf.exp(tf.reduce_sum(tf.math.log(p_voxel_correct))/num_elements)
     return p_correct
+
+
+def highest_match(test_vg, vg_list, metric=iou):
+    """
+    Returns the index and element of vg_list that maximizes metric(test_vg, element)
+    @param test_vg: voxelgrid
+    @param vg_list: list of voxelgrids
+    @param metric: metric function of two voxelgrids
+    @return: (index, element)
+
+    TODO:
+    """
+
+    best_ind = None
+    best_elem = None
+    best_val = -np.inf
+
+    for i, elem in enumerate(vg_list):
+        val = metric(test_vg, elem)
+        if val > best_val:
+            best_ind = i
+            best_elem = elem
+            best_val = val
+    return best_ind, best_elem
+
+
