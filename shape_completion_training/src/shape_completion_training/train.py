@@ -1,17 +1,7 @@
 #! /usr/bin/env python
 
-
-import sys
-from os.path import dirname, abspath, join
-
-sc_path = join(dirname(abspath(__file__)), "..")
-sys.path.append(sc_path)
-
-from model import data_tools
-from model.modelrunner import ModelRunner
-import tensorflow as tf
-import numpy as np
-import IPython
+from shape_completion_training.model import data_tools
+from shape_completion_training.model.modelrunner import ModelRunner
 
 
 params = {

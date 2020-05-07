@@ -47,6 +47,17 @@ class TestMetrics(unittest.TestCase):
         vg_half = tf.concat([tf.ones(shape=(10,10,5)), 0.5*tf.ones(shape=(10,10,5))], axis=2)
         self.assertAlmostEqual(metrics.p_correct_geometric_mean(vg_half, vg_all), np.sqrt(.5), delta=1e-5)
 
+    def test_highest_match(self):
+        """
+        Note that this test assumes that metric(a,b) is maximized when a==b
+        """
+        d = load_test_files()
+        for i in range(3):
+            test_vg = d[i]
+            best_ind, best_elem = metrics.highest_match(test_vg, d)
+            self.assertEqual(i, best_ind, "Wrong index returned")
+            self.assertTrue((best_elem == d[i]).all(), "Returned element is not the best element")
+
 
 if __name__ == '__main__':
     unittest.main()

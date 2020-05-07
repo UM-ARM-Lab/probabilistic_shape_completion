@@ -1,16 +1,8 @@
 #! /usr/bin/env python
 from __future__ import print_function
 
-import sys
-from os.path import dirname, abspath, join
-
-sc_path = join(dirname(abspath(__file__)), "..")
-sys.path.append(sc_path)
-
-from model import data_tools
-from model.modelrunner import ModelRunner, VoxelCNN
+from shape_completion_training.model.modelrunner import ModelRunner, VoxelCNN
 import tensorflow as tf
-import IPython
 
 shape_map = {"airplane":"02691156",
              "mug":"03797390"}

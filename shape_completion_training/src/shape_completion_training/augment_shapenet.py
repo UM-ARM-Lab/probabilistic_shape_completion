@@ -3,14 +3,9 @@ from __future__ import print_function
 
 import sys
 import os
-from os.path import dirname, abspath, join
 
-sc_path = join(dirname(abspath(__file__)), "..")
-sys.path.append(sc_path)
-
-from model import obj_tools
-from model import data_tools
-import IPython
+from shape_completion_training.model import obj_tools
+from shape_completion_training.model import data_tools
 import subprocess
 from itertools import izip_longest
 import multiprocessing as mp
