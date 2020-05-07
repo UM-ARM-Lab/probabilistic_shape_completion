@@ -1,21 +1,20 @@
 from __future__ import print_function
-import os
-import time
-from os.path import join
-import shutil
-import datetime
-import subprocess
+
+from datetime import datetime
 import json
+import os
+import subprocess
+from os.path import join
 
 import git
 
 
 def unique_trial_name(*names):
-    now = str(int(time.time()))
+    stamp = "{:%B_%d_%H-%M-%S}".format(datetime.now())
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha[:10]
     format_string = "{}_{}" + len(names) * '_{}'
-    return format_string.format(now, sha, *names)
+    return format_string.format(stamp, sha, *names)
 
 
 def get_trial_directory(base_directory, nick=None, expect_reuse=False, write_summary=True):
