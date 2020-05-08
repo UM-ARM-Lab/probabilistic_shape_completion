@@ -1,7 +1,7 @@
 from unittest import TestCase
 from setup_data_for_unit_tests import load_test_files
 from shape_completion_training.voxelgrid.conversions import voxelgrid_to_pointcloud, pointcloud_to_voxelgrid, \
-    transform_voxelgrid
+    transform_voxelgrid, make_transform
 import numpy as np
 
 
@@ -69,3 +69,25 @@ class TestTransforms(TestCase):
         T = np.eye(4)
         vg_new = transform_voxelgrid(vg_orig, T)
         self.assertTrue((vg_new == vg_orig).all())
+
+    def test_transform_voxelgrid_using_identity(self):
+        vg_orig = load_test_files()[0]
+        T = np.eye(4)
+        vg_new = transform_voxelgrid(vg_orig, T)
+        self.assertTrue((vg_new == vg_orig).all())
+
+    def test_transform_voxelgrid_is_invertable(self):
+        """
+        Note, this is not necessarily true for rotation or fractional translation, as converting to a voxelgrid
+        effectively truncates to an int so there is a loss of precision
+        @return:
+        """
+        T = make_transform(thetas=[0.0,0,np.pi/2], translation=[1,2,3])
+        T_inv = np.linalg.inv(T)
+        scale = 0.5
+        self.assertTrue((np.dot(T, T_inv) == np.eye(4)).all())
+        vg_orig = load_test_files()[0]
+        vg_rot = transform_voxelgrid(vg_orig, T, scale=scale)
+        self.assertFalse((vg_orig == vg_rot).all())
+        vg_new = transform_voxelgrid(vg_rot, T_inv, scale=scale)
+        self.assertTrue((vg_orig == vg_new).all())
