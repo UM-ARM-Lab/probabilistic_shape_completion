@@ -2,7 +2,8 @@
 <package format="2">
   <name>bsaund_shape_completion</name>
   <version>0.0.0</version>
-  <description>The bsaund_shape_completion package</description>
+  <description>This package visualizes the results of shape completion in rviz and provides
+  a basic interface for moving between different images</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
