@@ -25,22 +25,6 @@ import time
 
 
 class ModelRunner:
-<<<<<<< HEAD
-    def __init__(self, params=None, trial_name=None, training=False, write_summary=True):
-        self.batch_size = 16
-        if not training:
-            self.batch_size = 1
-        self.side_length = 64
-        self.num_voxels = self.side_length ** 3
-
-        file_fp = os.path.dirname(__file__)
-        fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
-                                                expect_reuse=(params is None),
-                                                nick=trial_name,
-                                                write_summary=write_summary)
-        self.trial_name = fp.split('/')[-1]
-        self.params = filepath_tools.handle_params(file_fp, fp, params)
-=======
     def __init__(self, trial_name=None, params=None, write_summary=True):
         self.trial_name = trial_name
         self.side_length = 64
@@ -53,7 +37,6 @@ class ModelRunner:
         self.batch_size = 16
         if not self.training:
             self.batch_size = 1
->>>>>>> dd5bb26... more work on filepath refactor
 
         self.checkpoint_path = os.path.join(self.full_trial_directory, "training_checkpoints/")
 
