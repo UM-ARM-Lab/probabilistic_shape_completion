@@ -25,6 +25,7 @@ import time
 
 
 class ModelRunner:
+<<<<<<< HEAD
     def __init__(self, params=None, trial_name=None, training=False, write_summary=True):
         self.batch_size = 16
         if not training:
@@ -39,12 +40,25 @@ class ModelRunner:
                                                 write_summary=write_summary)
         self.trial_name = fp.split('/')[-1]
         self.params = filepath_tools.handle_params(file_fp, fp, params)
+=======
+    def __init__(self, trial_name=None, params=None, write_summary=True):
+        self.trial_name = trial_name
+        self.side_length = 64
+        self.num_voxels = self.side_length ** 3
 
-        self.trial_fp = fp
-        self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
+        self.full_trial_directory, self.params, self.training = filepath_tools.create_or_load_trial(trial_name=trial_name,
+                                                                                                    params=params,
+                                                                                                    write_summary=write_summary)
 
-        train_log_dir = os.path.join(fp, 'logs/train')
-        test_log_dir = os.path.join(fp, 'logs/test')
+        self.batch_size = 16
+        if not self.training:
+            self.batch_size = 1
+>>>>>>> dd5bb26... more work on filepath refactor
+
+        self.checkpoint_path = os.path.join(self.full_trial_directory, "training_checkpoints/")
+
+        train_log_dir = os.path.join(self.full_trial_directory, 'logs/train')
+        test_log_dir = os.path.join(self.full_trial_directory, 'logs/test')
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
@@ -93,7 +107,7 @@ class ModelRunner:
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
-        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_fp, 'network.png'),
+        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.full_trial_directory, 'network.png'),
                                   show_shapes=True)
 
     def write_summary(self, summary_dict):
