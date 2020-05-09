@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import rospkg
 from datetime import datetime
 import json
 import pathlib
@@ -22,13 +23,17 @@ def create_or_load_trial(trial_name=None, params=None, trials_directory=None, wr
         training = False
         # load, raises an exception if it doesn't exist
         full_trial_directory, params = load_trial(trial_name=trial_name, trials_directory=trials_directory)
+        all_params = get_default_params()
+        all_params.update(params)
     else:
         training = True
+        all_params = get_default_params()
+        all_params.update(params)
         full_trial_directory = create_trial(params=params,
                                             trial_name=trial_name,
                                             write_summary=write_summary,
                                             trials_directory=trials_directory)
-    return full_trial_directory, params, training
+    return full_trial_directory, all_params, training
 
 
 def load_trial(trial_name=None, trials_directory=None):
@@ -107,4 +112,5 @@ def get_default_params():
     r = rospkg.RosPack()
     shape_completion_training_path = pathlib.Path(r.get_path('shape_completion_training'))
     default_params_filename = shape_completion_training_path / 'default_params.json'
-    return json.load(default_params_filename.open('r'))
+    with default_params_filename.open('r') as default_params_file:
+        return json.load(default_params_file)
