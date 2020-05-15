@@ -1,16 +1,16 @@
 from __future__ import print_function
 
-import rospkg
-from datetime import datetime
 import json
 import pathlib
 import subprocess
-from os.path import join
+from datetime import datetime
 
 import git
+import rospkg
+from colorama import Fore
 
 
-def unique_trial_name(*names):
+def make_unique_trial_subdirectory_name(*names):
     stamp = "{:%B_%d_%H-%M-%S}".format(datetime.now())
     repo = git.Repo(search_parent_directories=True)
     sha = repo.head.object.hexsha[:10]
@@ -19,21 +19,30 @@ def unique_trial_name(*names):
 
 
 def create_or_load_trial(trial_name=None, params=None, trials_directory=None, write_summary=True):
+    """
+    Figures out whether you mean to resume or start a new trial
+    :param trial_name: either just a group name (when creating a new trial) or a full path including subdir (when resuming)
+    :param params: dictionary of params
+    :param trials_directory: don't set this yourself, we use a sensible default
+    :param write_summary: dumps some info to a file in the trial directory (for new trials)
+    :return: the full trial directory, params
+    """
     if '/' in trial_name:
-        training = False
         # load, raises an exception if it doesn't exist
+        if params is not None:
+            msg = "Your trial name contains '/' but params were also provided. Ignoring params and loading."
+            print(Fore.YELLOW + msg + Fore.RESET)
         full_trial_directory, params = load_trial(trial_name=trial_name, trials_directory=trials_directory)
         all_params = get_default_params()
         all_params.update(params)
     else:
-        training = True
         all_params = get_default_params()
         all_params.update(params)
         full_trial_directory = create_trial(params=params,
-                                            trial_name=trial_name,
+                                            group_name=trial_name,
                                             write_summary=write_summary,
                                             trials_directory=trials_directory)
-    return full_trial_directory, all_params, training
+    return full_trial_directory, all_params
 
 
 def load_trial(trial_name=None, trials_directory=None):
@@ -54,7 +63,7 @@ def load_trial(trial_name=None, trials_directory=None):
     return full_directory, params
 
 
-def create_trial(params, trial_name=None, write_summary=True, trials_directory=None):
+def create_trial(params, group_name=None, write_summary=True, trials_directory=None):
     """
     Returns the path to the directory for the trial, creates directories as needed
     """
@@ -64,15 +73,13 @@ def create_trial(params, trial_name=None, write_summary=True, trials_directory=N
         trials_directory = shape_completion_training_path / 'trials'
     trials_directory.mkdir(parents=True, exist_ok=True)
 
-    if trial_name is None:
+    if group_name is None:
         # creating a new trial with tmp as the group name
         print("No trial_namename given. Using tmp")
         group_name = "tmp"
-    else:
-        group_name = trial_name
 
     # make subdirectory
-    unique_trial_subdirectory_name = unique_trial_name()
+    unique_trial_subdirectory_name = make_unique_trial_subdirectory_name()
     full_directory = trials_directory / group_name / unique_trial_subdirectory_name
     full_directory.mkdir(parents=True, exist_ok=False)
     # save params
@@ -80,8 +87,8 @@ def create_trial(params, trial_name=None, write_summary=True, trials_directory=N
     with params_filename.open("w") as params_file:
         json.dump(params, params_file, indent=2)
     # write summary
-    if write_summary:
-        _write_summary(full_directory, trial_name)
+    if write_summary and group_name is not None:
+        _write_summary(full_directory, group_name, unique_trial_subdirectory_name)
     return full_directory
 
 
@@ -95,10 +102,10 @@ def rm_tree(path):
     path.rmdir()
 
 
-def _write_summary(full_trial_directory, trial_name):
+def _write_summary(full_trial_directory, group_name, unique_trial_subdirectory_name):
     with (full_trial_directory / 'readme.txt').open("w") as f:
         f.write(datetime.now().strftime("%Y/%m/%d-%H:%M:%S"))
-        f.write("\nTrial trial_nickname: {}\n".format(trial_name))
+        f.write("\nTrial trial_nickname: {}/{}\n".format(group_name, unique_trial_subdirectory_name))
 
         f.write("git show --summary:\n")
         f.write(subprocess.check_output(['git', 'show', '--summary']))

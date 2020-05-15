@@ -24,14 +24,12 @@ class FilePathToolsTest(unittest.TestCase):
     def test_get_trial_directory_new_train_error(self):
         base_dir = pathlib.Path('.testing')
         unique_nickname = 'new_trial/subdir_non_existing'
-        try:
-            filepath_tools.create_or_load_trial(trial_name=unique_nickname,
-                                                params={},
-                                                write_summary=False,
-                                                trials_directory=base_dir)
-            self.assertTrue(False)
-        except ValueError:
-            self.assertTrue(True)
+        self.assertRaises(ValueError,
+                          filepath_tools.create_or_load_trial,
+                          trial_name=unique_nickname,
+                          params={},
+                          trials_directory=base_dir,
+                          write_summary=False)
 
     def test_get_trial_directory_load_existing(self):
         base_dir = pathlib.Path('.testing')
