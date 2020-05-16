@@ -36,7 +36,7 @@ class ModelRunnerTraining(unittest.TestCase):
         cls.dataset = tf.data.Dataset
 
     def test_train(self):
-        ModelRunner(params=params, write_summary=False)
+        ModelRunner(training=True, params=params, write_summary=False)
 
 
 if __name__ == '__main__':
