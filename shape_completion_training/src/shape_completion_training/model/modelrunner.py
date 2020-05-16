@@ -30,7 +30,7 @@ class ModelRunner:
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
 
-        self.full_trial_directory, self.params, self.training = filepath_tools.create_or_load_trial(trial_name=trial_name,
+        self.full_trial_directory, self.params, self.training = filepath_tools.create_or_load_trial(group_name=trial_name,
                                                                                                     params=params,
                                                                                                     write_summary=write_summary)
 
