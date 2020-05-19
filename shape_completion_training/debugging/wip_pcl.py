@@ -4,6 +4,7 @@ from numpy import cos, sin
 from shape_completion_training.tests.setup_data_for_unit_tests import load_test_files
 from mps_shape_completion_visualization.quick_publish import publish_voxelgrid, publish_object_transform
 from shape_completion_training.voxelgrid import conversions
+from shape_completion_training.voxelgrid import fit
 import rospy
 
 from scipy.spatial.transform import Rotation
@@ -67,24 +68,19 @@ def test_icp():
 
 
 if __name__ == "__main__":
-
-
     scale = 0.1
     rospy.init_node("wip_pcl")
     d = load_test_files()
     publish_voxelgrid(d[0], "gt_voxel_grid")
-    vg_other = d[2]
-    publish_voxelgrid(vg_other, "predicted_occ_voxel_grid")
 
-    pt_0 = conversions.voxelgrid_to_pointcloud(d[0], scale=scale)
-    pt_1 = conversions.voxelgrid_to_pointcloud(vg_other, scale=scale)
 
-    source = pcl.PointCloud(pt_0.astype(np.float32))
-    target = pcl.PointCloud(pt_1.astype(np.float32))
-    icp = source.make_IterativeClosestPoint()
-    converged, transf, estimate, fitness = icp.icp(
-        source, target, max_iter=1000)
-
-    T = np.linalg.inv(transf)
-    vg_icp = conversions.transform_voxelgrid(vg_other, T, scale=scale)
-    publish_voxelgrid(vg_icp, "sampled_occ_voxel_grid")
+    # pt_0 = conversions.voxelgrid_to_pointcloud(d[0], scale=scale)
+    # pt_1 = conversions.voxelgrid_to_pointcloud(vg_other, scale=scale)
+    #
+    #
+    # publish_voxelgrid(vg_icp, "sampled_occ_voxel_grid")
+    for i, vg in enumerate(d):
+        # vg_other = d[2]
+        print("fitting {}".format(i))
+        publish_voxelgrid(fit.icp(vg, d[0], scale, max_iter=10), "sampled_occ_voxel_grid")
+        publish_voxelgrid(vg, "predicted_occ_voxel_grid")

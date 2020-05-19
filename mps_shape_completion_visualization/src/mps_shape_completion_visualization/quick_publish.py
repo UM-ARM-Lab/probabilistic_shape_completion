@@ -11,7 +11,6 @@ import geometry_msgs.msg
 
 def publish_voxelgrid(vg, topic="voxelgrid", scale=0.01, frame_id="object"):
     """
-
     @param vg: Assumes a cubic voxel grid (all dimensions are equal)
     @param topic:
     @param scale:
