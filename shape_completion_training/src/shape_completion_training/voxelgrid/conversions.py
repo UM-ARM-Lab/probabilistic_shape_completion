@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import sin, cos
+import tensorflow as tf
 
 
 def strip_extra_dims(vg):
@@ -30,6 +31,8 @@ def voxelgrid_to_pointcloud(voxelgrid, scale=1.0, origin=(0, 0, 0), threshold=0.
     """
     pts = np.argwhere(np.squeeze(voxelgrid) > threshold)
     return (np.array(pts) - origin + 0.5) * scale
+    # pts = tf.cast(tf.where(tf.squeeze(voxelgrid) > threshold), tf.float32)
+    # return (pts - origin + 0.5) * scale
 
 
 def pointcloud_to_voxelgrid(pointcloud, scale=1.0, origin=(0, 0, 0), shape=(64, 64, 64),
@@ -45,6 +48,8 @@ def pointcloud_to_voxelgrid(pointcloud, scale=1.0, origin=(0, 0, 0), shape=(64, 
     @return:
     """
     vg = np.zeros(shape)
+    if tf.is_tensor(pointcloud):
+        pointcloud = pointcloud.numpy()
     s = (pointcloud / scale + origin).astype(int)
     vg[s[:, 0], s[:, 1], s[:, 2]] = 1.0
     return add_extra_dims(vg, add_leading_dim, add_trailing_dim)

@@ -2,6 +2,7 @@
 from __future__ import print_function
 import tensorflow as tf
 import numpy as np
+from shape_completion_training.voxelgrid import conversions
 
 
 def iou(voxelgrid_1, voxelgrid_2, threshold=0.5):
@@ -66,3 +67,38 @@ def highest_match(test_vg, vg_list, metric=iou):
     return best_ind, best_elem
 
 
+def distance_matrix(pt_1, pt_2):
+    """
+    Computes the distance matrix from each point pt_1 to pt_2
+    @param pt_1: tensor, [num_pts_1, pt_length]
+    @param pt_2: tensor, [num_pts_2, pt_length]
+    @return: distances [num_pts_1, num_pts_2] where distances[i,j] is the distance(pt_1[i], pt_1[j])
+    """
+
+    num_points_1, num_features = pt_1.shape
+    num_points_2, num_features = pt_2.shape
+
+    expanded_pt_2 = tf.tile(pt_2, (num_points_1, 1))
+    expanded_pt_1 = tf.reshape(
+        tf.tile(tf.expand_dims(pt_1, 1),
+                (1, num_points_2, 1)),
+        (-1, num_features))
+    distances = tf.norm(expanded_pt_1 - expanded_pt_2, axis=1)
+    distances = tf.reshape(distances, (num_points_1, num_points_2))
+    return distances
+
+
+def chamfer_distance_pointcloud(pt_1, pt_2):
+    d = distance_matrix(pt_1, pt_2)
+    d_ab = tf.reduce_mean(tf.reduce_min(d, axis=1))
+    d_ba = tf.reduce_mean(tf.reduce_min(d, axis=0))
+    return d_ab + d_ba
+
+
+def chamfer_distance(vg1, vg2, scale):
+    """
+    Returns the chamfer distance between two voxelgrids
+    """
+    pt1 = conversions.voxelgrid_to_pointcloud(vg1, scale=scale)
+    pt2 = conversions.voxelgrid_to_pointcloud(vg2, scale=scale)
+    return chamfer_distance_pointcloud(pt1, pt2)
