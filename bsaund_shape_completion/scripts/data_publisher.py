@@ -240,22 +240,12 @@ def sampler_worker(elem):
     # IPython.embed()
 
 
-def publish_object_transform():
-    # Transform so shapes appear upright in rviz
-    br = tf2_ros.TransformBroadcaster()
-    t = geometry_msgs.msg.TransformStamped()
-    t.header.stamp = rospy.Time.now()
-    t.header.frame_id = "world"
-    t.child_frame_id = "object"
-    q = tf_conversions.transformations.quaternion_from_euler(1.57,0,0)
-    t.transform.rotation.x = q[0]
-    t.transform.rotation.y = q[1]
-    t.transform.rotation.z = q[2]
-    t.transform.rotation.w = q[3]
-
-    rospy.sleep(1)
-    br.sendTransform(t)
-    
+def publish_object_transform_old():
+    """
+    This is deprecated and will be removed
+    1) Use `roslaunch bsaund_shape_completion shape_completion.launch` and this is not necessary
+    2) Use mps_shape_completion_visualization/quick_publish.py/publish_object_transform
+    """
 
 
 def load_network():
@@ -265,6 +255,7 @@ def load_network():
         return
     # model = Network(trial_name="VCNN_v2", training=False)
     model = ModelRunner(trial_name=ARGS.trial)
+
 
 def parser():
     global ARGS
@@ -300,7 +291,6 @@ if __name__=="__main__":
     selected_sub = rospy.Subscriber('/shapenet_selection', String,
                                     lambda x: publish_selection(records, x))
 
-    publish_object_transform()
     publish_options(records)
 
     rospy.spin()

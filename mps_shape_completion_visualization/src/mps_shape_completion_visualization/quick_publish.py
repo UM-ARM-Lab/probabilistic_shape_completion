@@ -31,8 +31,12 @@ def publish_voxelgrid(vg, topic="voxelgrid", scale=0.01, frame_id="object"):
 
 
 def publish_object_transform():
-    # Transform so shapes appear upright in rviz
-    br = tf2_ros.TransformBroadcaster()
+    """
+    Publishes static ransform so shapes appear upright in rviz
+    Note: This should not be necessary if starting ros using
+    `roslaunch bsaund_shape_completion shape_completion
+    """
+    br = tf2_ros.StaticTransformBroadcaster()
     t = geometry_msgs.msg.TransformStamped()
     t.header.stamp = rospy.Time.now()
     t.header.frame_id = "world"

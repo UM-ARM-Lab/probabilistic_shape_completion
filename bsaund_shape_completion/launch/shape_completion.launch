@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="object_transform_publisher"
+          args="0 0 0   0.70682518 0. 0. 0.70738827 world object" />
+</launch>
