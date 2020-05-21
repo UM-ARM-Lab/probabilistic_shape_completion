@@ -1,8 +1,9 @@
 from unittest import TestCase
 from setup_data_for_unit_tests import load_test_files
 from shape_completion_training.voxelgrid.conversions import voxelgrid_to_pointcloud, pointcloud_to_voxelgrid, \
-    transform_voxelgrid, make_transform
+    transform_voxelgrid, make_transform, downsample, format_voxelgrid
 import numpy as np
+import tensorflow as tf
 
 
 class TestConversions(TestCase):
@@ -82,7 +83,7 @@ class TestTransforms(TestCase):
         effectively truncates to an int so there is a loss of precision
         @return:
         """
-        T = make_transform(thetas=[0.0,0,np.pi/2], translation=[1,2,3])
+        T = make_transform(thetas=[0.0, 0, np.pi / 2], translation=[1, 2, 3])
         T_inv = np.linalg.inv(T)
         scale = 0.5
         self.assertTrue((np.dot(T, T_inv) == np.eye(4)).all())
@@ -91,3 +92,58 @@ class TestTransforms(TestCase):
         self.assertFalse((vg_orig == vg_rot).all())
         vg_new = transform_voxelgrid(vg_rot, T_inv, scale=scale)
         self.assertTrue((vg_orig == vg_new).all())
+
+
+class TestUtils(TestCase):
+    def test_format_keeps_numpy_as_numpy(self):
+        vg = np.random.random((3, 3, 3))
+        vg_formatted = format_voxelgrid(vg, leading_dim=False, trailing_dim=False)
+        self.assertTrue(isinstance(vg_formatted, np.ndarray))
+        self.assertFalse(tf.is_tensor(vg_formatted))
+        self.assertEqual((3, 3, 3), vg_formatted.shape)
+        self.assertTrue((vg == vg_formatted).all())
+
+    def test_format_keeps_tf_as_tf(self):
+        vg = tf.random.uniform((3, 3, 3))
+        vg_formatted = format_voxelgrid(vg, leading_dim=False, trailing_dim=False)
+        self.assertFalse(isinstance(vg_formatted, np.ndarray))
+        self.assertTrue(tf.is_tensor(vg_formatted))
+        self.assertEqual((3, 3, 3), vg_formatted.shape)
+        self.assertTrue(tf.reduce_all(vg == vg_formatted))
+
+    def test_format_adds_and_removes_tf_dims(self):
+        vg_neither = tf.random.uniform((3, 3, 3))
+        vg_leading = format_voxelgrid(vg_neither, leading_dim=True, trailing_dim=False)
+        vg_trailing = format_voxelgrid(vg_neither, leading_dim=False, trailing_dim=True)
+        vg_both = format_voxelgrid(vg_neither, leading_dim=True, trailing_dim=True)
+        self.assertEqual((1, 3, 3, 3), vg_leading.shape)
+        self.assertEqual((3, 3, 3, 1), vg_trailing.shape)
+        self.assertEqual((1, 3, 3, 3, 1), vg_both.shape)
+
+        for vg in [vg_neither, vg_leading, vg_trailing, vg_both]:
+            self.assertEqual((3, 3, 3), format_voxelgrid(vg, False, False).shape)
+            self.assertEqual((1, 3, 3, 3), format_voxelgrid(vg, True, False).shape)
+            self.assertEqual((3, 3, 3, 1), format_voxelgrid(vg, False, True).shape)
+            self.assertEqual((1, 3, 3, 3, 1), format_voxelgrid(vg, True, True).shape)
+
+    def test_downsample_without_extra_dims(self):
+        vg_orig = np.zeros((4, 4, 4))
+        vg_orig[0, 0, 0] = 1.0
+        vg_orig = tf.cast(vg_orig, tf.float32)
+        vg_downsampled = downsample(vg_orig)
+        self.assertEqual((2, 2, 2), vg_downsampled.shape)
+        vg_expected = [[[1, 0], [0, 0]], [[0, 0], [0, 0]]]
+        self.assertTrue(tf.reduce_all(vg_expected == vg_downsampled))
+
+    def test_downsample_with_extra_dims(self):
+        vg_orig = np.zeros((1, 4, 4, 4))
+        vg_orig[0, 0, 0, 0] = 1.0
+        self.assertEqual((1,2,2,2), downsample(vg_orig).shape)
+
+        vg_orig = np.zeros((1, 4, 4, 4, 1))
+        vg_orig[0, 0, 0, 0] = 1.0
+        self.assertEqual((1, 2, 2, 2, 1), downsample(vg_orig).shape)
+
+        vg_orig = np.zeros((4, 4, 4, 1))
+        vg_orig[0, 0, 0, 0] = 1.0
+        self.assertEqual((2, 2, 2, 1), downsample(vg_orig).shape)

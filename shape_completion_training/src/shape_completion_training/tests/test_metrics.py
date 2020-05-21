@@ -91,6 +91,29 @@ class TestMetrics(unittest.TestCase):
         dist_fit = metrics.chamfer_distance(d[0], vg_fit, scale=0.1)
         self.assertLess(dist_fit, dist_orig, "Distance was not lower after fitting with icp")
 
+    def test_highest_match_using_fit_and_chamfer_distance(self):
+        d = load_test_files()
+        base = d[0]
+
+        def m(vg1, vg2):
+            vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=1)
+            return -metrics.chamfer_distance(vg1, vg_fit, scale=0.1)
+
+        ind, elem = metrics.highest_match(base, d, m)
+        self.assertEqual(0, ind)
+
+    def test_highest_match_using_fit_and_iou(self):
+        d = load_test_files()
+        base = d[0]
+
+        def m(vg1, vg2):
+            vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=1)
+            return metrics.iou(vg1, vg_fit)
+
+        ind, elem = metrics.highest_match(base, d, m)
+        self.assertEqual(0, ind)
+
+
 class TestUtils(unittest.TestCase):
     def test_distance_matrix_on_simple_features(self):
         a = tf.cast([[1.0, 1.0], [0.0, 0.0]], tf.float32)
