@@ -4,7 +4,6 @@ import pcl
 import numpy as np
 
 
-
 def icp(voxelgrid_to_transform, template_voxelgrid, scale, max_iter=10, downsample = 1):
     """
     Returns a voxelgrid fitted to the template using ICP
@@ -15,10 +14,9 @@ def icp(voxelgrid_to_transform, template_voxelgrid, scale, max_iter=10, downsamp
     @param template_voxelgrid:
     @return:
     """
-    vg_to_transform_downsampled = voxelgrid_to_transform
-    if downsample != 1:
-        vg_to_transform_downsampled = conversions.downsample(vg_to_transform_downsampled, downsample)
-        template_voxelgrid = conversions.downsample(template_voxelgrid, downsample)
+
+    vg_to_transform_downsampled = conversions.downsample(voxelgrid_to_transform, downsample)
+    template_voxelgrid = conversions.downsample(template_voxelgrid, downsample)
 
     pt_0 = conversions.voxelgrid_to_pointcloud(template_voxelgrid, scale=scale)
     pt_1 = conversions.voxelgrid_to_pointcloud(vg_to_transform_downsampled, scale=scale)

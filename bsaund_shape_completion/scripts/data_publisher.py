@@ -4,9 +4,6 @@ from __future__ import print_function
 import argparse
 
 import rospy
-import tf2_ros
-import tf_conversions
-import geometry_msgs.msg
 from mps_shape_completion_msgs.msg import OccupancyStamped
 from mps_shape_completion_visualization import conversions
 
@@ -254,7 +251,7 @@ def load_network():
     if ARGS.trial is None and raw_input().lower() == 'n':
         return
     # model = Network(trial_name="VCNN_v2", training=False)
-    model = ModelRunner(training=False, group_name=ARGS.trial)
+    model = ModelRunner(training=False, trial_path=ARGS.trial)
 
 
 def parser():

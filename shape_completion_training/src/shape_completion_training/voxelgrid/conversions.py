@@ -112,6 +112,9 @@ def make_transform(thetas=(0, 0, 0), translation=(0, 0, 0)):
 
 
 def downsample(voxelgrid, kernel_size=2):
+    if kernel_size == 1:
+        return voxelgrid
+
     if not tf.is_tensor(voxelgrid):
         voxelgrid = tf.cast(voxelgrid, tf.float32)
     leading, trailing = get_format(voxelgrid)

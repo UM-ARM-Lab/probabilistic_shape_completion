@@ -95,10 +95,13 @@ def chamfer_distance_pointcloud(pt_1, pt_2):
     return d_ab + d_ba
 
 
-def chamfer_distance(vg1, vg2, scale):
+def chamfer_distance(vg1, vg2, scale, downsample=1):
     """
     Returns the chamfer distance between two voxelgrids
     """
+    vg1 = conversions.downsample(vg1, downsample)
+    vg2 = conversions.downsample(vg2, downsample)
+
     pt1 = conversions.voxelgrid_to_pointcloud(vg1, scale=scale)
     pt2 = conversions.voxelgrid_to_pointcloud(vg2, scale=scale)
     return chamfer_distance_pointcloud(pt1, pt2)

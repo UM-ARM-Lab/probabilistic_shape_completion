@@ -93,21 +93,21 @@ class TestMetrics(unittest.TestCase):
 
     def test_highest_match_using_fit_and_chamfer_distance(self):
         d = load_test_files()
-        base = d[0]
+        base = d[2]
 
         def m(vg1, vg2):
-            vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=1)
-            return -metrics.chamfer_distance(vg1, vg_fit, scale=0.1)
+            vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=2)
+            return -metrics.chamfer_distance(vg1, vg_fit, scale=0.1, downsample=2)
 
         ind, elem = metrics.highest_match(base, d, m)
-        self.assertEqual(0, ind)
+        self.assertEqual(2, ind)
 
     def test_highest_match_using_fit_and_iou(self):
         d = load_test_files()
         base = d[0]
 
         def m(vg1, vg2):
-            vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=1)
+            vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=2)
             return metrics.iou(vg1, vg_fit)
 
         ind, elem = metrics.highest_match(base, d, m)

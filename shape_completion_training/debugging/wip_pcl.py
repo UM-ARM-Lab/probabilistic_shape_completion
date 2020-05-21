@@ -84,3 +84,4 @@ if __name__ == "__main__":
         print("fitting {}".format(i))
         publish_voxelgrid(fit.icp(vg, d[0], scale, max_iter=10), "sampled_occ_voxel_grid")
         publish_voxelgrid(vg, "predicted_occ_voxel_grid")
+        rospy.sleep(1)
