@@ -40,12 +40,12 @@ class ModelRunner:
         if not self.training:
             self.batch_size = 1
 
-        self.checkpoint_path = os.path.join(self.trial_path, "training_checkpoints/")
 
-        train_log_dir = os.path.join(self.trial_path, 'logs/train')
-        test_log_dir = os.path.join(self.trial_path, 'logs/test')
-        self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
+
+        train_log_dir = self.trial_path / "logs/train"
+        test_log_dir = self.trial_path / "logs/test"
+        self.train_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/train").as_posix())
+        self.test_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/test").as_posix())
 
         if self.params['network'] == 'VoxelCNN':
             self.model = VoxelCNN(self.params, batch_size=self.batch_size)
@@ -72,7 +72,8 @@ class ModelRunner:
                                         epoch=tf.Variable(0),
                                         train_time=tf.Variable(0.0),
                                         optimizer=self.model.opt, net=self.model.get_model())
-        self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
+        self.checkpoint_path = self.trial_path / "training_checkpoints/"
+        self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path.as_posix(), max_to_keep=1)
         self.restore()
 
     def restore(self):
