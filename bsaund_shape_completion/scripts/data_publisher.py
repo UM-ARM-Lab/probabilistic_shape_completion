@@ -254,7 +254,7 @@ def load_network():
     if ARGS.trial is None and raw_input().lower() == 'n':
         return
     # model = Network(trial_name="VCNN_v2", training=False)
-    model = ModelRunner(trial_name=ARGS.trial)
+    model = ModelRunner(training=False, group_name=ARGS.trial)
 
 
 def parser():

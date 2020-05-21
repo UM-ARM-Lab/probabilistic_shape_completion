@@ -25,26 +25,25 @@ import time
 
 
 class ModelRunner:
-    def __init__(self, params=None, trial_name=None, training=False, write_summary=True):
-        self.batch_size = 16
-        if not training:
-            self.batch_size = 1
+    def __init__(self, training, group_name=None, trial_path=None, params=None, write_summary=True):
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
+        self.training = training
 
-        file_fp = os.path.dirname(__file__)
-        fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
-                                                expect_reuse=(params is None),
-                                                nick=trial_name,
-                                                write_summary=write_summary)
-        self.trial_name = fp.split('/')[-1]
-        self.params = filepath_tools.handle_params(file_fp, fp, params)
+        self.trial_path, self.params = filepath_tools.create_or_load_trial(group_name=group_name,
+                                                                           params=params,
+                                                                           trial_path=trial_path,
+                                                                           write_summary=write_summary)
+        self.group_name = self.trial_path.parts[-2]
 
-        self.trial_fp = fp
-        self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
+        self.batch_size = 16
+        if not self.training:
+            self.batch_size = 1
 
-        train_log_dir = os.path.join(fp, 'logs/train')
-        test_log_dir = os.path.join(fp, 'logs/test')
+        self.checkpoint_path = os.path.join(self.trial_path, "training_checkpoints/")
+
+        train_log_dir = os.path.join(self.trial_path, 'logs/train')
+        test_log_dir = os.path.join(self.trial_path, 'logs/test')
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
         self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
@@ -93,7 +92,7 @@ class ModelRunner:
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
-        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_fp, 'network.png'),
+        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_path, 'network.png'),
                                   show_shapes=True)
 
     def write_summary(self, summary_dict):
@@ -146,7 +145,7 @@ class ModelRunner:
             self.ckpt.epoch.assign_add(1)
             print('')
             print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '=' * 25 \
-                  + ' ' + self.trial_name + ' ' + '=' * 20)
+                  + ' ' + self.group_name + ' ' + '=' * 20)
             self.train_batch(batched_ds)
             print('=' * 48)
 
