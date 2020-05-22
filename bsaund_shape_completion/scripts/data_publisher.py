@@ -21,34 +21,15 @@ from shape_completion_training.model import obj_tools
 from shape_completion_training.model import nn_tools
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training import binvox_rw
-
 # from bsaund_shape_completion import sampling_tools
 from shape_completion_training.model import sampling_tools
-
 from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
 from std_msgs.msg import String
-
 import threading
-
 import tensorflow as tf
 
-
-
-
 ARGS = None
-
-
-# DIM = 64
-
-gt_pub = None
-known_occ_pub = None
-known_free_pub = None
-completion_pub = None
-completion_free_pub = None
-sampled_occ_pub = None
-conditioned_occ_pub = None
-mismatch_pub = None
-aux_pub = None
+VG_PUB = None
 
 options_pub = None
 selected_sub = None
@@ -60,42 +41,45 @@ stop_current_sampler = None
 sampling_thread = None
 
 
+class VoxelgridPublisher:
+    def __init__(self):
+        self.pubs = {}
+
+    def add(self, short_name, topic):
+        self.pubs[short_name] = rospy.Publisher(topic, OccupancyStamped, queue_size=1)
+
+    def publish(self, short_name, voxelgrid):
+        if tf.is_tensor(voxelgrid):
+            voxelgrid = voxelgrid.numpy()
+        self.pubs[short_name].publish(to_msg(voxelgrid))
+
+    def publish_elem(self, elem):
+        self.publish("gt", elem["gt_occ"])
+        self.publish("known_occ", elem["known_occ"])
+        self.publish("known_free", elem["known_free"])
+        if not elem.has_key('sampled_occ'):
+            elem['sampled_occ'] = np.zeros(elem['gt_occ'].shape)
+        self.publish("sampled_occ", elem["sampled_occ"])
+
+        if not elem.has_key('conditioned_occ'):
+            elem['conditioned_occ'] = np.zeros(elem['gt_occ'].shape)
+        self.publish("conditioned_occ", elem["conditioned_occ"])
+
+        def make_numpy(tensor_or_np):
+            if tf.is_tensor(tensor_or_np):
+                return tensor_or_np.numpy()
+            return tensor_or_np
+
+        print("Category: {}, id: {}, aug: {}".format(make_numpy(elem['shape_category']),
+                                                     make_numpy(elem['id']),
+                                                     make_numpy(elem['augmentation'])))
 
 
-def to_msg(voxel_grid):
-    
-    return conversions.vox_to_occupancy_stamped(voxel_grid,
-                                                dim = voxel_grid.shape[1],
+def to_msg(voxelgrid):
+    return conversions.vox_to_occupancy_stamped(voxelgrid,
+                                                dim = voxelgrid.shape[1],
                                                 scale=0.01,
                                                 frame_id = "object")
-
-
-def publish_elem(elem):
-    gt_pub.publish(to_msg(elem["gt_occ"].numpy()))
-    known_occ_pub.publish(to_msg(elem["known_occ"].numpy()))
-    known_free_pub.publish(to_msg(elem['known_free'].numpy()))
-    print("Category: {}, id: {}, aug: {}".format(elem['shape_category'].numpy(),
-                                                 elem['id'].numpy(),
-                                                 elem['augmentation'].numpy()))
-
-
-def publish_np_elem(elem):
-    gt_pub.publish(to_msg(elem["gt_occ"]))
-    known_occ_pub.publish(to_msg(elem["known_occ"]))
-    known_free_pub.publish(to_msg(elem['known_free']))
-
-    if not elem.has_key('sampled_occ'):
-        elem['sampled_occ'] = np.zeros(elem['gt_occ'].shape)
-    sampled_occ_pub.publish(to_msg(elem['sampled_occ']))
-
-    if not elem.has_key('conditioned_occ'):
-        elem['conditioned_occ'] = np.zeros(elem['gt_occ'].shape)
-    conditioned_occ_pub.publish(to_msg(elem['conditioned_occ']))
-
-    print("Category: {}, id: {}, aug: {}".format(elem['shape_category'],
-                                                 elem['id'],
-                                                 elem['augmentation']))
-
 
 
 def publish_options(metadata):
@@ -110,10 +94,10 @@ def publish_options(metadata):
 
 
 def publish_inference(inference):
-    completion_pub.publish(to_msg(inference['predicted_occ'].numpy()))
-    completion_free_pub.publish(to_msg(inference['predicted_free'].numpy()))
+    VG_PUB.publish("predicted_occ", inference["predicted_occ"])
+    VG_PUB.publish("predicted_free", inference["predicted_free"])
     if inference.has_key('aux_occ'):
-        aux_pub.publish(to_msg(inference['aux_occ'].numpy()))
+        VG_PUB.publish("aux_occ", inference("aux_occ"))
 
 
 def run_inference(elem):
@@ -131,8 +115,7 @@ def run_inference(elem):
             best_iou = iou
             best_inference = inference
     return best_inference
-        
-        
+
 
 def publish_selection(metadata, str_msg):
     translation = 0
@@ -159,7 +142,7 @@ def publish_selection(metadata, str_msg):
     
     for k in elem_raw.keys():
         elem[k] = elem_raw[k].numpy()
-    publish_np_elem(elem)
+    VG_PUB.publish_elem(elem)
 
     if model is None:
         return
@@ -170,7 +153,8 @@ def publish_selection(metadata, str_msg):
     publish_inference(inference)
 
     mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
-    mismatch_pub.publish(to_msg(mismatch))
+    VG_PUB.publish("mismatch", mismatch)
+    # mismatch_pub.publish(to_msg(mismatch))
     print("There are {} mismatches".format(np.sum(mismatch > 0.5)))
 
     def multistep_error(elem, inference):
@@ -179,7 +163,8 @@ def publish_selection(metadata, str_msg):
         elem['conditioned_occ'] = np.float32(a > 0.5)
         inference = model.model(elem)
         mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
-        mismatch_pub.publish(to_msg(mismatch))
+        VG_PUB.publish("mismatch", mismatch)
+        # mismatch_pub.publish(to_msg(mismatch))
         return elem, inference
         
     if ARGS.multistep:
@@ -247,10 +232,9 @@ def publish_object_transform_old():
 
 def load_network():
     global model
-    print('Load network? (Y/n)')
-    if ARGS.trial is None and raw_input().lower() == 'n':
+    if ARGS.trial is None:
+        print("Not loading any inference model")
         return
-    # model = Network(trial_name="VCNN_v2", training=False)
     model = ModelRunner(training=False, trial_path=ARGS.trial)
 
 
@@ -275,15 +259,12 @@ if __name__=="__main__":
     records = data_tools.load_shapenet_metadata(shuffle=False)
     load_network()
 
-    gt_pub = rospy.Publisher('gt_voxel_grid', OccupancyStamped, queue_size=1)
-    known_occ_pub = rospy.Publisher('known_occ_voxel_grid', OccupancyStamped, queue_size=1)
-    known_free_pub = rospy.Publisher('known_free_voxel_grid', OccupancyStamped, queue_size=1)
-    completion_pub = rospy.Publisher('predicted_occ_voxel_grid', OccupancyStamped, queue_size=1)
-    completion_free_pub = rospy.Publisher('predicted_free_voxel_grid', OccupancyStamped, queue_size=1)
-    sampled_occ_pub = rospy.Publisher('sampled_occ_voxel_grid', OccupancyStamped, queue_size=1)
-    conditioned_occ_pub = rospy.Publisher('conditioned_occ_voxel_grid', OccupancyStamped, queue_size=1)
-    mismatch_pub = rospy.Publisher('mismatch_voxel_grid', OccupancyStamped, queue_size=1)
-    aux_pub = rospy.Publisher('aux_grid', OccupancyStamped, queue_size=1)
+    pub_names = ["gt", "known_occ", "known_free", "predicted_occ", "predicted_free", "sampled_occ",
+                 "conditioned_occ", "mismatch", "aux"]
+    VG_PUB = VoxelgridPublisher()
+    for name in pub_names:
+        VG_PUB.add(name, name+"_voxel_grid")
+
     options_pub = rospy.Publisher('shapenet_options', TextSelectionOptions, queue_size=1)
     selected_sub = rospy.Subscriber('/shapenet_selection', String,
                                     lambda x: publish_selection(records, x))
