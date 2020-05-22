@@ -2,31 +2,19 @@
 from __future__ import print_function
 
 import argparse
-
 import rospy
-from mps_shape_completion_msgs.msg import OccupancyStamped
-from mps_shape_completion_visualization import conversions
-
-
 import numpy as np
 
-import sys
-import os
-
-# sc_path = os.path.join(os.path.dirname(__file__), "../../")
-# sys.path.append(sc_path)
 from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import data_tools
-from shape_completion_training.model import obj_tools
-from shape_completion_training.model import nn_tools
 from shape_completion_training.voxelgrid import metrics
-from shape_completion_training import binvox_rw
-# from bsaund_shape_completion import sampling_tools
 from shape_completion_training.model import sampling_tools
 from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
 from std_msgs.msg import String
 import threading
 import tensorflow as tf
+from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
+
 
 ARGS = None
 VG_PUB = None
@@ -41,47 +29,6 @@ stop_current_sampler = None
 sampling_thread = None
 
 
-class VoxelgridPublisher:
-    def __init__(self):
-        self.pubs = {}
-
-    def add(self, short_name, topic):
-        self.pubs[short_name] = rospy.Publisher(topic, OccupancyStamped, queue_size=1)
-
-    def publish(self, short_name, voxelgrid):
-        if tf.is_tensor(voxelgrid):
-            voxelgrid = voxelgrid.numpy()
-        self.pubs[short_name].publish(to_msg(voxelgrid))
-
-    def publish_elem(self, elem):
-        self.publish("gt", elem["gt_occ"])
-        self.publish("known_occ", elem["known_occ"])
-        self.publish("known_free", elem["known_free"])
-        if not elem.has_key('sampled_occ'):
-            elem['sampled_occ'] = np.zeros(elem['gt_occ'].shape)
-        self.publish("sampled_occ", elem["sampled_occ"])
-
-        if not elem.has_key('conditioned_occ'):
-            elem['conditioned_occ'] = np.zeros(elem['gt_occ'].shape)
-        self.publish("conditioned_occ", elem["conditioned_occ"])
-
-        def make_numpy(tensor_or_np):
-            if tf.is_tensor(tensor_or_np):
-                return tensor_or_np.numpy()
-            return tensor_or_np
-
-        print("Category: {}, id: {}, aug: {}".format(make_numpy(elem['shape_category']),
-                                                     make_numpy(elem['id']),
-                                                     make_numpy(elem['augmentation'])))
-
-
-def to_msg(voxelgrid):
-    return conversions.vox_to_occupancy_stamped(voxelgrid,
-                                                dim = voxelgrid.shape[1],
-                                                scale=0.01,
-                                                frame_id = "object")
-
-
 def publish_options(metadata):
     tso = TextSelectionOptions()
 
@@ -91,13 +38,6 @@ def publish_options(metadata):
         tso.options.append(s)
 
     options_pub.publish(tso)
-
-
-def publish_inference(inference):
-    VG_PUB.publish("predicted_occ", inference["predicted_occ"])
-    VG_PUB.publish("predicted_free", inference["predicted_free"])
-    if inference.has_key('aux_occ'):
-        VG_PUB.publish("aux_occ", inference("aux_occ"))
 
 
 def run_inference(elem):
@@ -110,10 +50,13 @@ def run_inference(elem):
         inference = model.model(elem)
         iou = metrics.iou(elem['gt_occ'], inference['predicted_occ'])
         if ARGS.publish_each_sample:
-            publish_inference(inference)
+            VG_PUB.publish_inference(inference)
         if iou > best_iou:
             best_iou = iou
             best_inference = inference
+    if ARGS.publish_each_sample:
+        raw_input("Ready to publish final sample?")
+
     return best_inference
 
 
@@ -150,7 +93,7 @@ def publish_selection(metadata, str_msg):
     elem = sampling_tools.prepare_for_sampling(elem)
 
     inference = run_inference(elem)
-    publish_inference(inference)
+    VG_PUB.publish_inference(inference)
 
     mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
     VG_PUB.publish("mismatch", mismatch)
@@ -216,8 +159,8 @@ def sampler_worker(elem):
 
         if sampler.ct - prev_ct >= 100 or finished:
             prev_ct = sampler.ct
-            publish_np_elem(elem)
-            publish_inference(inference)
+            VG_PUB.publish_elem(elem)
+            VG_PUB.publish_inference(inference)
     print("Sampling complete")
     # IPython.embed()
 
@@ -228,6 +171,7 @@ def publish_object_transform_old():
     1) Use `roslaunch bsaund_shape_completion shape_completion.launch` and this is not necessary
     2) Use mps_shape_completion_visualization/quick_publish.py/publish_object_transform
     """
+    pass
 
 
 def load_network():
@@ -238,7 +182,7 @@ def load_network():
     model = ModelRunner(training=False, trial_path=ARGS.trial)
 
 
-def parser():
+def parse_command_line_args():
     global ARGS
     parser = argparse.ArgumentParser(description='Publish shape data to RViz for viewing')
     parser.add_argument('--sample', help='foo help', action='store_true')
@@ -250,8 +194,8 @@ def parser():
     ARGS = parser.parse_args()
 
 
-if __name__=="__main__":
-    parser()
+if __name__ == "__main__":
+    parse_command_line_args()
     
     rospy.init_node('shape_publisher')
     rospy.loginfo("Data Publisher")
@@ -272,14 +216,3 @@ if __name__=="__main__":
     publish_options(records)
 
     rospy.spin()
-
-    
-
-
-
-
-
-
-
-
-
