@@ -6,6 +6,7 @@ import rospy
 import numpy as np
 
 from shape_completion_training.model.modelrunner import ModelRunner
+from shape_completion_training.model.model_evaluator import ModelEvaluator
 from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import sampling_tools
@@ -15,14 +16,14 @@ import threading
 import tensorflow as tf
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
 
-
 ARGS = None
 VG_PUB = None
 
 options_pub = None
 selected_sub = None
 
-model = None
+model_runner = None
+model_evaluator = None
 
 selection_map = {}
 stop_current_sampler = None
@@ -42,38 +43,47 @@ def publish_options(metadata):
 
 def run_inference(elem):
     if not ARGS.use_best_iou:
-        return model.model(elem)
+        return model_runner.model(elem)
 
-    best_iou = 0.0
-    best_inference = None
-    for _ in range(300):
-        inference = model.model(elem)
-        iou = metrics.iou(elem['gt_occ'], inference['predicted_occ'])
-        if ARGS.publish_each_sample:
-            VG_PUB.publish_inference(inference)
-        if iou > best_iou:
-            best_iou = iou
-            best_inference = inference
+    # best_iou = 0.0
+    # best_inference = None
+    # for _ in range(300):
+    #     inference = model_runner.model(elem)
+    #     iou = metrics.iou(elem['gt_occ'], inference['predicted_occ'])
+    #     if ARGS.publish_each_sample:
+    #         VG_PUB.publish_inference(inference)
+    #     if iou > best_iou:
+    #         best_iou = iou
+    #         best_inference = inference
+    # if ARGS.publish_each_sample:
+    #     raw_input("Ready to publish final sample?")
+    sample_evaluation = model_evaluator.evaluate_element(elem, num_samples=10)
     if ARGS.publish_each_sample:
-        raw_input("Ready to publish final sample?")
+        for particle in sample_evaluation.particles:
+            VG_PUB.publish("predicted_occ", particle)
+            rospy.sleep(0.5)
 
-    return best_inference
+    # raw_input("Ready to display best?")
+    inference = model_evaluator.model(elem)
+    inference["predicted_occ"] = sample_evaluation.get_best_particle(
+        metric=lambda a, b: -metrics.chamfer_distance(a, b, scale=0.01, downsample=2).numpy())
+    return inference
 
 
 def publish_selection(metadata, str_msg):
     translation = 0
-    
+
     ds = metadata.skip(selection_map[str_msg.data]).take(1)
     ds = data_tools.load_voxelgrids(ds)
     ds = data_tools.simulate_input(ds, 0, 0, 0)
     # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3 * 4/8)
     # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3)
-    
+
     # ds = data_tools.simulate_input(ds, translation, translation, translation,
     #                                sim_input_fn=sim_input_fn)
     # ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00001, turn_off_prob=0.1)
     # ds = data_tools.simulate_condition_occ(ds, turn_on_prob = 0.00000, turn_off_prob=0.0)
-    
+
     # ds = data_tools.simulate_partial_completion(ds)
     # ds = data_tools.simulate_random_partial_completion(ds)
 
@@ -82,14 +92,14 @@ def publish_selection(metadata, str_msg):
 
     for k in elem_raw.keys():
         elem_raw[k] = tf.expand_dims(elem_raw[k], axis=0)
-    
+
     for k in elem_raw.keys():
         elem[k] = elem_raw[k].numpy()
     VG_PUB.publish_elem(elem)
 
-    if model is None:
+    if model_runner is None:
         return
-        
+
     elem = sampling_tools.prepare_for_sampling(elem)
 
     inference = run_inference(elem)
@@ -104,12 +114,12 @@ def publish_selection(metadata, str_msg):
         a = inference['predicted_occ']
         # a = inference['predicted_occ'] +  elem['known_occ'] - elem['known_free']
         elem['conditioned_occ'] = np.float32(a > 0.5)
-        inference = model.model(elem)
+        inference = model_runner.model(elem)
         mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
         VG_PUB.publish("mismatch", mismatch)
         # mismatch_pub.publish(to_msg(mismatch))
         return elem, inference
-        
+
     if ARGS.multistep:
         for _ in range(5):
             rospy.sleep(1)
@@ -123,12 +133,12 @@ def publish_selection(metadata, str_msg):
     if ARGS.sample:
         global stop_current_sampler
         global sampling_thread
-        
+
         # print("Stopping old worker")
         stop_current_sampler = True
         if sampling_thread is not None:
             sampling_thread.join()
-        
+
         sampling_thread = threading.Thread(target=sampler_worker, args=(elem,))
         sampling_thread.start()
 
@@ -142,18 +152,18 @@ def sampler_worker(elem):
         if stop_current_sampler:
             return
         rospy.sleep(0.01)
-    
+
     # sampler = sampling_tools.UnknownSpaceSampler(elem)
     sampler = sampling_tools.EfficientCNNSampler(elem)
     # sampler = sampling_tools.MostConfidentSampler(elem)
-    inference = model.model(elem)
+    inference = model_runner.model(elem)
 
     finished = False
     prev_ct = 0
 
     while not finished and not stop_current_sampler:
         try:
-            elem, inference = sampler.sample(model, elem, inference)
+            elem, inference = sampler.sample(model_runner, elem, inference)
         except StopIteration:
             finished = True
 
@@ -175,11 +185,13 @@ def publish_object_transform_old():
 
 
 def load_network():
-    global model
+    global model_runner
+    global model_evaluator
     if ARGS.trial is None:
         print("Not loading any inference model")
         return
-    model = ModelRunner(training=False, trial_path=ARGS.trial)
+    model_runner = ModelRunner(training=False, trial_path=ARGS.trial)
+    model_evaluator = ModelEvaluator(model_runner.model)
 
 
 def parse_command_line_args():
@@ -196,7 +208,7 @@ def parse_command_line_args():
 
 if __name__ == "__main__":
     parse_command_line_args()
-    
+
     rospy.init_node('shape_publisher')
     rospy.loginfo("Data Publisher")
 
@@ -207,7 +219,7 @@ if __name__ == "__main__":
                  "conditioned_occ", "mismatch", "aux"]
     VG_PUB = VoxelgridPublisher()
     for name in pub_names:
-        VG_PUB.add(name, name+"_voxel_grid")
+        VG_PUB.add(name, name + "_voxel_grid")
 
     options_pub = rospy.Publisher('shapenet_options', TextSelectionOptions, queue_size=1)
     selected_sub = rospy.Subscriber('/shapenet_selection', String,
