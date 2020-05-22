@@ -50,8 +50,6 @@ def highest_match(test_vg, vg_list, metric=iou):
     @param vg_list: list of voxelgrids
     @param metric: metric function of two voxelgrids
     @return: (index, element)
-
-    TODO:
     """
 
     best_ind = None

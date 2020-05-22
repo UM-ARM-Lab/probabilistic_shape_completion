@@ -8,7 +8,6 @@ from setup_data_for_unit_tests import load_test_files
 from shape_completion_training.voxelgrid import fit
 
 
-
 class TestMetrics(unittest.TestCase):
     def test_iou_on_simple_data(self):
         vg1 = tf.random.uniform(shape=(10, 10, 10), minval=0.0, maxval=1.0)
