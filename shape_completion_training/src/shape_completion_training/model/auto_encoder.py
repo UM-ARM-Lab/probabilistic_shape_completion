@@ -24,52 +24,53 @@ class AutoEncoder(tf.keras.Model):
     def setup_model(self):
 
         nl = self.params['num_latent_layers']
-
+        
         autoencoder_layers = [
-            tfl.Conv3D(64, (2, 2, 2), padding="same", name='conv_4_conv'),
-            tfl.Activation(tf.nn.relu, name='conv_4_activation'),
-            tfl.MaxPool3D((2, 2, 2), name='conv_4_maxpool'),
+            tfl.Conv3D(64, (2,2,2), padding="same",  name='conv_4_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_4_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_4_maxpool'),
 
-            tfl.Conv3D(128, (2, 2, 2), padding="same", name='conv_3_conv'),
-            tfl.Activation(tf.nn.relu, name='conv_3_activation'),
-            tfl.MaxPool3D((2, 2, 2), name='conv_3_maxpool'),
+            tfl.Conv3D(128, (2,2,2), padding="same", name='conv_3_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_3_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_3_maxpool'),
 
-            tfl.Conv3D(256, (2, 2, 2), padding="same", name='conv_2_conv'),
-            tfl.Activation(tf.nn.relu, name='conv_2_activation'),
-            tfl.MaxPool3D((2, 2, 2), name='conv_2_maxpool'),
+            tfl.Conv3D(256, (2,2,2), padding="same", name='conv_2_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_2_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_2_maxpool'),
 
-            tfl.Conv3D(512, (2, 2, 2), padding="same", name='conv_1_conv'),
-            tfl.Activation(tf.nn.relu, name='conv_1_activation'),
-            tfl.MaxPool3D((2, 2, 2), name='conv_1_maxpool'),
+            tfl.Conv3D(512, (2,2,2), padding="same", name='conv_1_conv'),
+            tfl.Activation(tf.nn.relu,               name='conv_1_activation'),
+            tfl.MaxPool3D((2,2,2),                   name='conv_1_maxpool'),
 
-            tfl.Flatten(name='flatten'),
+            tfl.Flatten(                             name='flatten'),
 
-            tfl.Dense(nl, activation='relu', name='latent'),
+            tfl.Dense(nl, activation='relu',         name='latent'),
+            
+            tfl.Dense(32768, activation='relu',      name='expand'),
+            tfl.Reshape((4,4,4,512),                 name='reshape'),
+            
 
-            tfl.Dense(32768, activation='relu', name='expand'),
-            tfl.Reshape((4, 4, 4, 512), name='reshape'),
-
-            tfl.Conv3DTranspose(256, (2, 2, 2,), strides=2, name='deconv_1_deconv'),
-            tfl.Activation(tf.nn.relu, name='deconv_1_activation'),
-            tfl.Conv3DTranspose(128, (2, 2, 2,), strides=2, name='deconv_2_deconv'),
-            tfl.Activation(tf.nn.relu, name='deconv_2_activation'),
-            tfl.Conv3DTranspose(64, (2, 2, 2,), strides=2, name='deconv_3_deconv'),
-            tfl.Activation(tf.nn.relu, name='deconv_3_activation'),
-
-            tfl.Conv3DTranspose(1, (2, 2, 2,), strides=2, name='deconv_4_deconv'),
+            tfl.Conv3DTranspose(256, (2,2,2,), strides=2, name='deconv_1_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_1_activation'),
+            tfl.Conv3DTranspose(128, (2,2,2,), strides=2, name='deconv_2_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_2_activation'),
+            tfl.Conv3DTranspose(64, (2,2,2,), strides=2,  name='deconv_3_deconv'),
+            tfl.Activation(tf.nn.relu,                    name='deconv_3_activation'),
+            
+            tfl.Conv3DTranspose(1, (2,2,2,), strides=2,   name='deconv_4_deconv'),
             # tfl.Activation(tf.nn.relu,                    name='deconv_4_activation'),
-
+            
             # tfl.Conv3DTranspose(1, (2,2,2,), strides=1,   name='deconv_5_deconv', padding="same"),
         ]
         if self.params['is_u_connected'] and self.params['use_final_unet_layer']:
             extra_unet_layers = [
-                tfl.Conv3D(2, (1, 1, 1,), use_bias=False, name='unet_combine'),
+                tfl.Conv3D(2, (1,1,1,), use_bias=False,                  name='unet_combine'),
                 # tfl.Activation(tf.nn.relu,                             name='unet_final_activation'),
             ]
             if self.params['final_activation'] == 'sigmoid':
                 extra_unet_layers.append(tfl.Activation(tf.math.sigmoid, name='unet_final_activation'))
             if self.params['final_activation'] == 'relu':
-                extra_unet_layers.append(tfl.Activation(tf.nn.relu, name='unet_final_activation'))
+                extra_unet_layers.append(tfl.Activation(tf.nn.relu,      name='unet_final_activation'))
 
             autoencoder_layers = autoencoder_layers + extra_unet_layers
 
