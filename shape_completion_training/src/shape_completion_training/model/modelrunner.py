@@ -5,8 +5,6 @@ Tensorflow 2.0 (instead of 1.0)
 
 '''
 
-import os
-
 from shape_completion_training.model import utils
 
 utils.set_gpu_with_lowest_memory()
@@ -40,10 +38,6 @@ class ModelRunner:
         if not self.training:
             self.batch_size = 1
 
-
-
-        train_log_dir = self.trial_path / "logs/train"
-        test_log_dir = self.trial_path / "logs/test"
         self.train_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/train").as_posix())
         self.test_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/test").as_posix())
 
@@ -93,8 +87,7 @@ class ModelRunner:
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
-        tf.keras.utils.plot_model(self.model.get_model(), os.path.join(self.trial_path, 'network.png'),
-                                  show_shapes=True)
+        tf.keras.utils.plot_model(self.model.get_model(), self.trial_path / 'network.png', show_shapes=True)
 
     def write_summary(self, summary_dict):
         with self.train_summary_writer.as_default():
