@@ -1,12 +1,3 @@
-'''
-
-Very simple neural network created by bsaund to practice coding in 
-Tensorflow 2.0 (instead of 1.0)
-
-'''
-
-import os
-
 from shape_completion_training.model import utils
 
 utils.set_gpu_with_lowest_memory()
@@ -14,7 +5,6 @@ import tensorflow as tf
 from shape_completion_training.model import filepath_tools
 from shape_completion_training.model.auto_encoder import AutoEncoder
 from shape_completion_training.model.augmented_ae import Augmented_VAE
-# from voxelcnn import VoxelCNN, StackedVoxelCNN
 from shape_completion_training.model.voxelcnn import VoxelCNN
 from shape_completion_training.model.vae import VAE, VAE_GAN
 from shape_completion_training.model.conditional_vcnn import ConditionalVCNN
@@ -44,29 +34,24 @@ def get_model_type(network_type):
 
 
 class ModelRunner:
-    def __init__(self, model, params=None, trial_name=None, training=False, write_summary=True):
-        self.batch_size = 16
-        if not training:
-            self.batch_size = 1
+    def __init__(self, model, training, group_name=None, trial_path=None, params=None, write_summary=True):
+        self.model = model
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
-        self.model = model
+        self.training = training
 
-        file_fp = os.path.dirname(__file__)
-        fp = filepath_tools.get_trial_directory(os.path.join(file_fp, "../trials/"),
-                                                expect_reuse=(params is None),
-                                                nick=trial_name,
-                                                write_summary=write_summary)
-        self.trial_name = fp.split('/')[-1]
-        self.params = filepath_tools.handle_params(file_fp, fp, params)
+        self.trial_path, self.params = filepath_tools.create_or_load_trial(group_name=group_name,
+                                                                           params=params,
+                                                                           trial_path=trial_path,
+                                                                           write_summary=write_summary)
+        self.group_name = self.trial_path.parts[-2]
 
-        self.trial_fp = fp
-        self.checkpoint_path = os.path.join(fp, "training_checkpoints/")
+        self.batch_size = 16
+        if not self.training:
+            self.batch_size = 1
 
-        train_log_dir = os.path.join(fp, 'logs/train')
-        test_log_dir = os.path.join(fp, 'logs/test')
-        self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        self.test_summary_writer = tf.summary.create_file_writer(test_log_dir)
+        self.train_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/train").as_posix())
+        self.test_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/test").as_posix())
 
         self.num_batches = None
 
@@ -74,7 +59,8 @@ class ModelRunner:
                                         epoch=tf.Variable(0),
                                         train_time=tf.Variable(0.0),
                                         model=self.model)
-        self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path, max_to_keep=1)
+        self.checkpoint_path = self.trial_path / "training_checkpoints/"
+        self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path.as_posix(), max_to_keep=1)
         self.restore()
 
     def restore(self):
@@ -94,7 +80,8 @@ class ModelRunner:
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
-        tf.keras.utils.plot_model(self.model, os.path.join(self.trial_fp, 'network.png'), show_shapes=True)
+        model_image_path = self.trial_path / 'network.png'
+        tf.keras.utils.plot_model(self.model, model_image_path.as_posix(), show_shapes=True)
 
     def write_summary(self, summary_dict):
         with self.train_summary_writer.as_default():
@@ -136,15 +123,13 @@ class ModelRunner:
     def train(self, dataset, num_epochs):
         self.build_model(dataset)
         self.count_params()
-        # dataset = dataset.shuffle(10000)
-        # batched_ds = dataset.batch(self.batch_size, drop_remainder=True).prefetch(64)
-        batched_ds = dataset.batch(self.batch_size).prefetch(64)
+        batched_ds = dataset.batch(self.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
         while self.ckpt.epoch < num_epochs:
             self.ckpt.epoch.assign_add(1)
             print('')
-            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '=' * 25 \
-                  + ' ' + self.trial_name + ' ' + '=' * 20)
+            msg_fmt = '== Epoch {}/{} ========================= {} ===================='
+            print(msg_fmt.format(self.ckpt.epoch.numpy(), num_epochs, self.group_name))
             self.train_batch(batched_ds)
             print('=' * 48)
 

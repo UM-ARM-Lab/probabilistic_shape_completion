@@ -3,7 +3,7 @@ import unittest
 import tensorflow as tf
 
 from shape_completion_training.model.utils import reduce_mean_dict
-from shape_completion_training.modelrunner import ModelRunner
+from shape_completion_training.model_runner import ModelRunner
 from shape_completion_training.mykerasmodel import MyKerasModel
 
 params = {
@@ -62,12 +62,7 @@ class ModelRunnerTraining(unittest.TestCase):
 
     def test_train(self):
         model = FakeModel(params=params)
-        mr = ModelRunner(model=model, params=params, write_summary=False)
-        mr.train(ModelRunnerTraining.dataset, num_epochs=1)
-
-    def test_train_named(self):
-        model = FakeModel(params=params)
-        mr = ModelRunner(model=model, params=params, write_summary=False, trial_name='test_name')
+        mr = ModelRunner(model=model, training=True, params=params, write_summary=False)
         mr.train(ModelRunnerTraining.dataset, num_epochs=1)
 
 
