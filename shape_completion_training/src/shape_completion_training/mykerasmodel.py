@@ -80,4 +80,4 @@ class MyKerasModel(tf.keras.Model):
         return train_outputs, metrics
 
     def calculate_metrics(self, dataset_element, outputs):
-        raise NotImplementedError()
+        return {}

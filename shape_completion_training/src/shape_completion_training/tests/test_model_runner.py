@@ -56,14 +56,14 @@ class ModelRunnerTraining(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         numbers = tf.data.Dataset.range(1000).map(lambda x: tf.cast(x, tf.float32))
-        x = numbers.map(lambda x: {'x': x}).batch(1)
-        y = numbers.map(lambda x: {'y': x * 5 + 2}).batch(1)
+        x = numbers.map(lambda x: {'x': x}).batch(1).batch(16)
+        y = numbers.map(lambda x: {'y': x * 5 + 2}).batch(1).batch(16)
         cls.dataset = tf.data.Dataset.zip((x, y))
 
     def test_train(self):
         model = FakeModel(params=params)
         mr = ModelRunner(model=model, training=True, params=params, write_summary=False)
-        mr.train(ModelRunnerTraining.dataset, num_epochs=1)
+        mr.train(ModelRunnerTraining.dataset, ModelRunnerTraining.dataset, num_epochs=1, seed=1)
 
 
 if __name__ == '__main__':
