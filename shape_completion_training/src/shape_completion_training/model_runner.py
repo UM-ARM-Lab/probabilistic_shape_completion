@@ -1,3 +1,4 @@
+from link_bot_pycommon.link_bot_pycommon import print_dict
 from shape_completion_training.model import utils
 
 utils.set_gpu_with_lowest_memory()
@@ -46,10 +47,6 @@ class ModelRunner:
                                                                            write_summary=write_summary)
         self.group_name = self.trial_path.parts[-2]
 
-        self.batch_size = 16
-        if not self.training:
-            self.batch_size = 1
-
         self.train_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/train").as_posix())
         self.test_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/test").as_posix())
 
@@ -74,9 +71,9 @@ class ModelRunner:
         self.model.summary()
 
     def build_model(self, dataset):
-        elem = next(iter(dataset.take(self.batch_size).batch(self.batch_size)))
+        elem = next(iter(dataset))
         tf.summary.trace_on(graph=True, profiler=False)
-        self.model(elem)
+        self.model(elem, training=True)
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
@@ -120,17 +117,16 @@ class ModelRunner:
         print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
         print("loss {:1.3f}".format(all_metrics['loss'].numpy()))
 
-    def train(self, dataset, num_epochs):
+    def train(self, dataset, num_epochs, seed):
         self.build_model(dataset)
         self.count_params()
-        batched_ds = dataset.batch(self.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
         while self.ckpt.epoch < num_epochs:
             self.ckpt.epoch.assign_add(1)
             print('')
             msg_fmt = '== Epoch {}/{} ========================= {} ===================='
             print(msg_fmt.format(self.ckpt.epoch.numpy(), num_epochs, self.group_name))
-            self.train_batch(batched_ds)
+            self.train_batch(dataset)
             print('=' * 48)
 
     def train_and_test(self, dataset):
@@ -139,4 +135,4 @@ class ModelRunner:
         self.count_params()
 
     def evaluate(self, dataset):
-        self.model.evaluate(dataset.batch(self.batch_size))
+        self.model.evaluate(dataset)
