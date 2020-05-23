@@ -31,10 +31,6 @@ class ModelRunner:
         if not self.training:
             self.batch_size = 1
 
-
-
-        train_log_dir = self.trial_path / "logs/train"
-        test_log_dir = self.trial_path / "logs/test"
         self.train_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/train").as_posix())
         self.test_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/test").as_posix())
 
@@ -136,7 +132,7 @@ class ModelRunner:
         while self.ckpt.epoch < num_epochs:
             self.ckpt.epoch.assign_add(1)
             print('')
-            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '=' * 25 \
+            print('==  Epoch {}/{}  '.format(self.ckpt.epoch.numpy(), num_epochs) + '=' * 25
                   + ' ' + self.group_name + ' ' + '=' * 20)
             self.train_batch(batched_ds)
             print('=' * 48)

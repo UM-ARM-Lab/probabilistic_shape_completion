@@ -1,9 +1,8 @@
-import os
-
+import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
+
 import shape_completion_training.model.nn_tools as nn
-import numpy as np
 
 """
 VAE that explicitly tries to predict angle loss as a feature
