@@ -1,5 +1,7 @@
-from link_bot_pycommon.link_bot_pycommon import print_dict
+from colorama import Style, Fore
+
 from shape_completion_training.model import utils
+from shape_completion_training.model.utils import reduce_mean_dict, sequence_of_dicts_to_dict_of_sequences
 
 utils.set_gpu_with_lowest_memory()
 import tensorflow as tf
@@ -35,7 +37,14 @@ def get_model_type(network_type):
 
 
 class ModelRunner:
-    def __init__(self, model, training, group_name=None, trial_path=None, params=None, write_summary=True):
+    def __init__(self,
+                 model,
+                 training,
+                 group_name=None,
+                 trial_path=None,
+                 params=None,
+                 trials_directory=None,
+                 write_summary=True):
         self.model = model
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
@@ -44,13 +53,15 @@ class ModelRunner:
         self.trial_path, self.params = filepath_tools.create_or_load_trial(group_name=group_name,
                                                                            params=params,
                                                                            trial_path=trial_path,
+                                                                           trials_directory=trials_directory,
                                                                            write_summary=write_summary)
         self.group_name = self.trial_path.parts[-2]
 
         self.train_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/train").as_posix())
-        self.test_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/test").as_posix())
+        self.val_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/val").as_posix())
 
-        self.num_batches = None
+        self.num_train_batches = None
+        self.num_val_batches = None
 
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1),
                                         epoch=tf.Variable(0),
@@ -80,14 +91,19 @@ class ModelRunner:
         model_image_path = self.trial_path / 'network.png'
         tf.keras.utils.plot_model(self.model, model_image_path.as_posix(), show_shapes=True)
 
-    def write_summary(self, summary_dict):
+    def write_train_summary(self, summary_dict):
         with self.train_summary_writer.as_default():
             for k in summary_dict:
                 tf.summary.scalar(k, summary_dict[k].numpy(), step=self.ckpt.step.numpy())
 
-    def train_batch(self, dataset):
-        if self.num_batches is not None:
-            max_size = str(self.num_batches)
+    def write_val_summary(self, summary_dict):
+        with self.val_summary_writer.as_default():
+            for k in summary_dict:
+                tf.summary.scalar(k, summary_dict[k].numpy(), step=self.ckpt.step.numpy())
+
+    def train_epoch(self, train_dataset, val_dataset):
+        if self.num_train_batches is not None:
+            max_size = str(self.num_train_batches)
         else:
             max_size = '???'
 
@@ -99,40 +115,64 @@ class ModelRunner:
             ' (', progressbar.ETA(), ') ',
         ]
 
-        with progressbar.ProgressBar(widgets=widgets, max_value=self.num_batches) as bar:
-            self.num_batches = 0
+        with progressbar.ProgressBar(widgets=widgets, max_value=self.num_train_batches) as bar:
+            self.num_train_batches = 0
             t0 = time.time()
-            for batch in dataset:
-                self.num_batches += 1
+            for train_batch in train_dataset:
+                self.num_train_batches += 1
                 self.ckpt.step.assign_add(1)
 
-                train_outputs, all_metrics = self.model.train_step(batch)
+                _, train_batch_metrics = self.model.train_step(train_batch)
                 time_str = str(datetime.timedelta(seconds=int(self.ckpt.train_time.numpy())))
-                bar.update(self.num_batches, Loss=all_metrics['loss'].numpy().squeeze(), TrainTime=time_str)
-                self.write_summary(all_metrics)
+                bar.update(self.num_train_batches, Loss=train_batch_metrics['loss'].numpy().squeeze(), TrainTime=time_str)
+                self.write_train_summary(train_batch_metrics)
                 self.ckpt.train_time.assign_add(time.time() - t0)
                 t0 = time.time()
 
         save_path = self.manager.save()
-        print("Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path))
-        print("loss {:1.3f}".format(all_metrics['loss'].numpy()))
+        print(Fore.CYAN + "Saved checkpoint for step {}: {}".format(int(self.ckpt.step), save_path) + Fore.RESET)
+        print("train loss {:1.3f}".format(train_batch_metrics['loss'].numpy()))
 
-    def train(self, dataset, num_epochs, seed):
-        self.build_model(dataset)
+    def val_epoch(self, val_dataset):
+        if self.num_val_batches is not None:
+            max_size = str(self.num_val_batches)
+        else:
+            max_size = '???'
+
+        widgets = [
+            '  ', progressbar.Counter(), '/', max_size,
+            progressbar.Bar(),
+            ' (', progressbar.ETA(), ') ',
+        ]
+
+        with progressbar.ProgressBar(widgets=widgets, max_value=self.num_val_batches) as bar:
+            self.num_val_batches = 0
+            val_metrics = []
+            for val_batch in val_dataset:
+                self.num_val_batches += 1
+                _, val_batch_metrics = self.model.val_step(val_batch)
+                val_metrics.append(val_batch_metrics)
+                bar.update(self.num_val_batches)
+
+            val_metrics = sequence_of_dicts_to_dict_of_sequences(val_metrics)
+            mean_val_metrics = reduce_mean_dict(val_metrics)
+            self.write_val_summary(mean_val_metrics)
+        print(Style.BRIGHT + "val loss {:1.3f}".format(mean_val_metrics['loss'].numpy()) + Style.NORMAL)
+
+    def train(self, train_dataset, val_dataset, num_epochs, seed):
+        self.build_model(train_dataset)
         self.count_params()
 
-        while self.ckpt.epoch < num_epochs:
-            self.ckpt.epoch.assign_add(1)
-            print('')
-            msg_fmt = '== Epoch {}/{} ========================= {} ===================='
-            print(msg_fmt.format(self.ckpt.epoch.numpy(), num_epochs, self.group_name))
-            self.train_batch(dataset)
-            print('=' * 48)
+        try:
+            while self.ckpt.epoch < num_epochs:
+                # Training
+                self.ckpt.epoch.assign_add(1)
+                print('')
+                msg_fmt = Fore.GREEN + Style.BRIGHT + 'Epoch {:3d}/{}, Group Name {}' + Style.RESET_ALL
+                print(msg_fmt.format(self.ckpt.epoch.numpy(), num_epochs, self.group_name))
+                self.train_epoch(train_dataset, val_dataset)
 
-    def train_and_test(self, dataset):
-        train_ds = dataset
-        self.train(train_ds)
-        self.count_params()
-
-    def evaluate(self, dataset):
-        self.model.evaluate(dataset)
+                # Validation at end of epoch
+                self.val_epoch(val_dataset)
+        except KeyboardInterrupt:
+            print(Fore.YELLOW + "Interrupted." + Fore.RESET)

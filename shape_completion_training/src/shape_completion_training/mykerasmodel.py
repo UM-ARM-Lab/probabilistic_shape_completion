@@ -53,17 +53,31 @@ class MyKerasModel(tf.keras.Model):
 
     @tf.function
     def train_step(self, train_element):
-        all_metrics = {}
         with tf.GradientTape() as tape:
             train_outputs = self.call(train_element, training=True)
             train_losses = self.compute_loss(train_element, train_outputs)
 
         gradient_metrics = self.apply_gradients(tape, train_element, train_outputs, train_losses)
+        other_metrics = self.calculate_metrics(train_element, train_outputs)
 
-        all_metrics.update(train_losses)
-        all_metrics.update(gradient_metrics)
+        metrics = {}
+        metrics.update(train_losses)
+        metrics.update(gradient_metrics)
+        metrics.update(other_metrics)
 
-        return train_outputs, all_metrics
+        return train_outputs, metrics
+
+    @tf.function
+    def val_step(self, val_element):
+        train_outputs = self.call(val_element, training=True)
+        train_losses = self.compute_loss(val_element, train_outputs)
+        other_metrics = self.calculate_metrics(val_element, train_outputs)
+
+        metrics = {}
+        metrics.update(train_losses)
+        metrics.update(other_metrics)
+
+        return train_outputs, metrics
 
     def calculate_metrics(self, dataset_element, outputs):
         raise NotImplementedError()
