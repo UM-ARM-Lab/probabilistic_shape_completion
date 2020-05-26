@@ -6,6 +6,7 @@ from os.path import join
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from shape_completion_training import binvox_rw
+from shape_completion_training.voxelgrid import conversions
 import numpy as np
 
 shape_map = {"airplane":"02691156",
@@ -41,6 +42,16 @@ def simulate_2_5D_input(gt):
         unknown_mask = unknown_mask + gt_occ[h,:,:,0]
         unknown_mask = np.clip(unknown_mask, 0, 1)
     return known_occ, known_free
+
+
+def simulate_depth_image(vg):
+    vg = conversions.format_voxelgrid(vg, False, False)
+    size = vg.shape[1]
+    z_inds = tf.expand_dims(tf.expand_dims(tf.range(size), axis=-1), axis=-1)
+    z_inds = tf.repeat(tf.repeat(z_inds, size, axis=1), size, axis=2)
+    z_inds = tf.cast(z_inds, tf.float32)
+    dists = z_inds * vg + size * tf.cast(vg == 0, tf.float32)
+    return tf.reduce_min(dists, axis=0)
 
 
 def shift_elem(elem, x, y, z):

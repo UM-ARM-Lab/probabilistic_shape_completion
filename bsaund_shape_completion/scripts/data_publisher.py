@@ -10,6 +10,7 @@ from shape_completion_training.model.model_evaluator import ModelEvaluator
 from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import sampling_tools
+from shape_completion_training.voxelgrid import fit
 from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
 from std_msgs.msg import String
 import threading
@@ -67,10 +68,37 @@ def run_inference(elem):
     inference = model_evaluator.model(elem)
     inference["predicted_occ"] = sample_evaluation.get_best_particle(
         metric=lambda a, b: -metrics.chamfer_distance(a, b, scale=0.01, downsample=2).numpy())
+    VG_PUB.publish_inference(inference)
+    fit_to_particles(records, sample_evaluation)
+
     return inference
 
 
+def fit_to_particle(metadata, particle):
+
+    ds = metadata.shuffle(10000).take(10)
+    ds = data_tools.load_voxelgrids(ds)
+    # ds = data_tools.simulate_input(ds, 0, 0, 0)
+    possibles = [e['gt_occ'] for e in ds.__iter__()]
+    fitted = [fit.icp(possible, particle, scale=0.01) for possible in possibles]
+    for f in fitted:
+        VG_PUB.publish("gt", f)
+        rospy.sleep(1)
+
+
+def fit_to_particles(metadata, sample_evaluation):
+    if not ARGS.fit_to_particles:
+        return
+    for i, particle in enumerate(sample_evaluation.particles):
+        raw_input("Ready to fit to particle {}".format(i))
+        fit_to_particle(metadata, particle)
+
+
 def publish_selection(metadata, str_msg):
+    if selection_map[str_msg.data] == 0:
+        print("Skipping first display")
+        return
+
     translation = 0
 
     ds = metadata.skip(selection_map[str_msg.data]).take(1)
@@ -104,6 +132,8 @@ def publish_selection(metadata, str_msg):
 
     inference = run_inference(elem)
     VG_PUB.publish_inference(inference)
+
+    # fit_to_particles(metadata)
 
     mismatch = np.abs(elem['gt_occ'] - inference['predicted_occ'].numpy())
     VG_PUB.publish("mismatch", mismatch)
@@ -200,6 +230,7 @@ def parse_command_line_args():
     parser.add_argument('--sample', help='foo help', action='store_true')
     parser.add_argument('--use_best_iou', help='foo help', action='store_true')
     parser.add_argument('--publish_each_sample', help='foo help', action='store_true')
+    parser.add_argument('--fit_to_particles', help='foo help', action='store_true')
     parser.add_argument('--multistep', action='store_true')
     parser.add_argument('--trial')
 
