@@ -15,6 +15,10 @@ def to_msg(voxelgrid):
 class VoxelgridPublisher:
     def __init__(self):
         self.pubs = {}
+        pub_names = ["gt", "known_occ", "known_free", "predicted_occ", "predicted_free", "sampled_occ",
+                     "conditioned_occ", "mismatch", "aux"]
+        for name in pub_names:
+            self.add(name, name + "_voxel_grid")
 
     def add(self, short_name, topic):
         self.pubs[short_name] = rospy.Publisher(topic, OccupancyStamped, queue_size=1)

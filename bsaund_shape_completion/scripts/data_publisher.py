@@ -11,35 +11,19 @@ from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import sampling_tools
 from shape_completion_training.voxelgrid import fit
-from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
-from std_msgs.msg import String
 import threading
 import tensorflow as tf
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
+from bsaund_shape_completion.shape_selection import send_display_names_from_metadata
 
 ARGS = None
 VG_PUB = None
 
-options_pub = None
-selected_sub = None
-
 model_runner = None
 model_evaluator = None
 
-selection_map = {}
 stop_current_sampler = None
 sampling_thread = None
-
-
-def publish_options(metadata):
-    tso = TextSelectionOptions()
-
-    for i, elem in metadata.enumerate():
-        s = elem['id'].numpy() + elem['augmentation'].numpy()
-        selection_map[s] = i
-        tso.options.append(s)
-
-    options_pub.publish(tso)
 
 
 def run_inference(elem):
@@ -94,14 +78,14 @@ def fit_to_particles(metadata, sample_evaluation):
         fit_to_particle(metadata, particle)
 
 
-def publish_selection(metadata, str_msg):
-    if selection_map[str_msg.data] == 0:
+def publish_selection(metadata, ind, str_msg):
+    if ind == 0:
         print("Skipping first display")
         return
 
-    translation = 0
+    # translation = 0
 
-    ds = metadata.skip(selection_map[str_msg.data]).take(1)
+    ds = metadata.skip(ind).take(1)
     ds = data_tools.load_voxelgrids(ds)
     ds = data_tools.simulate_input(ds, 0, 0, 0)
     # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3 * 4/8)
@@ -202,16 +186,6 @@ def sampler_worker(elem):
             VG_PUB.publish_elem(elem)
             VG_PUB.publish_inference(inference)
     print("Sampling complete")
-    # IPython.embed()
-
-
-def publish_object_transform_old():
-    """
-    This is deprecated and will be removed
-    1) Use `roslaunch bsaund_shape_completion shape_completion.launch` and this is not necessary
-    2) Use mps_shape_completion_visualization/quick_publish.py/publish_object_transform
-    """
-    pass
 
 
 def load_network():
@@ -225,7 +199,6 @@ def load_network():
 
 
 def parse_command_line_args():
-    global ARGS
     parser = argparse.ArgumentParser(description='Publish shape data to RViz for viewing')
     parser.add_argument('--sample', help='foo help', action='store_true')
     parser.add_argument('--use_best_iou', help='foo help', action='store_true')
@@ -234,11 +207,11 @@ def parse_command_line_args():
     parser.add_argument('--multistep', action='store_true')
     parser.add_argument('--trial')
 
-    ARGS = parser.parse_args()
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    parse_command_line_args()
+    ARGS = parse_command_line_args()
 
     rospy.init_node('shape_publisher')
     rospy.loginfo("Data Publisher")
@@ -246,16 +219,8 @@ if __name__ == "__main__":
     records = data_tools.load_shapenet_metadata(shuffle=False)
     load_network()
 
-    pub_names = ["gt", "known_occ", "known_free", "predicted_occ", "predicted_free", "sampled_occ",
-                 "conditioned_occ", "mismatch", "aux"]
     VG_PUB = VoxelgridPublisher()
-    for name in pub_names:
-        VG_PUB.add(name, name + "_voxel_grid")
 
-    options_pub = rospy.Publisher('shapenet_options', TextSelectionOptions, queue_size=1)
-    selected_sub = rospy.Subscriber('/shapenet_selection', String,
-                                    lambda x: publish_selection(records, x))
-
-    publish_options(records)
+    selection_sub = send_display_names_from_metadata(records, publish_selection)
 
     rospy.spin()
