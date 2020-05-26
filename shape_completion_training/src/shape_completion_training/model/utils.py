@@ -1,11 +1,12 @@
 """Some useful Utils for tensorflow"""
 
-
-import subprocess, re, os
-
+import os
+import re
+import subprocess
 
 # Nvidia-smi GPU memory parsing.
 # Tested on nvidia-smi 370.23
+import tensorflow as tf
 
 
 def run_command(cmd):
@@ -25,7 +26,7 @@ def list_available_gpus():
     result = []
     for line in output.strip().split("\n"):
         m = gpu_regex.match(line)
-        assert m, "Couldnt parse "+line
+        assert m, "Couldnt parse " + line
         result.append(int(m.group("gpu_id")))
     return result
 
@@ -69,3 +70,21 @@ def set_gpu_with_lowest_memory():
         return
     os.environ["CUDA_VISIBLE_DEVICES"] = best_gpu
 
+
+def reduce_mean_dict(dict):
+    reduced_dict = {}
+    for k, v in dict.items():
+        reduced_dict[k] = tf.reduce_mean(v)
+    return reduced_dict
+
+
+def sequence_of_dicts_to_dict_of_sequences(seq_of_dicts):
+    # TODO: make a data structure that works both ways, as a dict and as a list
+    dict_of_seqs = {}
+    for d in seq_of_dicts:
+        for k, v in d.items():
+            if k not in dict_of_seqs:
+                dict_of_seqs[k] = []
+            dict_of_seqs[k].append(v)
+
+    return dict_of_seqs
