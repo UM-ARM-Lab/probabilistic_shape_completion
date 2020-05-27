@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 from shape_completion_training.model import plausiblility
 from shape_completion_training.model import data_tools
 
