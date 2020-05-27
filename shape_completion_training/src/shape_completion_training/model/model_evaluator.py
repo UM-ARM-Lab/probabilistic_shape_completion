@@ -1,15 +1,25 @@
 import tensorflow as tf
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import data_tools
+from shape_completion_training.model import utils
 import tensorflow_probability as tfp
 
 
-def observation_probability(observation, underlying_state, std_dev_in_voxels = 1):
+def observation_likelihood(observation, underlying_state, std_dev_in_voxels = 1):
+    return tf.reduce_prod(_observation_model(observation, underlying_state, std_dev_in_voxels))
+
+
+def observation_likelihood_geometric_mean(observation, underlying_state, std_dev_in_voxels = 1):
+    return utils.reduce_geometric_mean(_observation_model(observation, underlying_state, std_dev_in_voxels))
+
+
+def _observation_model(observation, underlying_state, std_dev_in_voxels):
     observed_depth = data_tools.simulate_depth_image(observation)
     expected_depth = data_tools.simulate_depth_image(underlying_state)
     error = observed_depth - expected_depth
     depth_probs = tfp.distributions.Normal(0, std_dev_in_voxels).prob(error)
-    return tf.reduce_prod(depth_probs)
+    return depth_probs
+
 
 class ModelEvaluator:
     def __init__(self, model):

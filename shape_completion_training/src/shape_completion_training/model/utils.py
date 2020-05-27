@@ -88,3 +88,8 @@ def sequence_of_dicts_to_dict_of_sequences(seq_of_dicts):
             dict_of_seqs[k].append(v)
 
     return dict_of_seqs
+
+
+def reduce_geometric_mean(tensor):
+    return tf.exp(tf.reduce_mean(tf.math.log(tensor)))
+

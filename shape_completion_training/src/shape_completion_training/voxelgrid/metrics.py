@@ -3,6 +3,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 from shape_completion_training.voxelgrid import conversions
+from shape_completion_training.model import utils
 
 
 def iou(voxelgrid_1, voxelgrid_2, threshold=0.5):
@@ -38,9 +39,10 @@ def p_correct_geometric_mean(estimate_voxelgrid, gt_voxelgrid):
     """
     gt = tf.cast(gt_voxelgrid > 0.5, tf.float32)
     p_voxel_correct = 1.0 - tf.math.abs(gt - estimate_voxelgrid)
-    num_elements = tf.cast(tf.size(p_voxel_correct), tf.float32)
-    p_correct = tf.exp(tf.reduce_sum(tf.math.log(p_voxel_correct))/num_elements)
-    return p_correct
+    return utils.reduce_geometric_mean(p_voxel_correct)
+    # num_elements = tf.cast(tf.size(p_voxel_correct), tf.float32)
+    # p_correct = tf.exp(tf.reduce_sum(tf.math.log(p_voxel_correct))/num_elements)
+    # return p_correct
 
 
 def highest_match(test_vg, vg_list, metric=iou):

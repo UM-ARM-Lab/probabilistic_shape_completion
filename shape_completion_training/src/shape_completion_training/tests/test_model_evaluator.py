@@ -10,8 +10,8 @@ class TestObservationModel(TestCase):
         vg_expected[1,1,0] = 1.0
         vg_observed = vg_expected.copy()
         vg_observed[2,2,2] = 1.0
-        p_self = observation_probability(vg_expected, vg_expected)
-        p_other = observation_probability(vg_observed, vg_expected)
+        p_self = observation_likelihood(vg_expected, vg_expected)
+        p_other = observation_likelihood(vg_observed, vg_expected)
 
         self.assertGreater(p_self, p_other)
 
