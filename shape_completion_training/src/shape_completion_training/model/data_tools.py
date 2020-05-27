@@ -3,14 +3,13 @@ from __future__ import print_function
 
 import os
 from os.path import join
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from shape_completion_training import binvox_rw
 from shape_completion_training.voxelgrid import conversions
 import numpy as np
 
-shape_map = {"airplane":"02691156",
-             "mug":"03797390"}
+shape_map = {"airplane": "02691156",
+             "mug": "03797390"}
 
 cur_path = os.path.dirname(__file__)
 shapenet_load_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented")
@@ -25,7 +24,9 @@ def shapenet_labels(human_names):
 
 def simulate_omniscient_input(gt):
     """
-    Given a single ground truth mask occupied list, return ground truth occupied and free, as well as simulate the known occupied and free
+    Given a single ground truth mask occupied list,
+    return ground truth occupied and free,
+    as well as simulate the known occupied and free
     """
     return gt, 1.0 - gt
 
@@ -39,7 +40,7 @@ def simulate_2_5D_input(gt):
     for h in range(gt.shape[1]):
         known_occ[h, :, :, 0] = np.clip(known_occ[h, :, :, 0] - unknown_mask, 0, 1)
         known_free[h, :, :, 0] = np.clip(known_free[h, :, :, 0] - unknown_mask, 0, 1)
-        unknown_mask = unknown_mask + gt_occ[h,:,:,0]
+        unknown_mask = unknown_mask + gt_occ[h, :, :, 0]
         unknown_mask = np.clip(unknown_mask, 0, 1)
     return known_occ, known_free
 
@@ -56,10 +57,10 @@ def simulate_depth_image(vg):
 
 def shift_elem(elem, x, y, z):
     keys = ['gt_occ', 'known_occ', 'gt_free', 'known_free']
-    pad_values = {'gt_occ':0.0,
-                  'known_occ':0.0,
-                  'gt_free':1.0,
-                  'known_free':1.0}
+    pad_values = {'gt_occ': 0.0,
+                  'known_occ': 0.0,
+                  'gt_free': 1.0,
+                  'known_free': 1.0}
     for k in keys:
         elem[k] = shift_tensor(elem[k], x, y, z, pad_values[k])
     return elem
@@ -73,18 +74,18 @@ def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
     c = np.abs(max_z)
 
     if a > 0:
-        t = tf.pad(t, paddings=tf.constant([[a,a], [0,0], [0,0], [0,0]]),
+        t = tf.pad(t, paddings=tf.constant([[a, a], [0, 0], [0, 0], [0, 0]]),
                    mode="CONSTANT", constant_values=pad_value)
         t = tf.roll(t, dx, axis=[0])
         t = t[a:-a, :, :, :]
 
     if b > 0:
-        t = tf.pad(t, paddings=tf.constant([[0,0], [b,b], [0,0], [0,0]]),
+        t = tf.pad(t, paddings=tf.constant([[0, 0], [b, b], [0, 0], [0, 0]]),
                    mode="CONSTANT", constant_values=pad_value)
         t = tf.roll(t, dy, axis=[1])
         t = t[:, b:-b, :, :]
     if c > 0:
-        t = tf.pad(t, paddings=tf.constant([[0,0], [0,0], [c,c],[0,0]]),
+        t = tf.pad(t, paddings=tf.constant([[0, 0], [0, 0], [c, c], [0, 0]]),
                    mode="CONSTANT", constant_values=pad_value)
         t = tf.roll(t, dz, axis=[2])
         t = t[:, :, c:-c, :]
@@ -101,7 +102,7 @@ def simulate_first_n_input(gt, n):
     gt_occ_masked = tf.reshape(tf.reshape(gt_occ, [-1]) * mask, shape)
     gt_free_masked = tf.reshape(tf.reshape(gt_free, [-1]) * mask, shape)
     return gt_occ_masked, gt_free_masked
-    
+
 
 # @tf.function
 def simulate_first_random_input(gt):
@@ -135,11 +136,11 @@ def load_gt_voxels(filepath, augmentation):
     filepath: string filepath to the "models" folder for this shape
     augmentation: string identifying the augmentation
     """
-    binvox_wire_fp = join(filepath, 'model_augmented_' + augmentation + '.wire.binvox')    
+    binvox_wire_fp = join(filepath, 'model_augmented_' + augmentation + '.wire.binvox')
     with open(binvox_wire_fp) as f:
         wire_vox = binvox_rw.read_as_3d_array(f).data
 
-    binvox_mesh_fp = join(filepath, 'model_augmented_' + augmentation + '.mesh.binvox')    
+    binvox_mesh_fp = join(filepath, 'model_augmented_' + augmentation + '.mesh.binvox')
     with open(binvox_mesh_fp) as f:
         mesh_vox = binvox_rw.read_as_3d_array(f).data
 
@@ -163,9 +164,8 @@ class ShapenetRecord:
 
 
 def get_all_shapenet_files(shape_ids):
-    shapenet_files = []
+    shapenet_records = []
     if shape_ids == "all":
-        
         shape_ids = [f for f in os.listdir(shapenet_load_path)
                      if os.path.isdir(join(shapenet_load_path, f))]
         shape_ids.sort()
@@ -189,8 +189,8 @@ def get_all_shapenet_files(shape_ids):
                 sr.filepath = obj_fp
                 sr.category = category
                 sr.augmentation = augmentation
-                shapenet_files.append(sr)
-    return shapenet_files
+                shapenet_records.append(sr)
+    return shapenet_records
 
 
 def group_shapenet_files(shapenet_files, group_size):
@@ -205,7 +205,7 @@ def group_shapenet_files(shapenet_files, group_size):
 
     def get_group_name(category, num):
         return "{}_{:02d}".format(category, num)
-    
+
     i = 0
     for sr in shapenet_files:
         if sr.category != category:
@@ -231,14 +231,20 @@ def get_unique_name(datum):
     return datum['id'].numpy() + datum['augmentation'].numpy()
 
 
-def load_shapenet(shapes = "all", shuffle=True):
-    ds = load_shapenet_metadata(shapes, shuffle)
-    return load_voxelgrids(ds)
+def load_shapenet(shapes="all", shuffle=True):
+    train_ds, test_ds = load_shapenet_metadata(shapes, shuffle)
+    return load_voxelgrids(train_ds), load_voxelgrids(test_ds)
 
 
-def load_shapenet_metadata(shapes = "all", shuffle=True):
+def load_shapenet_metadata(shapes="all", shuffle=True):
+    return _load_shapenet_metadata_train_or_test(shapes, shuffle, "train"), \
+           _load_shapenet_metadata_train_or_test(shapes, shuffle, "test"),
+
+
+def _load_shapenet_metadata_train_or_test(shapes="all", shuffle=True, prefix="train"):
     records = [f for f in os.listdir(shapenet_record_path)
-               if f.endswith(".tfrecord")]
+               if f.endswith(".tfrecord")
+               if f.startswith(prefix)]
     if shapes != "all":
         print("Not yet handling partial loading")
 
@@ -251,25 +257,56 @@ def load_shapenet_metadata(shapes = "all", shuffle=True):
     return ds
 
 
-def write_shapenet_to_tfrecord(shape_ids = "all"):
-    all_files = get_all_shapenet_files(shape_ids)
-    data = {'id':[], 'shape_category':[], 'fp':[], 'augmentation':[]}
-    for sr in all_files:
+def _split_train_and_test(shapenet_records, test_ratio=0.1):
+    train_ids = []
+    test_ids = []
+    train_records = []
+    test_records = []
+    np.random.seed(42)
+    for record in shapenet_records:
+        if record.id not in train_ids and record.id not in test_ids:
+            if np.random.random() < test_ratio:
+                test_ids.append(record.id)
+            else:
+                train_ids.append(record.id)
+
+        if record.id in train_ids:
+            train_records.append(record)
+        else:
+            test_records.append(record)
+
+    return train_records, test_records
+
+
+def _list_of_shapenet_records_to_dict(shapenet_records):
+    data = {'id': [], 'shape_category': [], 'fp': [], 'augmentation': []}
+    for sr in shapenet_records:
         data['id'].append(sr.id)
         data['shape_category'].append(sr.category)
         data['fp'].append(sr.filepath)
         data['augmentation'].append(sr.augmentation)
+    return data
 
-    ds = tf.data.Dataset.from_tensor_slices(data)
-    write_to_tfrecord(ds, join(shapenet_record_path, "filepaths.tfrecord"))
+
+def write_shapenet_to_tfrecord(shape_ids="all"):
+    all_files = get_all_shapenet_files(shape_ids)
+    train_files, test_files = _split_train_and_test(all_files)
+    train_data = _list_of_shapenet_records_to_dict(train_files)
+    test_data = _list_of_shapenet_records_to_dict(test_files)
+
+    write_to_tfrecord(tf.data.Dataset.from_tensor_slices(train_data),
+                      join(shapenet_record_path, "train_filepaths.tfrecord"))
+    write_to_tfrecord(tf.data.Dataset.from_tensor_slices(test_data),
+                      join(shapenet_record_path, "test_filepaths.tfrecord"))
 
 
 def write_to_tfrecord(dataset, record_file):
     def _bytes_feature(value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
     with tf.io.TFRecordWriter(record_file) as writer:
         for elem in dataset:
-            feature={k: _bytes_feature(elem[k].numpy()) for k in elem}
+            feature = {k: _bytes_feature(elem[k].numpy()) for k in elem}
             features = tf.train.Features(feature=feature)
             example = tf.train.Example(features=features)
             writer.write(example.SerializeToString())
@@ -280,7 +317,7 @@ def read_metadata_from_tfrecord(record_file, shuffle):
     Reads from a tfrecord file of paths and augmentations
     Loads the binvox files, simulates the input tensors, and returns a dataset
     """
-    print("Reading from filepath record")
+    # print("Reading from filepath record")
     raw_dataset = tf.data.TFRecordDataset(record_file)
 
     keys = ['id', 'shape_category', 'fp', 'augmentation']
@@ -296,7 +333,7 @@ def read_metadata_from_tfrecord(record_file, shuffle):
         raw_dataset = raw_dataset.shuffle(10000)
         cache_name = "shuffled_ds.cache"
     cache_fp = join(shapenet_record_path, cache_name)
-        
+
     parsed_dataset = raw_dataset.map(_parse_record_function)
     # parsed_dataset = parsed_dataset.cache(cache_fp)
     return parsed_dataset
@@ -307,6 +344,7 @@ def load_voxelgrids(metadata_ds):
         e = next(_raw_dataset.__iter__())
         gt = tf.numpy_function(load_gt_voxels, [e['fp'], e['augmentation']], tf.float32)
         return gt.shape
+
     shape = _get_shape(metadata_ds)
 
     def _load_voxelgrids(elem):
@@ -315,10 +353,11 @@ def load_voxelgrids(metadata_ds):
         gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
         gt.set_shape(shape)
         elem['gt_occ'] = gt
-        elem['gt_free'] = 1.0-gt
+        elem['gt_free'] = 1.0 - gt
         # gt_occ.set_shape(shape)
         # gt_free.set_shape(shape)
         return elem
+
     return metadata_ds.map(_load_voxelgrids)
 
 
@@ -337,17 +376,17 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
         dy = 0
         dz = 0
         if x > 0:
-            dx = tf.random.uniform(shape=[1], minval = -x, maxval=x, dtype=tf.int64)
+            dx = tf.random.uniform(shape=[1], minval=-x, maxval=x, dtype=tf.int64)
         if y > 0:
-            dy = tf.random.uniform(shape=[1], minval = -x, maxval=x, dtype=tf.int64)
+            dy = tf.random.uniform(shape=[1], minval=-x, maxval=x, dtype=tf.int64)
         if z > 0:
-            dz = tf.random.uniform(shape=[1], minval = -x, maxval=x, dtype=tf.int64)
+            dz = tf.random.uniform(shape=[1], minval=-x, maxval=x, dtype=tf.int64)
         example['gt_occ'] = shift_tensor(example['gt_occ'], dx, dy, dz, 0.0, x, y, z)
         example['gt_free'] = shift_tensor(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
         return example
 
-    return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE)\
-                  .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
+        .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
 
 def simulate_partial_completion(dataset):
@@ -370,7 +409,7 @@ def simulate_random_partial_completion(dataset):
     return dataset.map(_add_partial_gt)
 
 
-def simulate_condition_occ(dataset, turn_on_prob = 0.0, turn_off_prob=0.0):
+def simulate_condition_occ(dataset, turn_on_prob=0.0, turn_off_prob=0.0):
     def _add_conditional(elem):
         x = elem['gt_occ']
         x = x + tf.cast(tf.random.uniform(x.shape) < turn_on_prob, tf.float32)
@@ -422,10 +461,10 @@ def add_angle(dataset):
 #             for sr in group:
 #                 i+=1
 #                 bar.update(i, message=group_name)
-                
+
 #                 gt_vox = load_gt_voxels(sr.filepath, sr.augmentation)
 #                 gt.append(gt_vox)
-            
+
 #                 data['id'].append(sr.id)
 #                 data['shape_category'].append(sr.category)
 
@@ -439,11 +478,6 @@ def add_angle(dataset):
 #             write_to_tfrecord(ds, join(shapenet_record_path, group_name + ".tfrecord"))
 
 
-
-
-
-
-        
 # def load_shapenet(shapes = "all"):
 #     records = [f for f in os.listdir(shapenet_record_path)
 #                if f.endswith(".tfrecord")]
@@ -459,11 +493,10 @@ def add_angle(dataset):
 #     return ds
 
 
-
 # def write_to_tfrecord(dataset, record_file):
 #     def _bytes_feature(value):
 #         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-    
+
 #     """Returns a float_list from a float / double."""
 #     def _float_feature(value):
 #         return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
@@ -482,9 +515,7 @@ def add_angle(dataset):
 #             example = tf.train.Example(features=features)
 
 #             writer.write(example.SerializeToString())
-            
 
-            
 
 # def read_from_record(record_file):
 #     raw_dataset = tf.data.TFRecordDataset(record_file)
@@ -505,11 +536,11 @@ def add_angle(dataset):
 #         t = tf.io.parse_tensor(example['gt_occ'], tf.float32)
 #         return t.shape
 #     shape = _get_shape(raw_dataset)
-        
+
 
 #     def _parse_voxelgrid_function(example_proto):
 #         voxel_grid_fields = ['gt_occ', 'gt_free', 'known_occ', 'known_free']
-        
+
 #         # Parse the input tf.Example proto using the dictionary above.
 #         example = tf.io.parse_single_example(example_proto, voxelgrid_description)
 #         for field in voxel_grid_fields:
@@ -517,10 +548,9 @@ def add_angle(dataset):
 #             example[field].set_shape(shape)
 
 #         return example
-        
+
 #     parsed_dataset = raw_dataset.map(_parse_voxelgrid_function)
 #     return parsed_dataset
-
 
 
 # obj = "025_mug"
@@ -541,10 +571,9 @@ def add_angle(dataset):
 # def load_data(from_record=False):
 
 
-
 #     if from_record:
 #         return read_from_record(record_name)
-    
+
 
 #     files = [f for f in os.listdir(occ_path)]
 #     files.sort()
@@ -574,6 +603,5 @@ def add_angle(dataset):
 #     return array3d.reshape(a/s, s, b/s, s, c/s, s).max(axis=(1,3,5))
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     print("Not meant to be executed as main script")
-    

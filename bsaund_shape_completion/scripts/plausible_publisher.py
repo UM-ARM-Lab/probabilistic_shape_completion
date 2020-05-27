@@ -38,10 +38,10 @@ if __name__ == "__main__":
     rospy.init_node('shape_publisher')
     rospy.loginfo("Data Publisher")
 
-    records = data_tools.load_shapenet_metadata(shuffle=False)
+    train_records, test_records = data_tools.load_shapenet_metadata(shuffle=False)
 
     VG_PUB = VoxelgridPublisher()
 
-    selection_sub = send_display_names_from_metadata(records, publish_selection)
+    selection_sub = send_display_names_from_metadata(train_records, publish_selection)
 
     rospy.spin()

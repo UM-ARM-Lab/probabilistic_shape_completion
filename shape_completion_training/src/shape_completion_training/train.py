@@ -29,10 +29,10 @@ params = {
 
 
 if __name__ == "__main__":
-    data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
 
     # data = data_ycb
-    data = data_shapenet
+    data = train_data_shapenet
 
     # if params['network'] == 'VoxelCNN':
     #     sim_input_fn=data_tools.simulate_omniscient_input

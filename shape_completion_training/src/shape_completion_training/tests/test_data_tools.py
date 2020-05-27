@@ -4,9 +4,10 @@ import tensorflow as tf
 import numpy as np
 from shape_completion_training.voxelgrid import conversions
 
+
 class TestDatasetLoading(TestCase):
     def test_dataset_exists_and_can_be_loaded(self):
-        data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+        train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
 
 
 class TestObservationModel(TestCase):

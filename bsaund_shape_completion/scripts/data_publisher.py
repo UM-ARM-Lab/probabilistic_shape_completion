@@ -53,7 +53,7 @@ def run_inference(elem):
     inference["predicted_occ"] = sample_evaluation.get_best_particle(
         metric=lambda a, b: -metrics.chamfer_distance(a, b, scale=0.01, downsample=2).numpy())
     VG_PUB.publish_inference(inference)
-    fit_to_particles(records, sample_evaluation)
+    fit_to_particles(train_records, sample_evaluation)
 
     return inference
 
@@ -216,11 +216,11 @@ if __name__ == "__main__":
     rospy.init_node('shape_publisher')
     rospy.loginfo("Data Publisher")
 
-    records = data_tools.load_shapenet_metadata(shuffle=False)
+    train_records, test_records = data_tools.load_shapenet_metadata(shuffle=False)
     load_network()
 
     VG_PUB = VoxelgridPublisher()
 
-    selection_sub = send_display_names_from_metadata(records, publish_selection)
+    selection_sub = send_display_names_from_metadata(test_records, publish_selection)
 
     rospy.spin()

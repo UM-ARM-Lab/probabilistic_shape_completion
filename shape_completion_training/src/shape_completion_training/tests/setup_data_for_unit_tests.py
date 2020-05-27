@@ -8,8 +8,8 @@ import numpy as np
 test_dataset_filepath = "voxel_grid_test_data.npy"
 
 def create_tests_dataset():
-    data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
-    data_shapenet = data_shapenet.shuffle(1000)
+    train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    data_shapenet = train_data_shapenet.shuffle(1000)
 
     test_shapes = []
 
