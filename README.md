@@ -54,6 +54,8 @@ In normal operation just start a `shape_completion_node.py`. Requests are made e
 1. Download shapenet and put in the `shape_completion_training/data` folder. Unzip.
 2. Install pyassimp `pip install pyassimp=4.1.3`
      https://github.com/assimp/assimp/issues/2343
+3. Install pcl: Unfortunately I have found problems with `pip install python-pcl` on Ubuntu 18. Still try `pip` first, otherwise see: https://github.com/strawlab/python-pcl/issues/317
+3. 
 3. Install binvox
 4. If running over ssh, set external display for binvox.
 ``` 
