@@ -2,10 +2,11 @@ from __future__ import print_function
 import rospy
 from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
 from std_msgs.msg import String
+from shape_completion_training.model import data_tools
 
 
 def send_display_names_from_metadata(metadata, callback):
-    names_list = [elem['id'].numpy() + elem['augmentation'].numpy() for _, elem in metadata.enumerate()]
+    names_list = [data_tools.get_unique_name(elem) for _, elem in metadata.enumerate()]
     return send_display_names(names_list, lambda ind, name: callback(metadata, ind, name))
 
 

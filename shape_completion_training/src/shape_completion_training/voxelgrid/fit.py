@@ -4,7 +4,7 @@ import pcl
 import numpy as np
 
 
-def icp(voxelgrid_to_transform, template_voxelgrid, scale, max_iter=10, downsample = 1):
+def icp_transform(voxelgrid_to_transform, template_voxelgrid, scale, max_iter=10, downsample = 1):
     """
     Returns a voxelgrid fitted to the template using ICP
     @param max_iter: maximum iterations of ICP
@@ -28,5 +28,10 @@ def icp(voxelgrid_to_transform, template_voxelgrid, scale, max_iter=10, downsamp
         source, target, max_iter=max_iter)
 
     T = np.linalg.inv(transf)
+    return T
+
+
+def icp(voxelgrid_to_transform, template_voxelgrid, scale, max_iter=10, downsample = 1):
+    T = icp_transform(voxelgrid_to_transform, template_voxelgrid, scale, max_iter, downsample)
     vg_icp = conversions.transform_voxelgrid(voxelgrid_to_transform, T, scale=scale)
     return vg_icp

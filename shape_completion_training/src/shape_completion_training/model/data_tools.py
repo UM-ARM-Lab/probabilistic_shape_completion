@@ -222,6 +222,15 @@ def group_shapenet_files(shapenet_files, group_size):
     return groups
 
 
+def get_unique_name(datum):
+    """
+    Returns a unique name for the datum
+    @param datum:
+    @return:
+    """
+    return datum['id'].numpy() + datum['augmentation'].numpy()
+
+
 def load_shapenet(shapes = "all", shuffle=True):
     ds = load_shapenet_metadata(shapes, shuffle)
     return load_voxelgrids(ds)
