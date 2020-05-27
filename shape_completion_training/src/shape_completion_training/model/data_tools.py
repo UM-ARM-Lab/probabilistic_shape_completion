@@ -257,7 +257,7 @@ def _load_shapenet_metadata_train_or_test(shapes="all", shuffle=True, prefix="tr
     return ds
 
 
-def _split_train_and_test(shapenet_records, test_ratio=0.1):
+def _split_train_and_test(shapenet_records, test_ratio=0.05):
     train_ids = []
     test_ids = []
     train_records = []
