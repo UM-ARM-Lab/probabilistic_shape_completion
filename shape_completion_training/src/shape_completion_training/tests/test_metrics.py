@@ -96,9 +96,9 @@ class TestMetrics(unittest.TestCase):
 
         def m(vg1, vg2):
             vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=2)
-            return -metrics.chamfer_distance(vg1, vg_fit, scale=0.1, downsample=2)
+            return metrics.chamfer_distance(vg1, vg_fit, scale=0.1, downsample=2)
 
-        ind, elem = metrics.highest_match(base, d, m)
+        ind, elem = metrics.highest_match(base, d, m, maximize=False)
         self.assertEqual(2, ind)
 
     def test_highest_match_using_fit_and_iou(self):

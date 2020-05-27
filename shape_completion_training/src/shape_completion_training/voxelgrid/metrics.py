@@ -15,7 +15,7 @@ def iou(voxelgrid_1, voxelgrid_2, threshold=0.5):
     v2 = tf.cast(voxelgrid_2 > threshold, tf.float32)
 
     intersection = tf.reduce_sum(tf.cast((v1 + v2) > 1.5, tf.float32))
-    union = tf.reduce_sum(tf.cast((v1+v2) > 0.5, tf.float32))
+    union = tf.reduce_sum(tf.cast((v1 + v2) > 0.5, tf.float32))
     return intersection / union
 
 
@@ -40,14 +40,25 @@ def p_correct_geometric_mean(estimate_voxelgrid, gt_voxelgrid):
     gt = tf.cast(gt_voxelgrid > 0.5, tf.float32)
     p_voxel_correct = 1.0 - tf.math.abs(gt - estimate_voxelgrid)
     return utils.reduce_geometric_mean(p_voxel_correct)
-    # num_elements = tf.cast(tf.size(p_voxel_correct), tf.float32)
-    # p_correct = tf.exp(tf.reduce_sum(tf.math.log(p_voxel_correct))/num_elements)
-    # return p_correct
 
 
-def highest_match(test_vg, vg_list, metric=iou):
+def best_match_value(test_vg, vg_list, metric, maximize=True):
+    """
+    returns the
+    @param maximize: bool indicating whether to maximize (default True) or minimize the metric
+    @param test_vg: voxelgrid
+    @param vg_list: list of voxelgrids
+    @param metric:
+    @return: the value of the best match
+    """
+    ind, elem = highest_match(test_vg, vg_list, metric=metric)
+    return metric(test_vg, elem)
+
+
+def highest_match(test_vg, vg_list, metric=iou, maximize=True):
     """
     Returns the index and element of vg_list that maximizes metric(test_vg, element)
+    @param maximize: bool indicating whether to maximize (default True) or minimize the metric
     @param test_vg: voxelgrid
     @param vg_list: list of voxelgrids
     @param metric: metric function of two voxelgrids
@@ -58,8 +69,10 @@ def highest_match(test_vg, vg_list, metric=iou):
     best_elem = None
     best_val = -np.inf
 
+    maximize_factor = 1 if maximize else -1
+
     for i, elem in enumerate(vg_list):
-        val = metric(test_vg, elem)
+        val = maximize_factor * metric(test_vg, elem)
         if val > best_val:
             best_ind = i
             best_elem = elem
