@@ -15,4 +15,5 @@ if __name__ == "__main__":
 
     for model_name in MODELS_TO_EVALUATE:
         mr = ModelRunner(training=False, trial_path=model_name)
-        model_evaluator.evaluate_model(mr.model, test_ds, test_set_size)
+        evaluation = model_evaluator.evaluate_model(mr.model, test_ds, test_set_size)
+        model_evaluator.save_evaluation(evaluation)

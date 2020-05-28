@@ -257,7 +257,7 @@ def _load_shapenet_metadata_train_or_test(shapes="all", shuffle=True, prefix="tr
     return ds
 
 
-def _split_train_and_test(shapenet_records, test_ratio=0.05):
+def _split_train_and_test(shapenet_records, test_ratio):
     train_ids = []
     test_ids = []
     train_records = []
@@ -288,9 +288,9 @@ def _list_of_shapenet_records_to_dict(shapenet_records):
     return data
 
 
-def write_shapenet_to_tfrecord(shape_ids="all"):
+def write_shapenet_to_tfrecord(test_ratio, shape_ids="all"):
     all_files = get_all_shapenet_files(shape_ids)
-    train_files, test_files = _split_train_and_test(all_files)
+    train_files, test_files = _split_train_and_test(all_files, test_ratio)
     train_data = _list_of_shapenet_records_to_dict(train_files)
     test_data = _list_of_shapenet_records_to_dict(test_files)
 

@@ -3,6 +3,8 @@ from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import utils
 import tensorflow_probability as tfp
+import rospkg
+import pickle
 import progressbar
 
 
@@ -20,6 +22,23 @@ def _observation_model(observation, underlying_state, std_dev_in_voxels):
     error = observed_depth - expected_depth
     depth_probs = tfp.distributions.Normal(0, std_dev_in_voxels).prob(error)
     return depth_probs
+
+
+def _get_path():
+    r = rospkg.RosPack()
+    trial_path = pathlib.Path(r.get_path('shape_completion_training')) / "trials" / \
+                 "evaluation.pkl"
+    return trial_path.as_posix()
+
+
+def load_evaluation():
+    with open(_get_path(), "rb") as f:
+        return pickle.load(f)
+
+
+def save_evaluation(evaluation_dict):
+    with open(_get_path(), "wb") as f:
+        pickle.dump(evaluation_dict, f)
 
 
 def evaluate_model(model, test_set, test_set_size, num_particles=100):
