@@ -174,16 +174,14 @@ def get_all_shapenet_files(shape_ids):
         category = shape_ids[i]
         shape_path = join(shapenet_load_path, category)
         objs = os.listdir(shape_path)
-        for obj in objs:
+        for obj in sorted(objs):
             obj_fp = join(shape_path, obj, "models")
             augs = [f[len('model_augmented_'):-len('.wire.binvox')]
                     for f in os.listdir(obj_fp)
                     if f.startswith("model_augmented")
                     if f.endswith(".binvox")]
 
-            augs = list(set(augs))
-            augs.sort()
-            for augmentation in augs:
+            for augmentation in sorted(list(set(augs))):
                 sr = ShapenetRecord()
                 sr.id = obj
                 sr.filepath = obj_fp

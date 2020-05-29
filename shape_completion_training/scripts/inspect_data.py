@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 from shape_completion_training.model import data_tools
 
 
@@ -16,7 +17,15 @@ def report(ds_name, info):
         print("{}: {}".format(k, v))
 
 
+def write_all_files():
+    with open("./file_names.txt", "w") as f:
+        for record in data_tools.get_all_shapenet_files(shape_ids=data_tools.shapenet_labels(["mug"])):
+            f.write("{}\n".format(record.id))
+
+
+
 if __name__ == "__main__":
     train_ds, test_ds = data_tools.load_shapenet_metadata()
     print(report("test dataset", process(test_ds)))
+    # write_all_files()
 
