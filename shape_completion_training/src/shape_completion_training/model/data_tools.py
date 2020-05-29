@@ -229,6 +229,28 @@ def get_unique_name(datum):
     return datum['id'].numpy() + datum['augmentation'].numpy()
 
 
+class AddressableShapenet():
+    def __init__(self):
+        self.train_ds, self.test_ds = load_shapenet_metadata(shuffle=False)
+        self.train_map = {}
+        self.test_map = {}
+
+        for i, elem in self.train_ds.enumerate():
+            self.train_map[get_unique_name(elem)] = i
+        for i, elem in self.test_ds.enumerate():
+            self.test_map[get_unique_name(elem)] = i
+
+    def get(self, unique_name):
+        if unique_name in self.train_map:
+            ds = self.train_ds.skip(self.train_map[unique_name])
+        elif unique_name in self.test_map:
+            ds = self.test_ds.skip(self.test_map[unique_name])
+        else:
+            raise Exception("No element {} in dataset".format(unique_name))
+        ds = simulate_input(load_voxelgrids(ds.take(1)), 0, 0, 0)
+        return next(ds.__iter__())
+
+
 def load_shapenet(shapes="all", shuffle=True):
     train_ds, test_ds = load_shapenet_metadata(shapes, shuffle)
     return load_voxelgrids(train_ds), load_voxelgrids(test_ds)

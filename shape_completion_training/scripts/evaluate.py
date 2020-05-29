@@ -17,3 +17,4 @@ if __name__ == "__main__":
         mr = ModelRunner(training=False, trial_path=model_name)
         evaluation = model_evaluator.evaluate_model(mr.model, test_ds, test_set_size)
         model_evaluator.save_evaluation(evaluation)
+        print("Finished evaluating dataset")
