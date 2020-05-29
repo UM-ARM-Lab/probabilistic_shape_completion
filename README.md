@@ -56,6 +56,7 @@ In normal operation just start a `shape_completion_node.py`. Requests are made e
      https://github.com/assimp/assimp/issues/2343
 3. Install pcl: Unfortunately I have found problems with `pip install python-pcl` on Ubuntu 18. Still try `pip` first, otherwise see: https://github.com/strawlab/python-pcl/issues/317
 3. Install `pip install progressbar2`
+3. Install `pip install tensorflow-probability` (note I used `pip install tensorflow-probability==0.9.0`)
 3. Install binvox
 4. If running over ssh, set external display for binvox.
 ``` 
