@@ -4,6 +4,7 @@ import pickle
 from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import fit, conversions
 from shape_completion_training.model import model_evaluator
+from shape_completion_training.model.utils import memoize
 import progressbar
 
 
@@ -14,6 +15,7 @@ def _get_path():
     return trial_path.as_posix()
 
 
+@memoize
 def load_plausibilities():
     with open(_get_path(), "rb") as f:
         return pickle.load(f)
@@ -22,6 +24,12 @@ def load_plausibilities():
 def save_plausibilities(plausibilities_dict):
     with open(_get_path(), "wb") as f:
         pickle.dump(plausibilities_dict, f)
+
+
+def get_fits_for(name):
+    fits = load_plausibilities()[name]
+    return sorted([(k, v["T"], v["observation_probability"]) for k, v in fits.items()], key=lambda x: x[2],
+                  reverse=True)
 
 
 def compute_icp_fit_dict(metadata):

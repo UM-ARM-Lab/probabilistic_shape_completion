@@ -26,16 +26,13 @@ def fit_2_5D_view(metadata, reference):
     # ds = metadata
     # ds = data_tools.load_voxelgrids(ds)
     # ds = data_tools.simulate_input(ds, 0, 0, 0)
-    sn = data_tools.AddressableShapenet()
+    # sn = data_tools.AddressableShapenet(use_train=False)
+    sn = data_tools.get_addressible_shapenet(use_train=False)
     print("Loading plausibilities")
-    best_fits = plausiblility.load_plausibilities()
+    best_fits = plausiblility.get_fits_for(data_tools.get_unique_name(reference))
     print("plausibilities loaded")
-    i = 0
-    # for elem in ds:
-    #     i += 1
-    #     if i < 60:
-    #         continue
-    for elem_name, T in best_fits[data_tools.get_unique_name(reference)].items():
+
+    for elem_name, T, p in best_fits:
         elem = sn.get(elem_name)
         # T = best_fits[data_tools.get_unique_name(reference)][data_tools.get_unique_name(elem)]
         # T = fit.icp_transform(elem["known_occ"], reference, scale=0.01)
@@ -43,7 +40,7 @@ def fit_2_5D_view(metadata, reference):
         VG_PUB.publish("sampled_occ", fitted)
         p = model_evaluator.observation_likelihood_geometric_mean(reference['gt_occ'], fitted, std_dev_in_voxels=2)
         print("Best fit for {}: p={}".format(data_tools.get_unique_name(elem), p))
-        rospy.sleep(0.5)
+        rospy.sleep(0.1)
 
 
 if __name__ == "__main__":

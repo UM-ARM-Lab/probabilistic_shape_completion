@@ -6,6 +6,7 @@ from os.path import join
 import tensorflow as tf
 from shape_completion_training import binvox_rw
 from shape_completion_training.voxelgrid import conversions
+from shape_completion_training.model.utils import memoize
 import numpy as np
 
 shape_map = {"airplane": "02691156",
@@ -229,16 +230,23 @@ def get_unique_name(datum):
     return datum['id'].numpy() + datum['augmentation'].numpy()
 
 
+@memoize
+def get_addressible_shapenet(**kwargs):
+    return AddressableShapenet(**kwargs)
+
+
 class AddressableShapenet():
-    def __init__(self):
+    def __init__(self, use_test=True, use_train=True):
         self.train_ds, self.test_ds = load_shapenet_metadata(shuffle=False)
         self.train_map = {}
         self.test_map = {}
 
-        for i, elem in self.train_ds.enumerate():
-            self.train_map[get_unique_name(elem)] = i
-        for i, elem in self.test_ds.enumerate():
-            self.test_map[get_unique_name(elem)] = i
+        if use_train:
+            for i, elem in self.train_ds.enumerate():
+                self.train_map[get_unique_name(elem)] = i
+        if use_test:
+            for i, elem in self.test_ds.enumerate():
+                self.test_map[get_unique_name(elem)] = i
 
     def get(self, unique_name):
         if unique_name in self.train_map:
