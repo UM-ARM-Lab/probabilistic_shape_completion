@@ -29,10 +29,15 @@ def fit_2_5D_view(metadata, reference):
     # sn = data_tools.AddressableShapenet(use_train=False)
     sn = data_tools.get_addressible_shapenet(use_train=False)
     print("Loading plausibilities")
-    best_fits = plausiblility.get_fits_for(data_tools.get_unique_name(reference))
+    # best_fits = plausiblility.get_fits_for(data_tools.get_unique_name(reference))
+    fits = plausiblility.load_plausibilities()[data_tools.get_unique_name(reference)]
+    valid_fits = [(k, v["T"], v["observation_probability"], v["out_of_range_count"])
+                  for k, v in fits.items()
+                  if v["out_of_range_count"] == 0]
     print("plausibilities loaded")
 
-    for elem_name, T, p in best_fits:
+    # for elem_name, T, p in best_fits:
+    for elem_name, T, p, oob in valid_fits:
         elem = sn.get(elem_name)
         # T = best_fits[data_tools.get_unique_name(reference)][data_tools.get_unique_name(elem)]
         # T = fit.icp_transform(elem["known_occ"], reference, scale=0.01)
