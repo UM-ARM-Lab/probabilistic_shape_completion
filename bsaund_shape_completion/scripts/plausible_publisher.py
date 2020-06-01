@@ -42,7 +42,7 @@ def fit_2_5D_view(metadata, reference):
         # T = best_fits[data_tools.get_unique_name(reference)][data_tools.get_unique_name(elem)]
         # T = fit.icp_transform(elem["known_occ"], reference, scale=0.01)
         fitted = conversions.transform_voxelgrid(elem['gt_occ'], T, scale=0.01)
-        VG_PUB.publish("sampled_occ", fitted)
+        VG_PUB.publish("plausible", fitted)
         p = model_evaluator.observation_likelihood_geometric_mean(reference['gt_occ'], fitted, std_dev_in_voxels=2)
         print("Best fit for {}: p={}".format(data_tools.get_unique_name(elem), p))
         rospy.sleep(0.1)

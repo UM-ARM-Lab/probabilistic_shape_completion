@@ -16,7 +16,7 @@ class VoxelgridPublisher:
     def __init__(self):
         self.pubs = {}
         pub_names = ["gt", "known_occ", "known_free", "predicted_occ", "predicted_free", "sampled_occ",
-                     "conditioned_occ", "mismatch", "aux"]
+                     "conditioned_occ", "mismatch", "aux", "plausible"]
         for name in pub_names:
             self.add(name, name + "_voxel_grid")
 
