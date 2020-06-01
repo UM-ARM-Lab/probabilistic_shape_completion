@@ -27,8 +27,13 @@ def save_plausibilities(plausibilities_dict):
 
 
 def get_fits_for(name):
+    """
+    @param name:
+    @return: sorted list of (other_name, T, observation_probability, out_of_range_count)
+    """
     fits = load_plausibilities()[name]
-    return sorted([(k, v["T"], v["observation_probability"]) for k, v in fits.items()], key=lambda x: x[2],
+    return sorted([(k, v["T"], v["observation_probability"], v["out_of_range_count"]) for k, v in fits.items()],
+                  key=lambda x: x[2],
                   reverse=True)
 
 
@@ -62,7 +67,9 @@ def compute_icp_fit_dict(metadata):
                 fitted = conversions.transform_voxelgrid(other['gt_occ'], T, scale=0.01)
                 p = model_evaluator.observation_likelihood_geometric_mean(reference['gt_occ'], fitted,
                                                                           std_dev_in_voxels=2)
-                best_fit_for_reference[other_name] = {"T": T, "observation_probability": p}
+                oob = model_evaluator.out_of_range_count(reference['gt_occ'], fitted, width=4)
+                best_fit_for_reference[other_name] = {"T": T, "observation_probability": p,
+                                                      "out_of_range_count": oob}
 
             best_fits[data_tools.get_unique_name(reference)] = best_fit_for_reference
     return best_fits
