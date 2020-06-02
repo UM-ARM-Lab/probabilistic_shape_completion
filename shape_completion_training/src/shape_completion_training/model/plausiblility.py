@@ -1,9 +1,10 @@
 import rospkg
 import pathlib
 import pickle
+
+from shape_completion_training.model.observation_model import observation_likelihood_geometric_mean, out_of_range_count
 from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import fit, conversions
-from shape_completion_training.model import model_evaluator
 from shape_completion_training.model.utils import memoize
 import progressbar
 
@@ -24,6 +25,14 @@ def load_plausibilities():
 def save_plausibilities(plausibilities_dict):
     with open(_get_path(), "wb") as f:
         pickle.dump(plausibilities_dict, f)
+
+
+def get_valid_fits(name):
+    fits = load_plausibilities()[name]
+    valid_fits = [(k, v["T"], v["observation_probability"], v["out_of_range_count"])
+                  for k, v in fits.items()
+                  if v["out_of_range_count"] == 0]
+    return valid_fits
 
 
 def get_fits_for(name):
@@ -65,9 +74,9 @@ def compute_icp_fit_dict(metadata):
                 # print("    Fitting: {}".format(other_name))
                 T = fit.icp_transform(other['known_occ'], reference['known_occ'], scale=0.01)
                 fitted = conversions.transform_voxelgrid(other['gt_occ'], T, scale=0.01)
-                p = model_evaluator.observation_likelihood_geometric_mean(reference['gt_occ'], fitted,
-                                                                          std_dev_in_voxels=2)
-                oob = model_evaluator.out_of_range_count(reference['gt_occ'], fitted, width=4)
+                p = observation_likelihood_geometric_mean(reference['gt_occ'], fitted,
+                                                          std_dev_in_voxels=2)
+                oob = out_of_range_count(reference['gt_occ'], fitted, width=4)
                 best_fit_for_reference[other_name] = {"T": T, "observation_probability": p,
                                                       "out_of_range_count": oob}
 

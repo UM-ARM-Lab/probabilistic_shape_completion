@@ -1,6 +1,8 @@
 from unittest import TestCase
-from shape_completion_training.model.model_evaluator import *
 import numpy as np
+
+from shape_completion_training.model.observation_model import observation_likelihood
+
 
 class TestObservationModel(TestCase):
     def test_observation_probability(self):

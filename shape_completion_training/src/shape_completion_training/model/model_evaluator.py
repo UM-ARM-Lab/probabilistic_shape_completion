@@ -1,85 +1,13 @@
-import tensorflow as tf
 from shape_completion_training.voxelgrid import metrics
+from shape_completion_training.voxelgrid.metrics import best_match_value, chamfer_distance
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model import data_tools
-from shape_completion_training.model import utils
-import tensorflow_probability as tfp
+from shape_completion_training.model import plausiblility
 import rospkg
 import pickle
 import progressbar
 import pathlib
-
-
-def observation_likelihood(observation, underlying_state, std_dev_in_voxels=1):
-    return tf.reduce_prod(_observation_model(observation, underlying_state, std_dev_in_voxels))
-
-
-def observation_likelihood_geometric_mean(observation, underlying_state, std_dev_in_voxels=1):
-    return utils.reduce_geometric_mean(_observation_model(observation, underlying_state, std_dev_in_voxels))
-
-
-def mask_high_gradient(expected_depth, gradient_threshold=10, inflation=3):
-    dx, dy = tf.image.image_gradients(tf.expand_dims(tf.expand_dims(expected_depth, 0), -1))
-    mask = tf.maximum(tf.abs(dx), tf.abs(dy))
-    mask = tf.cast(mask > 10, tf.float32)
-    mask = tf.nn.convolution(mask, tf.ones([3, 3, 1, 1]), padding='SAME')
-    mask = tf.clip_by_value(tf.squeeze(mask), 0.0, 1.0)
-    return mask
-
-
-def mask_empty(expected_depth, observed_depth, max_depth=64):
-    return tf.cast(tf.logical_and(observed_depth == max_depth, expected_depth == max_depth), tf.float32)
-
-
-def range_likelihood(error, width):
-    return tf.cast(tf.abs(error) < width, tf.float32)
-
-
-def out_of_range_count(observation, underlying_state, width=4):
-    """
-    return the number of voxels in the observation that are out of the specified range
-    given an underlying state
-    @param observation:
-    @param underlying_state:
-    @param range:
-    @return:
-    """
-    observed_depth = data_tools.simulate_depth_image(observation)
-    expected_depth = data_tools.simulate_depth_image(underlying_state)
-    error = observed_depth - expected_depth
-    range_probs = range_likelihood(error, width)
-    p = range_probs
-
-    mask = mask_high_gradient(expected_depth)
-    p = p * (1 - mask) + mask
-
-    return tf.reduce_sum(1-p)
-
-
-def _observation_model(observation, underlying_state, std_dev_in_voxels, max_depth=64):
-    observed_depth = data_tools.simulate_depth_image(observation)
-    expected_depth = data_tools.simulate_depth_image(underlying_state)
-    error = observed_depth - expected_depth
-    # error = conversions.format_voxelgrid(error, True, True)
-    # error = -1 * tf.nn.max_pool(-1 * error, ksize=5, strides=1, padding="VALID")
-    # error = conversions.format_voxelgrid(error, False, False)
-
-    depth_probs = tfp.distributions.Normal(0, std_dev_in_voxels).prob(error)
-
-
-    """Mask out high gradient areas, set to constant probability"""
-    mask = mask_high_gradient(expected_depth)
-    depth_probs = depth_probs * (1 - mask) + (1.0 / max_depth) * mask
-
-    """Mask out correclty predicted empty space. Set to 1.0"""
-    mask = mask_empty(observed_depth, expected_depth)
-    depth_probs = depth_probs * (1 - mask) + mask
-
-    """Add small uniform support everywhere"""
-    alpha = 0.01
-    depth_probs = depth_probs * (1 - alpha) + (1.0 / max_depth) * alpha
-
-    return depth_probs
+import tensorflow as tf
 
 
 def _get_path():
@@ -98,6 +26,16 @@ def save_evaluation(evaluation_dict):
         pickle.dump(evaluation_dict, f)
 
 
+def compute_plausible_distances(ref_name, particles):
+    sn = data_tools.get_addressible_shapenet()
+    fits = plausiblility.load_plausibilities()[ref_name]
+    valid_fits = plausiblility.get_valid_fits(ref_name)
+    plausibles = [conversions.transform_voxelgrid(sn.get(name)['gt_occ'], T) for name, T, _, _ in valid_fits]
+
+    distances = [[chamfer_distance(a, b, scale=0.01, downsample=4).numpy() for a in particles] for b in plausibles]
+    return distances
+
+
 def evaluate_model(model, test_set, test_set_size, num_particles=100):
     all_metrics = {}
 
@@ -110,11 +48,18 @@ def evaluate_model(model, test_set, test_set_size, num_particles=100):
     with progressbar.ProgressBar(widgets=widgets, max_value=test_set_size) as bar:
         for i, elem in test_set.batch(1).enumerate():
             # print("Evaluating {}".format(data_tools.get_unique_name(elem)))
-            bar.update(i.numpy(), CurrentShape=data_tools.get_unique_name(elem)[0])
+            elem_name = data_tools.get_unique_name(elem)[0]
+            bar.update(i.numpy(), CurrentShape=elem_name)
             results = {}
+            tf.random.set_seed(42)
             particles = [model(elem)['predicted_occ'] for _ in range(num_particles)]
-            results["best_particle_iou"] = metrics.best_match_value(elem['gt_occ'], particles, metric=metrics.iou)
-            all_metrics[data_tools.get_unique_name(elem)[0]] = results
+            results["best_particle_iou"] = best_match_value(elem['gt_occ'], particles, metric=metrics.iou)
+            results["best_particle_chamfer"] = best_match_value(elem['gt_occ'], particles,
+                                                                metric=lambda a, b: chamfer_distance(a, b, scale=0.01,
+                                                                                                     downsample=4))
+            results["particle_distances"] = compute_plausible_distances(elem_name, particles)
+            all_metrics[elem_name] = results
+
     return all_metrics
 
 

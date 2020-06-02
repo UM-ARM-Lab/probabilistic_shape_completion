@@ -1,5 +1,6 @@
 from __future__ import print_function
 import rospy
+import shape_completion_training.model.observation_model
 from shape_completion_training.model import data_tools
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
 from bsaund_shape_completion.shape_selection import send_display_names_from_metadata
@@ -30,10 +31,11 @@ def fit_2_5D_view(metadata, reference):
     sn = data_tools.get_addressible_shapenet(use_train=False)
     print("Loading plausibilities")
     # best_fits = plausiblility.get_fits_for(data_tools.get_unique_name(reference))
-    fits = plausiblility.load_plausibilities()[data_tools.get_unique_name(reference)]
-    valid_fits = [(k, v["T"], v["observation_probability"], v["out_of_range_count"])
-                  for k, v in fits.items()
-                  if v["out_of_range_count"] == 0]
+    # fits = plausiblility.load_plausibilities()[data_tools.get_unique_name(reference)]
+    # valid_fits = [(k, v["T"], v["observation_probability"], v["out_of_range_count"])
+    #               for k, v in fits.items()
+    #               if v["out_of_range_count"] == 0]
+    valid_fits = plausiblility.get_valid_fits(data_tools.get_unique_name(reference))
     print("plausibilities loaded")
 
     # for elem_name, T, p in best_fits:
@@ -43,13 +45,13 @@ def fit_2_5D_view(metadata, reference):
         # T = fit.icp_transform(elem["known_occ"], reference, scale=0.01)
         fitted = conversions.transform_voxelgrid(elem['gt_occ'], T, scale=0.01)
         VG_PUB.publish("plausible", fitted)
-        p = model_evaluator.observation_likelihood_geometric_mean(reference['gt_occ'], fitted, std_dev_in_voxels=2)
+        p = shape_completion_training.model.observation_model.observation_likelihood_geometric_mean(reference['gt_occ'], fitted, std_dev_in_voxels=2)
         print("Best fit for {}: p={}".format(data_tools.get_unique_name(elem), p))
         rospy.sleep(0.1)
 
 
 if __name__ == "__main__":
-    rospy.init_node('shape_publisher')
+    rospy.init_node('plausible_shape_publisher')
     rospy.loginfo("Data Publisher")
 
     train_records, test_records = data_tools.load_shapenet_metadata(shuffle=False)

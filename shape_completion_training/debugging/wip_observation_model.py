@@ -1,5 +1,6 @@
 from __future__ import print_function
 import rospy
+import shape_completion_training.model.observation_model
 from shape_completion_training.model import data_tools
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
 from bsaund_shape_completion.shape_selection import send_display_names_from_metadata
@@ -30,9 +31,9 @@ def show_image(observation, underlying_state):
     # e = g.numpy() * 255.
     # Image.fromarray(e).show()
     # mask = model_evaluator.mask_high_gradient(expected_depth)
-    mask = model_evaluator.mask_empty(observed_depth, expected_depth)
+    mask = shape_completion_training.model.observation_model.mask_empty(observed_depth, expected_depth)
     # Image.fromarray(mask.numpy()*255.).show()
-    p = model_evaluator._observation_model(observation, underlying_state, 2)
+    p = shape_completion_training.model.observation_model._observation_model(observation, underlying_state, 2)
 
     # g = p * (1-mask) + 1.0/20 * mask
     # g = g.numpy()
@@ -62,10 +63,10 @@ def run():
     VG_PUB.publish("predicted_occ", good_fitted)
     VG_PUB.publish("sampled_occ", bad_fitted)
 
-    p_self = model_evaluator.observation_likelihood_geometric_mean(reference['gt_occ'], reference['gt_occ'])
-    p_good = model_evaluator.observation_likelihood_geometric_mean(good_fitted, reference['gt_occ'],
-                                                                   std_dev_in_voxels=1)
-    p_bad = model_evaluator.observation_likelihood_geometric_mean(bad_fitted, reference['gt_occ'])
+    p_self = shape_completion_training.model.observation_model.observation_likelihood_geometric_mean(reference['gt_occ'], reference['gt_occ'])
+    p_good = shape_completion_training.model.observation_model.observation_likelihood_geometric_mean(good_fitted, reference['gt_occ'],
+                                                                                                     std_dev_in_voxels=1)
+    p_bad = shape_completion_training.model.observation_model.observation_likelihood_geometric_mean(bad_fitted, reference['gt_occ'])
 
     print("self: {}, good: {}, bad: {}".format(p_self, p_good, p_bad))
 
@@ -76,10 +77,10 @@ def compare():
     best_fits = plausiblility.get_fits_for(name)
     for i in range(30):
         info = best_fits[i]
-        other_name, T, _ = best_fits[i]
+        other_name, T, _, _ = best_fits[i]
         fitted = conversions.transform_voxelgrid(sn.get(other_name)['gt_occ'], T, scale=0.01)
-        p = model_evaluator.observation_likelihood_geometric_mean(sn.get(name)['gt_occ'], fitted)
-        oob = model_evaluator.out_of_range_count(sn.get(name)['gt_occ'], fitted)
+        p = shape_completion_training.model.observation_model.observation_likelihood_geometric_mean(sn.get(name)['gt_occ'], fitted)
+        oob = shape_completion_training.model.observation_model.out_of_range_count(sn.get(name)['gt_occ'], fitted)
         VG_PUB.publish("sampled_occ", fitted)
         print("{}: name = {}: oob = {}: p= {}".format(i, other_name, oob, p))
 
