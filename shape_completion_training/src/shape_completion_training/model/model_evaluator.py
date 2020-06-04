@@ -41,7 +41,8 @@ def sample_particles(model, input_elem, num_particles):
 
 def compute_plausible_distances(ref_name, particles):
     plausibles = get_plausibles(ref_name)
-    distances = [[chamfer_distance(a, b, scale=0.01, downsample=4).numpy()
+    distances = [[chamfer_distance(tf.cast(a > 0.2, tf.float32), b,
+                                   scale=0.01, downsample=4).numpy()
                   for a in particles] for b in plausibles]
     return distances
 
@@ -70,5 +71,3 @@ def evaluate_model(model, test_set, test_set_size, num_particles=100):
             all_metrics[elem_name] = results
 
     return all_metrics
-
-
