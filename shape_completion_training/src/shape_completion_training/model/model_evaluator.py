@@ -26,13 +26,25 @@ def save_evaluation(evaluation_dict):
         pickle.dump(evaluation_dict, f)
 
 
-def compute_plausible_distances(ref_name, particles):
+def get_plausibles(shape_name):
     sn = data_tools.get_addressible_shapenet()
-    fits = plausiblility.load_plausibilities()[ref_name]
-    valid_fits = plausiblility.get_valid_fits(ref_name)
-    plausibles = [conversions.transform_voxelgrid(sn.get(name)['gt_occ'], T) for name, T, _, _ in valid_fits]
+    print("Loading valid fits")
+    valid_fits = plausiblility.get_valid_fits(shape_name)
+    print("Transforming plausibilities")
+    plausibles = [conversions.transform_voxelgrid(sn.get(name)['gt_occ'], T, scale=0.01)
+                  for name, T, _, _ in valid_fits]
+    return plausibles
 
-    distances = [[chamfer_distance(a, b, scale=0.01, downsample=4).numpy() for a in particles] for b in plausibles]
+
+def sample_particles(model, input_elem, num_particles):
+    tf.random.set_seed(42)
+    return [model(input_elem)['predicted_occ'] for _ in range(num_particles)]
+
+
+def compute_plausible_distances(ref_name, particles):
+    plausibles = get_plausibles(ref_name)
+    distances = [[chamfer_distance(a, b, scale=0.01, downsample=4).numpy()
+                  for a in particles] for b in plausibles]
     return distances
 
 
@@ -50,9 +62,8 @@ def evaluate_model(model, test_set, test_set_size, num_particles=100):
             # print("Evaluating {}".format(data_tools.get_unique_name(elem)))
             elem_name = data_tools.get_unique_name(elem)[0]
             bar.update(i.numpy(), CurrentShape=elem_name)
+            particles = sample_particles(model, elem, num_particles)
             results = {}
-            tf.random.set_seed(42)
-            particles = [model(elem)['predicted_occ'] for _ in range(num_particles)]
             results["best_particle_iou"] = best_match_value(elem['gt_occ'], particles, metric=metrics.iou).numpy()
             results["best_particle_chamfer"] = \
                 best_match_value(elem['gt_occ'], particles,
@@ -63,35 +74,3 @@ def evaluate_model(model, test_set, test_set_size, num_particles=100):
     return all_metrics
 
 
-class ModelEvaluator:
-    def __init__(self, model):
-        self.model = model
-
-    def evaluate_element(self, model_input, num_samples=100):
-        return DatumEvaluator(self.model, model_input, num_samples)
-
-
-class DatumEvaluator:
-    def __init__(self, model, model_input, num_samples):
-        self.model = model
-        self.model_input = model_input
-        self.particles = self.sample_particles(num_samples)
-
-    def sample_particles(self, num_samples):
-        return [self.model(self.model_input)['predicted_occ'] for _ in range(num_samples)]
-
-    def get_best_particle(self, metric=metrics.iou):
-        def score(vg):
-            return metric(self.model_input['gt_occ'], vg)
-
-        return max(self.particles, key=score)
-
-    def get_plausible_samples(self, dataset):
-        pass
-
-    def fit_best_sample(self, particle_ind, dataset, num_trials):
-        vg = self.particles[particle_ind]
-
-        def m(vg1, vg2):
-            vg_fit = fit.icp(vg2, vg1, scale=0.1, max_iter=10, downsample=2)
-            return -metrics.chamfer_distance(vg1, vg_fit, scale=0.1, downsample=2)

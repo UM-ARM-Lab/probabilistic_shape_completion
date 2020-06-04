@@ -91,6 +91,10 @@ def sequence_of_dicts_to_dict_of_sequences(seq_of_dicts):
     return dict_of_seqs
 
 
+def add_batch_to_dict(elem):
+    return {k: tf.expand_dims(v, axis=0) for k, v in elem.items()}
+
+
 def reduce_geometric_mean(tensor):
     return tf.exp(tf.reduce_mean(tf.math.log(tensor)))
 
