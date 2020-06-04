@@ -37,6 +37,10 @@ namespace mps_shape_completion_visualization
         cutoff_property_ = new rviz::FloatProperty("Threshold", 0.5,
                                                    "Voxels with values less than this will not be displayed",
                                                    this, SLOT(updateColorAndAlpha() ));
+
+        hide_property_ = new rviz::BoolProperty("Hide", false,
+                                                "Hide voxel grid",
+                                                this, SLOT(updateColorAndAlpha() ));
     }
 
 // After the top-level rviz::Display::initialize() does its own setup,
@@ -63,6 +67,7 @@ namespace mps_shape_completion_visualization
     void VoxelGridDisplay::reset()
     {
         MFDClass::reset();
+        visual_->reset();
     }
 
 // Set the current color and alpha values for each visual.
@@ -70,6 +75,7 @@ namespace mps_shape_completion_visualization
     {
         float alpha = alpha_property_->getFloat();
         Ogre::ColourValue color = color_property_->getOgreColor();
+        visual_->setHidden(hide_property_->getBool());
         visual_->setBinaryDisplay(binary_display_property_->getBool());
         visual_->setColor( color.r, color.g, color.b, alpha );
         visual_->setThreshold(cutoff_property_->getFloat());

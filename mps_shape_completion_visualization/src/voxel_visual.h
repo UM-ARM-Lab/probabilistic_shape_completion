@@ -40,9 +40,13 @@ public:
 
   void setBinaryDisplay(bool use_global_alpha);
   void setThreshold(float threshold);
+  void setHidden(bool hidden);
 
   //Rerenders the point cloud from the list of points and UI-selected properties
   void updatePointCloud();
+
+  void reset();
+
 
 private:
 
@@ -64,6 +68,7 @@ private:
   float r_, g_, b_, a_;
   bool binary_display_;
   float threshold_;
+  bool hidden_;
   
 };
 

@@ -57,6 +57,7 @@ private:
   boost::shared_ptr<VoxelGridVisual > visual_;
 
   // User-editable property variables.
+  rviz::BoolProperty* hide_property_;
   rviz::ColorProperty* color_property_;
   rviz::FloatProperty* alpha_property_;
   rviz::BoolProperty* binary_display_property_;

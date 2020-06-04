@@ -27,6 +27,14 @@ namespace mps_shape_completion_visualization
         scene_manager_->destroySceneNode( frame_node_ );
     }
 
+    void VoxelGridVisual::reset()
+    {
+        std::cout << "Reset called\n";
+        latest_msg = mps_shape_completion_msgs::OccupancyStamped();
+        voxel_grid_->clear();
+    }
+
+
     void VoxelGridVisual::setMessage( const mps_shape_completion_msgs::OccupancyStamped::ConstPtr& msg)
     {
         latest_msg = *msg;
@@ -35,10 +43,17 @@ namespace mps_shape_completion_visualization
 
     void VoxelGridVisual::updatePointCloud()
     {
+        if(hidden_)
+        {
+            voxel_grid_->clear();
+            return;
+        }
+
         if(latest_msg.occupancy.layout.dim.size() == 0)
         {
             return;
         }
+
         
         double scale = latest_msg.scale;
         voxel_grid_->setDimensions(scale, scale, scale);
@@ -118,6 +133,11 @@ namespace mps_shape_completion_visualization
     void VoxelGridVisual::setThreshold(float threshold)
     {
         threshold_ = threshold;
+    }
+
+    void VoxelGridVisual::setHidden(bool hidden)
+    {
+        hidden_ = hidden;
     }
 
 } // end namespace mps_shape_completion_visualization
