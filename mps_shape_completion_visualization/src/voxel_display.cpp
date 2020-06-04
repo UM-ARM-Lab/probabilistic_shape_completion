@@ -10,7 +10,6 @@
 #include <rviz/frame_manager.h>
 
 #include "voxel_visual.h"
-
 #include "voxel_display.h"
 
 namespace mps_shape_completion_visualization
@@ -20,14 +19,16 @@ namespace mps_shape_completion_visualization
 // constructor the parameters it needs to fully initialize.
     VoxelGridDisplay::VoxelGridDisplay()
     {
+        // We inherit the unreliable property, but do not want to display it
+        delete unreliable_property_;
+
         color_property_ = new rviz::ColorProperty( "Color", QColor( 204, 51, 204 ),
-                                                   "Color to draw the acceleration arrows.",
+                                                   "Color of the voxel grid",
                                                    this, SLOT( updateColorAndAlpha() ));
 
         alpha_property_ = new rviz::FloatProperty( "Alpha Multiple", 1.0,
                                                    "0 is fully transparent, 1.0 is fully opaque.",
                                                    this, SLOT( updateColorAndAlpha() ));
-
 
         binary_display_property_ = new rviz::BoolProperty("Binary Display", true,
                                                           "If checked, all voxels will have the same alpha",
@@ -36,8 +37,6 @@ namespace mps_shape_completion_visualization
         cutoff_property_ = new rviz::FloatProperty("Threshold", 0.5,
                                                    "Voxels with values less than this will not be displayed",
                                                    this, SLOT(updateColorAndAlpha() ));
-
-
     }
 
 // After the top-level rviz::Display::initialize() does its own setup,
@@ -78,7 +77,6 @@ namespace mps_shape_completion_visualization
     }
 
 
-// This is our callback to handle an incoming message.
     void VoxelGridDisplay::processMessage( const mps_shape_completion_msgs::OccupancyStamped::ConstPtr& msg)
     {
         // Here we call the rviz::FrameManager to get the transform from the
@@ -100,13 +98,8 @@ namespace mps_shape_completion_visualization
         visual_->setMessage( msg );
         visual_->setFramePosition( position );
         visual_->setFrameOrientation( orientation );
-
     }
-
-
-    
 } // end namespace mps_shape_completion_visualization
-
 
 
 // Tell pluginlib about this class.  It is important to do this in

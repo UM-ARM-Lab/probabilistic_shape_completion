@@ -17,9 +17,6 @@ namespace mps_shape_completion_visualization
 
         frame_node_ = parent_node->createChildSceneNode();
 
-        // We create the arrow object within the frame node so that we can
-        // set its position and direction relative to its header frame.
-        // voxel_grid_.reset(new rviz::PointCloud( scene_manager_, frame_node_ ));
         voxel_grid_.reset(new rviz::PointCloud());
         voxel_grid_->setRenderMode(rviz::PointCloud::RM_BOXES);
         frame_node_->attachObject(voxel_grid_.get());
@@ -27,7 +24,6 @@ namespace mps_shape_completion_visualization
 
     VoxelGridVisual::~VoxelGridVisual()
     {
-        // Destroy the frame node since we don't need it anymore.
         scene_manager_->destroySceneNode( frame_node_ );
     }
 
@@ -70,7 +66,6 @@ namespace mps_shape_completion_visualization
                     p.position.y = scale/2 + j*scale;
                     p.position.z = scale/2 + k*scale;
 
-
                     if(binary_display_)
                     {
                         val = 1.0;
@@ -97,17 +92,17 @@ namespace mps_shape_completion_visualization
 
 
 // Position and orientation are passed through to the SceneNode.
-    void VoxelGridVisual::setFramePosition( const Ogre::Vector3& position )
+    void VoxelGridVisual::setFramePosition(const Ogre::Vector3& position )
     {
         frame_node_->setPosition( position );
     }
 
-    void VoxelGridVisual::setFrameOrientation( const Ogre::Quaternion& orientation )
+    void VoxelGridVisual::setFrameOrientation(const Ogre::Quaternion& orientation )
     {
         frame_node_->setOrientation( orientation );
     }
 
-    void VoxelGridVisual::setColor( float r, float g, float b, float a )
+    void VoxelGridVisual::setColor(float r, float g, float b, float a)
     {
         r_ = r;
         g_ = g;

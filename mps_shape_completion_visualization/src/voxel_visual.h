@@ -66,7 +66,6 @@ private:
   float threshold_;
   
 };
-// END_TUTORIAL
 
 } // end namespace mps_shape_completion_visualization
 
