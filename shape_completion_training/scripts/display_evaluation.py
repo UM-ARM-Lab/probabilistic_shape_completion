@@ -12,6 +12,7 @@ from shape_completion_training.voxelgrid import conversions
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
+from shape_completion_training.voxelgrid.metrics import chamfer_distance
 
 
 # data_names = ["model", "shape", "best_sample_gt", ""
@@ -51,6 +52,7 @@ def display_voxelgrids(evaluation):
         if not 250 < angle < 290:
             continue
         # display_evaluation_for_shape(model, shape_name, shape_evaluation)
+        print("Getting plausibilities")
         plausibles = model_evaluator.get_plausibles(shape_name)
 
         elem = sn.get(shape_name)
@@ -65,7 +67,10 @@ def display_voxelgrids(evaluation):
             VG_PUB.publish("plausible", plausible)
             VG_PUB.publish("predicted_occ", particles[best_particles[i]])
             print("Distance is {}".format(np.min(shape_evaluation['particle_distances'], axis=1)[i]))
+            print("Recomputed  {}".format(chamfer_distance(plausible, particles[best_particles[i]],
+                                                           scale=0.01, downsample=4)))
             rospy.sleep(1)
+
 
 def display_evaluation_for_shape(model, shape_name, shape_evaluation):
     plausibles = model_evaluator.get_plausibles(shape_name)
