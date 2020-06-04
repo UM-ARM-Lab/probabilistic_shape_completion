@@ -1,12 +1,15 @@
+#! /usr/bin/env python
 from shape_completion_training.model import model_evaluator
 from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import data_tools
 import rospy
 
-MODELS_TO_EVALUATE = ["Augmented_VAE/May_21_20-00-00_0000000000"]
+MODELS_TO_EVALUATE = ["VAE/VAE_trial_1",
+    "Augmented_VAE/May_21_20-00-00_0000000000",
+]
 
 if __name__ == "__main__":
-    rospy.init_node('evaluation')
+    rospy.init_node('evaluation_node')
 
     train_ds, test_ds = data_tools.load_shapenet(shuffle=False)
     test_ds = data_tools.simulate_input(test_ds, 0, 0, 0)
@@ -20,6 +23,7 @@ if __name__ == "__main__":
 
     evaluation = {}
     for model_name in MODELS_TO_EVALUATE:
+        print("Evaluating {}".format(model_name))
         mr = ModelRunner(training=False, trial_path=model_name)
         evaluation[model_name] = model_evaluator.evaluate_model(mr.model, test_ds, test_set_size)
 
