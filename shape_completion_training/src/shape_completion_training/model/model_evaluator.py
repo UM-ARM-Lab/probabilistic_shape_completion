@@ -53,10 +53,10 @@ def evaluate_model(model, test_set, test_set_size, num_particles=100):
             results = {}
             tf.random.set_seed(42)
             particles = [model(elem)['predicted_occ'] for _ in range(num_particles)]
-            results["best_particle_iou"] = best_match_value(elem['gt_occ'], particles, metric=metrics.iou)
-            results["best_particle_chamfer"] = best_match_value(elem['gt_occ'], particles,
-                                                                metric=lambda a, b: chamfer_distance(a, b, scale=0.01,
-                                                                                                     downsample=4))
+            results["best_particle_iou"] = best_match_value(elem['gt_occ'], particles, metric=metrics.iou).numpy()
+            results["best_particle_chamfer"] = \
+                best_match_value(elem['gt_occ'], particles,
+                                 metric=lambda a, b: chamfer_distance(a, b, scale=0.01, downsample=4)).numpy()
             results["particle_distances"] = compute_plausible_distances(elem_name, particles)
             all_metrics[elem_name] = results
 

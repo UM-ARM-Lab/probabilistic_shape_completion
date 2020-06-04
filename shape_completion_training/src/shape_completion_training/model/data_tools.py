@@ -258,6 +258,15 @@ class AddressableShapenet():
         ds = simulate_input(load_voxelgrids(ds.take(1)), 0, 0, 0)
         return next(ds.__iter__())
 
+    def get_metadata(self, unique_name):
+        if unique_name in self.train_map:
+            ds = self.train_ds.skip(self.train_map[unique_name])
+        elif unique_name in self.test_map:
+            ds = self.test_ds.skip(self.test_map[unique_name])
+        else:
+            raise Exception("No element {} in dataset".format(unique_name))
+        return next(ds.__iter__())
+
 
 def load_shapenet(shapes="all", shuffle=True):
     train_ds, test_ds = load_shapenet_metadata(shapes, shuffle)
