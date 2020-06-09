@@ -6,7 +6,7 @@ import rospy
 import numpy as np
 
 from shape_completion_training.model.modelrunner import ModelRunner
-from shape_completion_training.model.model_evaluator import ModelEvaluator
+from shape_completion_training.model import model_evaluator
 from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import sampling_tools
@@ -20,14 +20,14 @@ ARGS = None
 VG_PUB = None
 
 model_runner = None
-model_evaluator = None
+# model_evaluator = None
 
 stop_current_sampler = None
 sampling_thread = None
 
 
 def run_inference(elem):
-    if not ARGS.use_best_iou:
+    if not ARGS.publish_each_sample and not ARGS.use_best_iou:
         return model_runner.model(elem)
 
     # best_iou = 0.0
@@ -42,18 +42,18 @@ def run_inference(elem):
     #         best_inference = inference
     # if ARGS.publish_each_sample:
     #     raw_input("Ready to publish final sample?")
-    sample_evaluation = model_evaluator.evaluate_element(elem, num_samples=10)
+    # sample_evaluation = model_evaluator.evaluate_element(elem, num_samples=10)
     if ARGS.publish_each_sample:
-        for particle in sample_evaluation.particles:
+        for particle in model_evaluator.sample_particles(model_runner.model, elem, 20):
             VG_PUB.publish("predicted_occ", particle)
             rospy.sleep(0.5)
 
     # raw_input("Ready to display best?")
-    inference = model_evaluator.model(elem)
-    inference["predicted_occ"] = sample_evaluation.get_best_particle(
-        metric=lambda a, b: -metrics.chamfer_distance(a, b, scale=0.01, downsample=2).numpy())
-    VG_PUB.publish_inference(inference)
-    fit_to_particles(train_records, sample_evaluation)
+    inference = model_runner.model(elem)
+    # inference["predicted_occ"] = sample_evaluation.get_best_particle(
+    #     metric=lambda a, b: -metrics.chamfer_distance(a, b, scale=0.01, downsample=2).numpy())
+    # VG_PUB.publish_inference(inference)
+    # fit_to_particles(train_records, sample_evaluation)
 
     return inference
 
@@ -190,12 +190,12 @@ def sampler_worker(elem):
 
 def load_network():
     global model_runner
-    global model_evaluator
+    # global model_evaluator
     if ARGS.trial is None:
         print("Not loading any inference model")
         return
     model_runner = ModelRunner(training=False, trial_path=ARGS.trial)
-    model_evaluator = ModelEvaluator(model_runner.model)
+    # model_evaluator = ModelEvaluator(model_runner.model)
 
 
 def parse_command_line_args():

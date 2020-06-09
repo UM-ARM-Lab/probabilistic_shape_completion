@@ -17,6 +17,7 @@ This is to attempt to find a "good" observation model, that has a relatively clo
 """
 
 
+
 def show_image(observation, underlying_state):
     observed_depth = data_tools.simulate_depth_image(observation)
     expected_depth = data_tools.simulate_depth_image(underlying_state)

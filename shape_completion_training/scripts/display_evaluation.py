@@ -16,10 +16,11 @@ from shape_completion_training.voxelgrid.metrics import chamfer_distance
 
 
 # data_names = ["model", "shape", "best_sample_gt", ""
-
+model_name_map = {"VAE/VAE_trial_1": "Baseline VAE",
+                  "Augmented_VAE/May_21_20-00-00_0000000000": "Our method"}
 
 def display_histogram(evaluation):
-    data = {name: [] for name in ["model", "shape", "closest_sample_to_plausible", "angle"]}
+    data = {name: [] for name in ["model", "shape", "Chamfer Distance from Plausible to Sample", "angle"]}
     for model_name, model_evaluation in evaluation.items():
         print("Processing data for {}".format(model_name))
         for shape_name, shape_evaluation in model_evaluation.items():
@@ -28,21 +29,21 @@ def display_histogram(evaluation):
             #     continue
             d = shape_evaluation['particle_distances']
             for closest_particle in list(np.min(d, axis=1)):
-                data["model"].append(model_name)
+                data["model"].append(model_name_map[model_name])
                 data["shape"].append(shape_name)
-                data["closest_sample_to_plausible"].append(closest_particle)
+                data["Chamfer Distance from Plausible to Sample"].append(closest_particle)
                 data["angle"].append(angle)
             # fmri = sns.load_dataset("fmri")
             # sns.lineplot(x="timepoint", y="signal", hue="region", style="event", data=fmri)
     df = pd.DataFrame(data, columns=data.keys())
     sns.set(style="darkgrid")
-    sns.lineplot(x="shape", y="closest_sample_to_plausible", data=df, hue="model")
+    sns.lineplot(x="shape", y="Chamfer Distance from Plausible to Sample", data=df, hue="model")
     plt.show()
 
     for unique_shape in set([s[0:10] for s in list(df['shape'])]):
         print(unique_shape)
         shape_df = df[df['shape'].str.startswith(unique_shape)]
-        sns.lineplot(x="angle", y="closest_sample_to_plausible", data=shape_df, hue="model")
+        sns.lineplot(x="angle", y="Chamfer Distance from Plausible to Sample", data=shape_df, hue="model")
         plt.show()
     print("wait")
 
@@ -55,8 +56,11 @@ def display_voxelgrids(evaluation):
     # shape_name = evaluation[model_name].keys()[0]
     # shape_evaluation = evaluation[model_name][shape_name]
     for shape_name, shape_evaluation in evaluation[model_name].items():
+        if not shape_name.startswith('9737'):
+            continue
         angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
-        if not 250 < angle < 290:
+        # if not 250 < angle < 290:
+        if not 329 < angle < 331:
             continue
         # display_evaluation_for_shape(model, shape_name, shape_evaluation)
         print("Getting plausibilities")
