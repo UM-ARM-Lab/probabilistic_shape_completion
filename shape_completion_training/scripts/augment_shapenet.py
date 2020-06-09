@@ -10,12 +10,8 @@ import subprocess
 from itertools import izip_longest
 import multiprocessing as mp
 import Queue
-import time
 import datetime
 from os.path import join
-import numpy as np
-import pickle
-import bz2
 
 NUM_THREADS_PER_CATEGORY = 5
 NUM_THREADS_PER_OBJECT = 6
@@ -105,7 +101,6 @@ def augment_shape(filepath):
     obj_path = join(fp, "model_normalized.obj")
     # print("Augmenting {}".format(fp))
     obj_tools.augment(obj_path)
-    print("Finished")
 
     augmented_obj_files = [f for f in os.listdir(fp)
                            if f.startswith('model_augmented')
