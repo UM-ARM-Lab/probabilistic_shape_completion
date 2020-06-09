@@ -13,6 +13,9 @@ import Queue
 import time
 import datetime
 from os.path import join
+import numpy as np
+import pickle
+import bz2
 
 NUM_THREADS_PER_CATEGORY = 5
 NUM_THREADS_PER_OBJECT = 6
@@ -51,7 +54,7 @@ def process_in_threads(target, args, num_threads):
 
 
 def augment_category(object_path):
-    # shapes = ['a1d293f5cc20d01ad7f470ee20dce9e0']
+    # shape_ids = ['a1d293f5cc20d01ad7f470ee20dce9e0']
     # shapes = ['214dbcace712e49de195a69ef7c885a4']
     shape_ids = os.listdir(object_path)
     shape_ids.sort()
@@ -100,7 +103,9 @@ def augment_shape(filepath):
         os.remove(join(fp, f))
 
     obj_path = join(fp, "model_normalized.obj")
+    # print("Augmenting {}".format(fp))
     obj_tools.augment(obj_path)
+    print("Finished")
 
     augmented_obj_files = [f for f in os.listdir(fp)
                            if f.startswith('model_augmented')
@@ -117,7 +122,7 @@ def augment_shape(filepath):
     # Cleanup large model files
     old_files = [f for f in os.listdir(fp)
                  if f.startswith("model_augmented")
-                 if not f.endswith(".binvox")]
+                 if not f.endswith(".pkl")]
     for f in old_files:
         os.remove(join(fp, f))
 
@@ -132,12 +137,11 @@ def binvox_object_file_worker(queue):
         binvox_object_file(fp)
 
 
-
 def augment_single(basepath):
     """
     Augment a hardcoded single shape. Useful for debugging
     """
-    shape_id = '2d10421716b16580e45ef4135c266a12'
+    shape_id = 'a1d293f5cc20d01ad7f470ee20dce9e0'
     fp = join(basepath, shape_id, 'models')
     print("Augmenting single models at {}".format(fp))
 
@@ -178,9 +182,14 @@ def binvox_object_file(fp):
 
         # subprocess.call(cuda_binvox_str, shell=True, stdout=FNULL)
 
+        file_dir, file_name = os.path.split(fp)
+        augmentation = file_name[len('model_augmented_'):-len('.obj')]
+        gt = data_tools.load_gt_voxels_from_binvox(file_dir, augmentation)
+        data_tools.save_gt_voxels(file_dir, augmentation, gt)
+
 
 if __name__ == "__main__":
-    sn_path = join(data_tools.cur_path, "../data/ShapeNetCore.v2_augmented")
+    sn_path = join(data_tools.cur_path, "../../../data/ShapeNetCore.v2_augmented")
     sn_path = join(sn_path, data_tools.shape_map['mug'])
 
     start_time = datetime.datetime.now()

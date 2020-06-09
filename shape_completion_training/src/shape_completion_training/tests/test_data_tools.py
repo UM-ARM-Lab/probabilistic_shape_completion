@@ -21,3 +21,15 @@ class TestObservationModel(TestCase):
         vg_2_5D, _ = data_tools.simulate_2_5D_input(conversions.format_voxelgrid(vg, False, True).numpy())
         img_from_2_5D = data_tools.simulate_depth_image(vg_2_5D)
         self.assertTrue((img == img_from_2_5D).numpy().all())
+
+
+class TestSavingAndLoading(TestCase):
+    def test_save_and_reload_does_not_change_values(self):
+        gt = (np.random.random((64,64,64,1)) > 0.5).astype(float)
+        self.assertEqual(1.0, np.max(gt))
+        self.assertEqual(0.0, np.min(gt))
+
+        data_tools.save_gt_voxels("/tmp", "0", gt)
+        reloaded = data_tools.load_gt_voxels("/tmp", "0")
+        self.assertTrue(np.all(reloaded['gt_occ'] == gt))
+        self.assertFalse("gt_occ_packed" in reloaded)
