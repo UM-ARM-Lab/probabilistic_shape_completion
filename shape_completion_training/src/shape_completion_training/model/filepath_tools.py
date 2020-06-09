@@ -10,6 +10,15 @@ import rospkg
 from colorama import Fore
 
 
+def get_shape_completion_package_path():
+    """
+    Get the path to shape_completion_training. Must be run in a Ros node
+    @return: The pathlib.Path to shape_completion_training
+    """
+    r = rospkg.RosPack()
+    return pathlib.Path(r.get_path('shape_completion_training'))
+
+
 def make_unique_trial_subdirectory_name(*names):
     stamp = "{:%B_%d_%H-%M-%S}".format(datetime.now())
     repo = git.Repo(search_parent_directories=True)

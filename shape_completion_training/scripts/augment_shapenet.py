@@ -6,12 +6,13 @@ import os
 
 from shape_completion_training.model import obj_tools
 from shape_completion_training.model import data_tools
+from shape_completion_training.model import filepath_tools
 import subprocess
 from itertools import izip_longest
 import multiprocessing as mp
 import Queue
 import datetime
-from os.path import join
+import rospy
 
 NUM_THREADS_PER_CATEGORY = 5
 NUM_THREADS_PER_OBJECT = 6
@@ -52,7 +53,7 @@ def process_in_threads(target, args, num_threads):
 def augment_category(object_path):
     # shape_ids = ['a1d293f5cc20d01ad7f470ee20dce9e0']
     # shapes = ['214dbcace712e49de195a69ef7c885a4']
-    shape_ids = os.listdir(object_path)
+    shape_ids = [f.name for f in object_path]
     shape_ids.sort()
 
     q = mp.Queue()
@@ -78,7 +79,7 @@ def augment_shape_worker(queue, object_path, total):
         sys.stdout.write('\033[2K\033[1G')
         print("{:03d}/{} Augmenting {}".format(count, total, shape_id), end="")
         sys.stdout.flush()
-        fp = join(object_path, shape_id, "models")
+        fp = object_path / shape_id / "models"
         augment_shape(fp)
 
 
@@ -94,32 +95,32 @@ def augment_shape(filepath):
     if fp is None:
         return
 
-    old_files = [f for f in os.listdir(fp) if f.startswith("model_augmented")]
+    old_files = [f for f in fp.iterdir() if f.name.startswith("model_augmented")]
     for f in old_files:
-        os.remove(join(fp, f))
+        f.unlink()
 
-    obj_path = join(fp, "model_normalized.obj")
+    obj_path = fp / "model_normalized.obj"
     # print("Augmenting {}".format(fp))
-    obj_tools.augment(obj_path)
+    obj_tools.augment(obj_path.posix())
 
-    augmented_obj_files = [f for f in os.listdir(fp)
-                           if f.startswith('model_augmented')
-                           if f.endswith('.obj')]
+    augmented_obj_files = [f for f in fp.iterdir()
+                           if f.name.startswith('model_augmented')
+                           if f.name.endswith('.obj')]
     augmented_obj_files.sort()
 
     q = mp.Queue()
     for f in augmented_obj_files:
         # binvox_object_file(join(fp, f))
-        q.put(join(fp, f))
+        q.put(f)
     process_in_threads(target=binvox_object_file_worker, args=(q,),
                        num_threads=NUM_THREADS_PER_OBJECT)
 
     # Cleanup large model files
-    old_files = [f for f in os.listdir(fp)
-                 if f.startswith("model_augmented")
-                 if not f.endswith(".pkl")]
+    old_files = [f for f in fp.iterdir()
+                 if f.name.startswith("model_augmented")
+                 if not f.name.endswith(".pkl")]
     for f in old_files:
-        os.remove(join(fp, f))
+        f.unlink()
 
 
 def binvox_object_file_worker(queue):
@@ -137,22 +138,22 @@ def augment_single(basepath):
     Augment a hardcoded single shape. Useful for debugging
     """
     shape_id = 'a1d293f5cc20d01ad7f470ee20dce9e0'
-    fp = join(basepath, shape_id, 'models')
+    fp = basepath / shape_id / 'models'
     print("Augmenting single models at {}".format(fp))
 
-    old_files = [f for f in os.listdir(fp) if f.startswith("model_augmented")]
+    old_files = [f for f in fp.iterdir() if f.name.startswith("model_augmented")]
     for f in old_files:
-        os.remove(join(fp, f))
+        f.unlink()
 
-    obj_path = join(fp, "model_normalized.obj")
-    obj_tools.augment(obj_path)
+    obj_path = fp / "model_normalized.obj"
+    obj_tools.augment(obj_path.as_posix())
 
-    augmented_obj_files = [f for f in os.listdir(fp)
-                           if f.startswith('model_augmented')
-                           if f.endswith('.obj')]
+    augmented_obj_files = [f for f in fp.iterdir()
+                           if f.name.startswith('model_augmented')
+                           if f.name.endswith('.obj')]
     augmented_obj_files.sort()
     for f in augmented_obj_files:
-        binvox_object_file(join(fp, f))
+        binvox_object_file(f)
 
 
 def binvox_object_file(fp):
@@ -160,36 +161,37 @@ def binvox_object_file(fp):
     Runs binvox on the input obj file
     """
     # TODO Hardcoded binvox path
-    binvox_str = "~/useful_scripts/binvox -dc -pb -down -down -dmin 2 {} {}".format(HARDCODED_BOUNDARY, fp)
+    binvox_str = "~/useful_scripts/binvox -dc -pb -down -down -dmin 2 {} {}".format(HARDCODED_BOUNDARY, fp.as_posix())
 
     # Fast but inaccurate
-    wire_binvox_str = "~/useful_scripts/binvox -e -pb -down -down -dmin 1 {} {}".format(HARDCODED_BOUNDARY, fp)
-    cuda_binvox_str = "~/useful_scripts/cuda_voxelizer -s 64 -f {}".format(fp)
-
-    fp_base = fp[:-4]
+    wire_binvox_str = "~/useful_scripts/binvox -e -pb -down -down -dmin 1 {} {}".format(HARDCODED_BOUNDARY,
+                                                                                        fp.as_posix())
+    # cuda_binvox_str = "~/useful_scripts/cuda_voxelizer -s 64 -f {}".format(fp)
 
     with open(os.devnull, 'w') as FNULL:
         subprocess.call(binvox_str, shell=True, stdout=FNULL)
-        os.rename(fp_base + ".binvox", fp_base + ".mesh.binvox")
+        fp.with_suffix('.binvox').rename(fp.with_suffix(".mesh.binvox"))
 
         subprocess.call(wire_binvox_str, shell=True, stdout=FNULL)
-        os.rename(fp_base + ".binvox", fp_base + ".wire.binvox")
+        fp.with_suffix('.binvox').rename(fp.with_suffix(".wire.binvox"))
 
         # subprocess.call(cuda_binvox_str, shell=True, stdout=FNULL)
 
-        file_dir, file_name = os.path.split(fp)
-        augmentation = file_name[len('model_augmented_'):-len('.obj')]
-        gt = data_tools.load_gt_voxels_from_binvox(file_dir, augmentation)
-        data_tools.save_gt_voxels(file_dir, augmentation, gt)
+    file_dir, file_name = fp.parent.as_posix(), fp.stem
+    augmentation = file_name[len('model_augmented_'):]
+    gt = data_tools.load_gt_voxels_from_binvox(file_dir, augmentation)
+    data_tools.save_gt_voxels(file_dir, augmentation, gt)
 
 
 if __name__ == "__main__":
-    sn_path = join(data_tools.cur_path, "../../../data/ShapeNetCore.v2_augmented")
-    sn_path = join(sn_path, data_tools.shape_map['mug'])
+    rospy.init_node("augment_shapenet_node")
+    sn_path = filepath_tools.get_shape_completion_package_path()
+    sn_path = sn_path / "data" / "ShapeNetCore.v2_augmented"
+    sn_path = sn_path / data_tools.shape_map['mug']
 
     start_time = datetime.datetime.now()
 
-    # augment_single(sn_path)
-    augment_category(sn_path)
+    augment_single(sn_path)
+    # augment_category(sn_path)
     print("")
     print("Augmenting with {} threads took {} seconds".format(NUM_THREADS, datetime.datetime.now() - start_time))
