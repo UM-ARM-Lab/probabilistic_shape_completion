@@ -53,7 +53,7 @@ def process_in_threads(target, args, num_threads):
 def augment_category(object_path):
     # shape_ids = ['a1d293f5cc20d01ad7f470ee20dce9e0']
     # shapes = ['214dbcace712e49de195a69ef7c885a4']
-    shape_ids = [f.name for f in object_path]
+    shape_ids = [f.name for f in object_path.iterdir()]
     shape_ids.sort()
 
     q = mp.Queue()
@@ -87,9 +87,12 @@ def augment_shape(filepath):
     """
     Augments the model at the filepath
 
-    filepath should end with the "models" folder
-    Augmentation involves rotatin the model and converting all rotations to .binvox files
+    Augmentation involves rotating the model and converting all rotations to .binvox files
+
+    @param filepath: pathlib.Path filepath, ending with the "models" folder
+    @return: None
     """
+
     fp = filepath
 
     if fp is None:
@@ -101,7 +104,7 @@ def augment_shape(filepath):
 
     obj_path = fp / "model_normalized.obj"
     # print("Augmenting {}".format(fp))
-    obj_tools.augment(obj_path.posix())
+    obj_tools.augment(obj_path.as_posix())
 
     augmented_obj_files = [f for f in fp.iterdir()
                            if f.name.startswith('model_augmented')
