@@ -4,23 +4,16 @@ from __future__ import print_function
 import os
 from os.path import join
 import tensorflow as tf
-from shape_completion_training import binvox_rw
+
+from shape_completion_training.model import filepath_tools
+from shape_completion_training.model.shapenet_storage import load_data_with_gt, shapenet_record_path, load_gt_only
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
-from shape_completion_training.model import filepath_tools
 import numpy as np
-import bz2
 import pickle
 
 shape_map = {"airplane": "02691156",
              "mug": "03797390"}
-
-cur_path = os.path.dirname(__file__)
-shapenet_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ShapeNetCore.v2_augmented"
-# shapenet_load_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented")
-# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
-# shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
-shapenet_record_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented/tfrecords/filepath")
 
 
 def shapenet_labels(human_names):
@@ -134,137 +127,8 @@ def simulate_random_partial_completion_input(gt):
     return gt_occ_masked, gt_free_masked
 
 
-def load_gt_voxels_from_binvox(filepath, augmentation):
-    """
-    Loads ground truth voxels into a np.array
-
-    filepath: string filepath to the "models" folder for this shape
-    augmentation: string identifying the augmentation
-    """
-    binvox_wire_fp = join(filepath, 'model_augmented_' + augmentation + '.wire.binvox')
-    with open(binvox_wire_fp) as f:
-        wire_vox = binvox_rw.read_as_3d_array(f).data
-
-    binvox_mesh_fp = join(filepath, 'model_augmented_' + augmentation + '.mesh.binvox')
-    with open(binvox_mesh_fp) as f:
-        mesh_vox = binvox_rw.read_as_3d_array(f).data
-
-    # cuda_binvox_fp = join(filepath, 'model_augmented_' + augmentation + '.obj_64.binvox')
-    # with open(cuda_binvox_fp) as f:
-    #     cuda_gt_vox = binvox_rw.read_as_3d_array(f).data
-
-    gt = wire_vox * 1.0 + mesh_vox * 1.0
-    gt = np.clip(gt, 0, 1)
-    gt = np.array(gt, dtype=np.float32)
-    gt = np.expand_dims(gt, axis=4)
-    return gt
-
-
-def save_gt_voxels(filepath, gt):
-    """
-    @param filepath: pathlib.Path full file path of save location.
-    This needs to be in the proper place in the shapenet folder structure, as parameters are inferred from
-    the folder name. The extension is replaced with .pkl
-    @param gt: The ground truth voxelgrid
-    @return:
-    """
-    filepath = filepath.with_suffix(".pkl")
-    shape = gt.shape
-    packed = np.packbits(gt.flatten().astype(bool))
-    parts = filepath.parts
-    augmentation = filepath.stem[len("model_augmented_"):]
-    data = {"gt_occ_packed": packed, "shape": shape, "augmentation": augmentation,
-            "filepath": filepath.relative_to(filepath_tools.get_shape_completion_package_path().as_posix()),
-            "category": parts[-4], "id": parts[-3], "angle": augmentation.split("_")[-1]}
-    with bz2.BZ2File(filepath.as_posix(), "w") as f:
-        pickle.dump(data, f)
-
-
-def load_gt_voxels(file_dir, augmentation):
-    with bz2.BZ2File(file_dir + "/model_augmented_" + augmentation + ".pkl") as f:
-        loaded = pickle.load(f)
-    loaded["gt_occ"] = np.reshape(np.unpackbits(loaded['gt_occ_packed']), loaded['shape']).astype(float)
-    loaded.pop("gt_occ_packed")
-    return loaded
-
-
-class ShapenetRecord:
-    def __init__(self):
-        self.filepath = None
-        self.category = None
-        self.id = None
-        self.augmentation = None
-
-
-def get_all_shapenet_files(shape_ids):
-    shapenet_records = []
-    if shape_ids == "all":
-        shape_ids = [f.name for f in shapenet_load_path.iterdir() if f.is_dir()]
-        # shape_ids = [f for f in os.listdir(shapenet_load_path)
-        #              if os.path.isdir(join(shapenet_load_path, f))]
-        shape_ids.sort()
-
-    for i in range(0, len(shape_ids)):
-        category = shape_ids[i]
-        shape_path = join(shapenet_load_path, category)
-        objs = os.listdir(shape_path)
-        for obj in sorted(objs):
-            obj_fp = join(shape_path, obj, "models")
-            augs = [f[len('model_augmented_'):-len('.wire.binvox')]  # .wire and .mesh have the same length
-                    for f in os.listdir(obj_fp)
-                    if f.startswith("model_augmented")
-                    if f.endswith(".binvox")]
-
-            for augmentation in sorted(list(set(augs))):
-                sr = ShapenetRecord()
-                sr.id = obj
-                sr.filepath = obj_fp
-                sr.category = category
-                sr.augmentation = augmentation
-                shapenet_records.append(sr)
-    return shapenet_records
-
-
-def group_shapenet_files(shapenet_files, group_size):
-    """
-    Groups a single list of ShapenetRecords into groups of lists.
-    Each group contains only one category and is at most group_size long
-    """
-    groups = []
-    group = []
-    category = shapenet_files[0].category
-    group_num = 1
-
-    def get_group_name(category, num):
-        return "{}_{:02d}".format(category, num)
-
-    i = 0
-    for sr in shapenet_files:
-        if sr.category != category:
-            group_num = 1
-        if sr.category != category or i >= group_size:
-            groups.append((get_group_name(category, group_num), group))
-            group = []
-            i = 0
-            category = sr.category
-            group_num += 1
-        i += 1
-        group.append(sr)
-    groups.append((get_group_name(category, group_num), group))
-    return groups
-
-
-def get_unique_name(datum):
-    """
-    Returns a unique name for the datum
-    @param datum:
-    @return:
-    """
-    return datum['id'].numpy() + datum['augmentation'].numpy()
-
-
 @memoize
-def get_addressible_shapenet(**kwargs):
+def get_shapenet(**kwargs):
     return AddressableShapenet(**kwargs)
 
 
@@ -312,121 +176,74 @@ def load_shapenet_metadata(shapes="all", shuffle=True):
 
 
 def _load_shapenet_metadata_train_or_test(shapes="all", shuffle=True, prefix="train"):
-    records = [f for f in os.listdir(shapenet_record_path)
-               if f.endswith(".tfrecord")
-               if f.startswith(prefix)]
+    records = [f for f in shapenet_record_path.iterdir()
+               if f.name == prefix + "_filepaths.pkl"]
     if shapes != "all":
         print("Not yet handling partial loading")
 
     ds = None
-    for fp in [join(shapenet_record_path, r) for r in records]:
+    for fp in records:
         if ds:
-            ds = ds.concatenate(read_metadata_from_tfrecord(fp, shuffle))
+            ds = ds.concatenate(read_metadata_from_filelist(fp, shuffle))
         else:
-            ds = read_metadata_from_tfrecord(fp, shuffle)
+            ds = read_metadata_from_filelist(fp, shuffle)
     return ds
 
 
-def _split_train_and_test(shapenet_records, test_ratio):
-    train_ids = []
-    test_ids = []
-    train_records = []
-    test_records = []
-    np.random.seed(42)
-    for record in shapenet_records:
-        if record.id not in train_ids and record.id not in test_ids:
-            if np.random.random() < test_ratio:
-                test_ids.append(record.id)
-            else:
-                train_ids.append(record.id)
-
-        if record.id in train_ids:
-            train_records.append(record)
-        else:
-            test_records.append(record)
-
-    return train_records, test_records
-
-
-def _list_of_shapenet_records_to_dict(shapenet_records):
-    data = {'id': [], 'shape_category': [], 'fp': [], 'augmentation': []}
-    for sr in shapenet_records:
-        data['id'].append(sr.id)
-        data['shape_category'].append(sr.category)
-        data['fp'].append(sr.filepath)
-        data['augmentation'].append(sr.augmentation)
-    return data
-
-
-def write_shapenet_to_tfrecord(test_ratio, shape_ids="all"):
-    all_files = get_all_shapenet_files(shape_ids)
-    train_files, test_files = _split_train_and_test(all_files, test_ratio)
-    train_data = _list_of_shapenet_records_to_dict(train_files)
-    test_data = _list_of_shapenet_records_to_dict(test_files)
-
-    write_to_tfrecord(tf.data.Dataset.from_tensor_slices(train_data),
-                      join(shapenet_record_path, "train_filepaths.tfrecord"))
-    write_to_tfrecord(tf.data.Dataset.from_tensor_slices(test_data),
-                      join(shapenet_record_path, "test_filepaths.tfrecord"))
-
-
-def write_to_tfrecord(dataset, record_file):
-    def _bytes_feature(value):
-        return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
-    with tf.io.TFRecordWriter(record_file) as writer:
-        for elem in dataset:
-            feature = {k: _bytes_feature(elem[k].numpy()) for k in elem}
-            features = tf.train.Features(feature=feature)
-            example = tf.train.Example(features=features)
-            writer.write(example.SerializeToString())
-
-
-def read_metadata_from_tfrecord(record_file, shuffle):
+def read_metadata_from_filelist(record_file, shuffle):
     """
     Reads from a tfrecord file of paths and augmentations
     Loads the binvox files, simulates the input tensors, and returns a dataset
     """
     # print("Reading from filepath record")
-    raw_dataset = tf.data.TFRecordDataset(record_file)
+    # raw_dataset = tf.data.TFRecordDataset(record_file.as_posix())
+    #
+    # keys = ['id', 'shape_category', 'fp', 'augmentation']
+    # tfrecord_description = {k: tf.io.FixedLenFeature([], tf.string) for k in keys}
+    #
+    # def _parse_record_function(example_proto):
+    #     # Parse the input tf.Example proto using the dictionary above.
+    #     example = tf.io.parse_single_example(example_proto, tfrecord_description)
+    #     # return pickle.loads(example_proto.numpy())
+    #     return example
+    #
+    # if shuffle:
+    #     raw_dataset = raw_dataset.shuffle(10000)
+    #
+    # parsed_dataset = raw_dataset.map(_parse_record_function)
+    with open(record_file.as_posix()) as f:
+        filelist = pickle.load(f)
+    ds = tf.data.Dataset.from_tensor_slices(filelist)
 
-    keys = ['id', 'shape_category', 'fp', 'augmentation']
-    tfrecord_description = {k: tf.io.FixedLenFeature([], tf.string) for k in keys}
-
-    def _parse_record_function(example_proto):
-        # Parse the input tf.Example proto using the dictionary above.
-        example = tf.io.parse_single_example(example_proto, tfrecord_description)
-        return example
-
-    cache_name = "ds.cache"
     if shuffle:
-        raw_dataset = raw_dataset.shuffle(10000)
-        cache_name = "shuffled_ds.cache"
-    cache_fp = join(shapenet_record_path, cache_name)
+        ds = ds.shuffle(10000)
 
-    parsed_dataset = raw_dataset.map(_parse_record_function)
-    # parsed_dataset = parsed_dataset.cache(cache_fp)
-    return parsed_dataset
+    return ds
 
 
 def load_voxelgrids(metadata_ds):
-    def _get_shape(_raw_dataset):
-        e = next(_raw_dataset.__iter__())
-        gt = tf.numpy_function(load_gt_voxels, [e['fp'], e['augmentation']], tf.float32)
-        return gt.shape
-
-    shape = _get_shape(metadata_ds)
+    # def _get_shape(_raw_dataset):
+    #     e = next(_raw_dataset.__iter__())
+    #     gt = tf.numpy_function(load_gt_voxels, [e['filepath'], e['augmentation']], tf.float32)
+    #     return gt.shape
+    #
+    # shape = _get_shape(metadata_ds)
+    def dummy_func(filepath):
+        return np.zeros((3,3,3), np.float32)
 
     def _load_voxelgrids(elem):
-        aug = elem['augmentation']
-        fp = elem['fp']
-        gt = tf.numpy_function(load_gt_voxels, [fp, aug], tf.float32)
-        gt.set_shape(shape)
+        fp = elem['filepath']
+        gt = tf.numpy_function(load_gt_only, [fp], tf.float32)
+        # gt = tf.numpy_function(dummy_func, [fp], tf.float32)
+        # gt.set_shape(elem['shape'])
         elem['gt_occ'] = gt
         elem['gt_free'] = 1.0 - gt
         # gt_occ.set_shape(shape)
         # gt_free.set_shape(shape)
         return elem
+
+    # d = metadata_ds.map(_load_voxelgrids)
+    # a = next(d.__iter__())
 
     return metadata_ds.map(_load_voxelgrids)
 
@@ -501,6 +318,15 @@ def add_angle(dataset):
         return elem
 
     return dataset.map(_extract_angle)
+
+
+def get_unique_name(datum):
+    """
+    Returns a unique name for the datum
+    @param datum:
+    @return:
+    """
+    return datum['id'].numpy() + datum['augmentation'].numpy()
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 import os
 
+import shape_completion_training.model.shapenet_storage
 from shape_completion_training.model import obj_tools
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import filepath_tools
@@ -182,8 +183,8 @@ def binvox_object_file(fp):
 
     file_dir, file_name = fp.parent.as_posix(), fp.stem
     augmentation = file_name[len('model_augmented_'):]
-    gt = data_tools.load_gt_voxels_from_binvox(file_dir, augmentation)
-    data_tools.save_gt_voxels(fp.with_suffix(".pkl"), gt)
+    gt = shape_completion_training.model.shapenet_storage.load_gt_voxels_from_binvox(file_dir, augmentation)
+    shape_completion_training.model.shapenet_storage.save_gt_voxels(fp.with_suffix(".pkl"), gt, compression="gzip")
 
 
 if __name__ == "__main__":

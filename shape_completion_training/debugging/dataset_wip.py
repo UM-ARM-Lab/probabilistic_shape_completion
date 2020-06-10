@@ -13,8 +13,8 @@ import time
 import tensorflow as tf
 import progressbar
 
-shape_map = {"airplane":"02691156",
-             "mug":"03797390"}
+shape_map = {"airplane": "02691156",
+             "mug": "03797390"}
 
 
 def examine_random_behavior():
@@ -23,7 +23,6 @@ def examine_random_behavior():
     def _rand_map(e):
         return tf.random.uniform(shape=[1], minval=0, maxval=100)
 
-    
     for elem in ds:
         print(elem.numpy())
     print()
@@ -46,8 +45,6 @@ def examine_random_behavior():
     print()
     for elem in cached_ds:
         print(elem.numpy())
-    
-    
 
 
 def examine_shapenet_loading_behavior():
@@ -56,14 +53,11 @@ def examine_shapenet_loading_behavior():
     batched_ds = dataset.batch(16)
     batched_ds = batched_ds
 
-
-
     widgets = [
         ' ', progressbar.Counter(),
         ' [', progressbar.Timer(), '] ',
         ' ', progressbar.Variable("shape"), ' '
-        ]
-
+    ]
 
     print()
     with progressbar.ProgressBar(widgets=widgets) as bar:
