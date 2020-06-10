@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     start_time = datetime.datetime.now()
 
-    augment_single(sn_path)
-    # augment_category(sn_path)
+    # augment_single(sn_path)
+    augment_category(sn_path)
     print("")
     print("Augmenting with {} threads took {} seconds".format(NUM_THREADS, datetime.datetime.now() - start_time))
