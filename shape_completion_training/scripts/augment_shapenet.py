@@ -183,7 +183,7 @@ def binvox_object_file(fp):
     file_dir, file_name = fp.parent.as_posix(), fp.stem
     augmentation = file_name[len('model_augmented_'):]
     gt = data_tools.load_gt_voxels_from_binvox(file_dir, augmentation)
-    data_tools.save_gt_voxels(file_dir, augmentation, gt)
+    data_tools.save_gt_voxels(fp.with_suffix(".pkl"), gt)
 
 
 if __name__ == "__main__":
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     start_time = datetime.datetime.now()
 
-    # augment_single(sn_path)
-    augment_category(sn_path)
+    augment_single(sn_path)
+    # augment_category(sn_path)
     print("")
     print("Augmenting with {} threads took {} seconds".format(NUM_THREADS, datetime.datetime.now() - start_time))

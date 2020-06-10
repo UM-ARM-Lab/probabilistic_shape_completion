@@ -7,6 +7,7 @@ import tensorflow as tf
 from shape_completion_training import binvox_rw
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
+from shape_completion_training.model import filepath_tools
 import numpy as np
 import bz2
 import pickle
@@ -15,7 +16,8 @@ shape_map = {"airplane": "02691156",
              "mug": "03797390"}
 
 cur_path = os.path.dirname(__file__)
-shapenet_load_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented")
+shapenet_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ShapeNetCore.v2_augmented"
+# shapenet_load_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/gt")
 # shapenet_record_path = join(cur_path, "../data/ShapeNetCore.v2_augmented/tfrecords/2.5D")
 shapenet_record_path = join(cur_path, "../../../data/ShapeNetCore.v2_augmented/tfrecords/filepath")
@@ -158,11 +160,23 @@ def load_gt_voxels_from_binvox(filepath, augmentation):
     return gt
 
 
-def save_gt_voxels(file_dir, augmentation, gt):
+def save_gt_voxels(filepath, gt):
+    """
+    @param filepath: pathlib.Path full file path of save location.
+    This needs to be in the proper place in the shapenet folder structure, as parameters are inferred from
+    the folder name. The extension is replaced with .pkl
+    @param gt: The ground truth voxelgrid
+    @return:
+    """
+    filepath = filepath.with_suffix(".pkl")
     shape = gt.shape
     packed = np.packbits(gt.flatten().astype(bool))
-    data = {"gt_occ_packed": packed, "shape": shape, "augmentation": augmentation}
-    with bz2.BZ2File(file_dir + "/model_augmented_" + augmentation + ".pkl", "w") as f:
+    parts = filepath.parts
+    augmentation = filepath.stem[len("model_augmented_"):]
+    data = {"gt_occ_packed": packed, "shape": shape, "augmentation": augmentation,
+            "filepath": filepath.relative_to(filepath_tools.get_shape_completion_package_path().as_posix()),
+            "category": parts[-4], "id": parts[-3], "angle": augmentation.split("_")[-1]}
+    with bz2.BZ2File(filepath.as_posix(), "w") as f:
         pickle.dump(data, f)
 
 
@@ -172,7 +186,6 @@ def load_gt_voxels(file_dir, augmentation):
     loaded["gt_occ"] = np.reshape(np.unpackbits(loaded['gt_occ_packed']), loaded['shape']).astype(float)
     loaded.pop("gt_occ_packed")
     return loaded
-
 
 
 class ShapenetRecord:
@@ -186,8 +199,9 @@ class ShapenetRecord:
 def get_all_shapenet_files(shape_ids):
     shapenet_records = []
     if shape_ids == "all":
-        shape_ids = [f for f in os.listdir(shapenet_load_path)
-                     if os.path.isdir(join(shapenet_load_path, f))]
+        shape_ids = [f.name for f in shapenet_load_path.iterdir() if f.is_dir()]
+        # shape_ids = [f for f in os.listdir(shapenet_load_path)
+        #              if os.path.isdir(join(shapenet_load_path, f))]
         shape_ids.sort()
 
     for i in range(0, len(shape_ids)):
@@ -196,7 +210,7 @@ def get_all_shapenet_files(shape_ids):
         objs = os.listdir(shape_path)
         for obj in sorted(objs):
             obj_fp = join(shape_path, obj, "models")
-            augs = [f[len('model_augmented_'):-len('.wire.binvox')] #.wire and .mesh have the same length
+            augs = [f[len('model_augmented_'):-len('.wire.binvox')]  # .wire and .mesh have the same length
                     for f in os.listdir(obj_fp)
                     if f.startswith("model_augmented")
                     if f.endswith(".binvox")]
@@ -487,8 +501,6 @@ def add_angle(dataset):
         return elem
 
     return dataset.map(_extract_angle)
-
-
 
 
 if __name__ == "__main__":
