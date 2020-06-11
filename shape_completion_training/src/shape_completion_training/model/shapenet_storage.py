@@ -9,13 +9,13 @@ import tensorflow as tf
 from shape_completion_training import binvox_rw
 from shape_completion_training.model import filepath_tools
 from shape_completion_training.model import utils
-from utils import sequence_of_dicts_to_dict_of_sequences as lod_to_dol
 import pathlib
 
 """
 Tools for storing and preprocessing augmented shapenet
 """
 package_path = filepath_tools.get_shape_completion_package_path()
+
 
 def load_gt_voxels_from_binvox(filepath, augmentation):
     """
@@ -57,7 +57,7 @@ def save_gt_voxels(filepath, gt, compression="gzip"):
     packed = np.packbits(gt.flatten().astype(bool))
     parts = filepath.parts
     augmentation = filepath.stem[len("model_augmented_"):]
-    data = {"gt_occ_packed": packed, "shape": shape, "augmentation": augmentation,
+    data = {"gt_occ_packed": packed, "shape": tf.TensorShape(shape), "augmentation": augmentation,
             "filepath": filepath.relative_to(package_path).as_posix(),
             "category": parts[-4], "id": parts[-3], "angle": augmentation.split("_")[-1]}
 
@@ -88,8 +88,7 @@ def load_gt_only(filepath, compression="gzip"):
     return np.reshape(np.unpackbits(loaded['gt_occ_packed']), loaded['shape']).astype(np.float32)
 
 
-
-def load_metadata(filepath, compression=None):
+def load_metadata(filepath, compression="gzip"):
     """
     @param filepath: filepath: pathlib.Path filepath to record
     @return: dictionary with just metadata
@@ -147,7 +146,6 @@ def write_to_filelist(dataset, record_file):
 
 
 def get_all_shapenet_files(shape_ids):
-    i = 0
     shapenet_records = []
     if shape_ids == "all":
         shape_ids = [f.name for f in shapenet_load_path.iterdir() if f.is_dir()]
@@ -155,16 +153,14 @@ def get_all_shapenet_files(shape_ids):
         #              if os.path.isdir(join(shapenet_load_path, f))]
         shape_ids.sort()
 
-    for i in range(0, len(shape_ids)):
-        category = shape_ids[i]
+    for category in shape_ids:
         shape_path = shapenet_load_path / category
         for obj_fp in sorted(p for p in shape_path.iterdir()):
+            print("{}".format(obj_fp.name))
             all_augmentations = [f for f in (obj_fp / "models").iterdir()
                                  if f.name.startswith("model_augmented")
                                  if f.name.endswith(".pkl")]
             for f in sorted(all_augmentations):
-                i += 1
-                print(i)
                 # shapenet_records.append(load_gt_voxels(f))
                 shapenet_records.append(load_metadata(f))
 

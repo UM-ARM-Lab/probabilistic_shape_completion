@@ -25,7 +25,7 @@ def store_shapenet_augmentations_in_multiple_formats(shape_ids):
                 i += 1
                 print(i)
                 # shapenet_records.append(load_gt_voxels(f))
-                gt = shapenet_storage.load_data_with_gt(f)
+                gt = shapenet_storage.load_data_with_gt(f, "gzip")
                 shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "bz2")
                 shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "gzip")
                 shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "None")

@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 from __future__ import print_function
 
-import os
-from os.path import join
 import tensorflow as tf
 
 from shape_completion_training.model import filepath_tools
@@ -222,28 +220,20 @@ def read_metadata_from_filelist(record_file, shuffle):
 
 
 def load_voxelgrids(metadata_ds):
-    # def _get_shape(_raw_dataset):
-    #     e = next(_raw_dataset.__iter__())
-    #     gt = tf.numpy_function(load_gt_voxels, [e['filepath'], e['augmentation']], tf.float32)
-    #     return gt.shape
-    #
-    # shape = _get_shape(metadata_ds)
-    def dummy_func(filepath):
-        return np.zeros((3,3,3), np.float32)
+    def _get_shape(_raw_dataset):
+        e = next(_raw_dataset.__iter__())
+        return tf.TensorShape(e["shape"])
+
+    shape = _get_shape(metadata_ds)
 
     def _load_voxelgrids(elem):
         fp = elem['filepath']
         gt = tf.numpy_function(load_gt_only, [fp], tf.float32)
-        # gt = tf.numpy_function(dummy_func, [fp], tf.float32)
-        # gt.set_shape(elem['shape'])
+        gt.set_shape(shape)
         elem['gt_occ'] = gt
         elem['gt_free'] = 1.0 - gt
-        # gt_occ.set_shape(shape)
-        # gt_free.set_shape(shape)
-        return elem
 
-    # d = metadata_ds.map(_load_voxelgrids)
-    # a = next(d.__iter__())
+        return elem
 
     return metadata_ds.map(_load_voxelgrids)
 
