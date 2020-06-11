@@ -122,7 +122,7 @@ def augment_shape(filepath):
     # Cleanup large model files
     old_files = [f for f in fp.iterdir()
                  if f.name.startswith("model_augmented")
-                 if not f.name.endswith(".pkl")]
+                 if not f.name.endswith(".pkl.gzip")]
     for f in old_files:
         f.unlink()
 
