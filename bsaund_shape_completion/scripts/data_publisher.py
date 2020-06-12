@@ -11,6 +11,7 @@ from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import sampling_tools
 from shape_completion_training.voxelgrid import fit
+from shape_completion_training.voxelgrid import bounding_box
 import threading
 import tensorflow as tf
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
@@ -108,6 +109,7 @@ def publish_selection(metadata, ind, str_msg):
     for k in elem_raw.keys():
         elem[k] = elem_raw[k].numpy()
     VG_PUB.publish_elem(elem)
+    VG_PUB.publish_bounding_box(bounding_box.get_aabb(elem["gt_occ"]))
 
     if model_runner is None:
         return
