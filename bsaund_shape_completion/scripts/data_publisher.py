@@ -111,8 +111,8 @@ def publish_selection(metadata, ind, str_msg):
     VG_PUB.publish_elem(elem)
     # VG_PUB.publish_bounding_box(bounding_box.get_aabb(elem["gt_occ"]))
     # VG_PUB.publish("predicted_occ", bounding_box.get_bounding_box_for_elem(elem))
-    bounds = bounding_box.get_bounding_box_for_elem(elem)
-    VG_PUB.publish_bounding_box(bounds)
+    # bounds = bounding_box.get_bounding_box_for_elem(elem)
+    # VG_PUB.publish_bounding_box(bounds)
 
     if model_runner is None:
         return

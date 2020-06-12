@@ -43,7 +43,10 @@ class VoxelgridPublisher:
         self.publish("conditioned_occ", elem["conditioned_occ"])
 
         if 'bounding_box' in elem:
-            self.publish_bounding_box(elem["bounding_box"])
+            bb = elem['bounding_box']
+            if len(bb.shape) == 3:
+                bb = bb[0]
+            self.publish_bounding_box(bb)
 
         def make_numpy(tensor_or_np):
             if tf.is_tensor(tensor_or_np):
