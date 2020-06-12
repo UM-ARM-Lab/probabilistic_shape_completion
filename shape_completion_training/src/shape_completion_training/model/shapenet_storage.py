@@ -53,7 +53,7 @@ def save_gt_voxels(filepath, gt, compression="gzip"):
     @return:
     """
     filepath = filepath.with_suffix(".pkl")
-    shape = gt.shape
+    shape = tf.TensorShape(gt.shape)
     packed = np.packbits(gt.flatten().astype(bool))
     parts = filepath.parts
     augmentation = filepath.stem[len("model_augmented_"):]
@@ -99,6 +99,11 @@ def load_metadata(filepath, compression="gzip"):
 
 
 def _load_compressed(filepath, compression):
+    """
+    @param filepath: full or relative (from shape_completion_training)
+    @param compression:
+    @return:
+    """
     if not filepath.is_absolute():
         filepath = package_path / filepath
     if compression == "bz2":
@@ -159,10 +164,11 @@ def get_all_shapenet_files(shape_ids):
             print("{}".format(obj_fp.name))
             all_augmentations = [f for f in (obj_fp / "models").iterdir()
                                  if f.name.startswith("model_augmented")
-                                 if f.name.endswith(".pkl")]
+                                 if f.name.endswith(".pkl.gzip")]
             for f in sorted(all_augmentations):
                 # shapenet_records.append(load_gt_voxels(f))
-                shapenet_records.append(load_metadata(f))
+                base = f.parent / f.stem
+                shapenet_records.append(load_metadata(base, compression="gzip"))
 
     return shapenet_records
 
