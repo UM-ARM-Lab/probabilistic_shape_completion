@@ -9,6 +9,7 @@ import tensorflow as tf
 from shape_completion_training import binvox_rw
 from shape_completion_training.model import filepath_tools
 from shape_completion_training.model import utils
+from shape_completion_training.voxelgrid import bounding_box
 import pathlib
 
 """
@@ -57,9 +58,13 @@ def save_gt_voxels(filepath, gt, compression="gzip"):
     packed = np.packbits(gt.flatten().astype(bool))
     parts = filepath.parts
     augmentation = filepath.stem[len("model_augmented_"):]
+    angle = int(augmentation.split("_")[-1])
+    bb = bounding_box.get_bounding_box_for_elem(gt, np.pi * angle / 180)
     data = {"gt_occ_packed": packed, "shape": tf.TensorShape(shape), "augmentation": augmentation,
             "filepath": filepath.relative_to(package_path).as_posix(),
-            "category": parts[-4], "id": parts[-3], "angle": int(augmentation.split("_")[-1])}
+            "category": parts[-4], "id": parts[-3], "angle": angle,
+            "bounding_box": bb
+            }
 
     if compression == "bz2":
         with bz2.BZ2File(filepath.with_suffix(".pkl.bz2").as_posix(), "w") as f:
