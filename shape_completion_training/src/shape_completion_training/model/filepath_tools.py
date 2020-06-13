@@ -80,16 +80,18 @@ def create_trial(group_name, params, trials_directory=None, write_summary=True):
         r = rospkg.RosPack()
         shape_completion_training_path = pathlib.Path(r.get_path('shape_completion_training'))
         trials_directory = shape_completion_training_path / 'trials'
-    trials_directory.mkdir(parents=True, exist_ok=True)
+    if not trials_directory.exists():
+        trials_directory.mkdir(parents=True)
 
     # make subdirectory
     unique_trial_subdirectory_name = make_unique_trial_subdirectory_name()
     full_directory = trials_directory / group_name / unique_trial_subdirectory_name
-    full_directory.mkdir(parents=True, exist_ok=False)
+    if not full_directory.exists():
+        full_directory.mkdir(parents=True)
 
     # save params
     params_filename = full_directory / 'params.json'
-    with params_filename.open("w") as params_file:
+    with open(params_filename.as_posix(), "w") as params_file:
         json.dump(params, params_file, indent=2)
 
     # write summary
@@ -109,7 +111,7 @@ def rm_tree(path):
 
 
 def _write_summary(full_trial_directory, group_name, unique_trial_subdirectory_name):
-    with (full_trial_directory / 'readme.txt').open("w") as f:
+    with open((full_trial_directory / 'readme.txt').as_posix(), "w") as f:
         f.write(datetime.now().strftime("%Y/%m/%d-%H:%M:%S"))
         f.write("\nTrial trial_nickname: {}/{}\n".format(group_name, unique_trial_subdirectory_name))
 

@@ -10,6 +10,7 @@ from shape_completion_training.model.voxelcnn import VoxelCNN
 from shape_completion_training.model.vae import VAE, VAE_GAN
 from shape_completion_training.model.conditional_vcnn import ConditionalVCNN
 from shape_completion_training.model.ae_vcnn import AE_VCNN
+from shape_completion_training.model.flow import Flow, RealNVP, MAF
 import progressbar
 import datetime
 import time
@@ -17,6 +18,14 @@ import time
 
 class ModelRunner:
     def __init__(self, training, group_name=None, trial_path=None, params=None, write_summary=True):
+        """
+        @type training: bool
+        @param training: 
+        @param group_name: 
+        @param trial_path: 
+        @param params: 
+        @param write_summary: 
+        """
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
         self.training = training
@@ -27,9 +36,7 @@ class ModelRunner:
                                                                            write_summary=write_summary)
         self.group_name = self.trial_path.parts[-2]
 
-        self.batch_size = 16
-        if not self.training:
-            self.batch_size = 1
+        self.batch_size = 1 if not self.training else params['batch_size']
 
         self.train_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/train").as_posix())
         self.test_summary_writer = tf.summary.create_file_writer((self.trial_path / "logs/test").as_posix())
@@ -50,6 +57,8 @@ class ModelRunner:
             self.model = ConditionalVCNN(self.params, batch_size=self.batch_size)
         elif self.params['network'] == 'AE_VCNN':
             self.model = AE_VCNN(self.params, batch_size=self.batch_size)
+        elif self.params['network'] == "RealNVP":
+            self.model = RealNVP(self.params, batch_size=self.batch_size)
         else:
             raise Exception('Unknown Model Type')
 
@@ -58,7 +67,7 @@ class ModelRunner:
         self.ckpt = tf.train.Checkpoint(step=tf.Variable(1),
                                         epoch=tf.Variable(0),
                                         train_time=tf.Variable(0.0),
-                                        optimizer=self.model.opt, net=self.model.get_model())
+                                        optimizer=self.model.optimizer, net=self.model)
         self.checkpoint_path = self.trial_path / "training_checkpoints/"
         self.manager = tf.train.CheckpointManager(self.ckpt, self.checkpoint_path.as_posix(), max_to_keep=1)
         self.restore()
@@ -80,7 +89,7 @@ class ModelRunner:
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
-        tf.keras.utils.plot_model(self.model.get_model(), (self.trial_path / 'network.png').as_posix(),
+        tf.keras.utils.plot_model(self.model, (self.trial_path / 'network.png').as_posix(),
                                   show_shapes=True)
 
     def write_summary(self, summary_dict):
