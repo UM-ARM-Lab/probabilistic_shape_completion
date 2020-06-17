@@ -29,7 +29,6 @@ namespace mps_shape_completion_visualization
 
     void VoxelGridVisual::reset()
     {
-        std::cout << "Reset called\n";
         latest_msg = mps_shape_completion_msgs::OccupancyStamped();
         voxel_grid_->clear();
     }
