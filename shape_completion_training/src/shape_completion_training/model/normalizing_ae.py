@@ -18,9 +18,10 @@ class NormalizingAE(MyKerasModel):
         return {"mean": mean, "logvar": logvar, "sampled_features": sampled_features}
 
     def compute_loss(self, gt_latent, train_outputs):
-        losses = -log_normal_pdf(gt_latent, train_outputs['mean'], train_outputs['logvar'])
-        loss = tf.reduce_mean(losses)
-        return {"loss": loss}
+        # losses = -log_normal_pdf(gt_latent, train_outputs['mean'], train_outputs['logvar'])
+        # loss = tf.reduce_mean(losses)
+        # return {"loss": loss}
+        return {"loss": 0}
 
     def sample_latent(self, mean, logvar):
         eps = tf.random.normal(shape=mean.shape)
