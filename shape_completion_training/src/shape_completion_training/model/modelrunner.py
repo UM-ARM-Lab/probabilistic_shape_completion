@@ -122,7 +122,7 @@ class ModelRunner:
                 self.num_batches += 1
                 self.ckpt.step.assign_add(1)
 
-                ret = self.model.train_step(batch)
+                _, ret = self.model.train_step(batch)
                 time_str = str(datetime.timedelta(seconds=int(self.ckpt.train_time.numpy())))
                 bar.update(self.num_batches, Loss=ret['loss'].numpy(),
                            TrainTime=time_str)
