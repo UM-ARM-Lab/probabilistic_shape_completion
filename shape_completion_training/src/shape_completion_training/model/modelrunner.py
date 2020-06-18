@@ -1,4 +1,5 @@
 from shape_completion_training.model import utils
+from shape_completion_training.model.normalizing_ae import NormalizingAE
 
 utils.set_gpu_with_lowest_memory()
 import tensorflow as tf
@@ -59,6 +60,9 @@ class ModelRunner:
             self.model = AE_VCNN(self.params, batch_size=self.batch_size)
         elif self.params['network'] == "RealNVP":
             self.model = RealNVP(self.params, batch_size=self.batch_size)
+        elif self.params['network'] == "NormalizingAE":
+            self.model = NormalizingAE(self.params, batch_size=self.batch_size)
+            self.model.flow = ModelRunner(training=False, trial_path="Flow/June_13_13-09-11_4bef25fbe3").model.flow
         else:
             raise Exception('Unknown Model Type')
 

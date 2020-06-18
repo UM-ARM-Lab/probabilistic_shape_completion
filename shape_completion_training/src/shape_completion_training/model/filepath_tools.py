@@ -53,6 +53,7 @@ def create_or_load_trial(group_name=None, trial_path=None, params=None, trials_d
     elif group_name is not None:
         return create_trial(group_name, params, trials_directory, write_summary)
     else:
+        print("No group name specified: using 'tmp' trial")
         return create_trial('tmp', params, trials_directory, write_summary)
 
 

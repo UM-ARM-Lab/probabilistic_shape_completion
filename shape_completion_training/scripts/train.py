@@ -5,13 +5,10 @@ from shape_completion_training.model.modelrunner import ModelRunner
 
 
 params = {
-    'num_latent_layers': 200,
-    'translation_pixel_range_x': 10,
-    'translation_pixel_range_y': 10,
-    'translation_pixel_range_z': 10,
-    'is_u_connected': False, 
-    'final_activation': 'None',
-    'unet_dropout_rate': 0.5,
+    'num_latent_layers': 24,
+    'translation_pixel_range_x': 0,
+    'translation_pixel_range_y': 0,
+    'translation_pixel_range_z': 0,
     'use_final_unet_layer': False,
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': False,
@@ -19,12 +16,10 @@ params = {
     # 'network': 'VAE_GAN',
     # 'network': 'Augmented_VAE',
     # 'network': 'Conditional_VCNN',
-    'network': 'AE_VCNN',
-    'stacknet_version': 'v2',
-    'turn_on_prob':0.00000,
-    'turn_off_prob':0.0,
-    'loss':'cross_entropy',
-    'multistep_loss': False,
+    'network': 'NormalizingAE',
+    'batch_size': 16,
+    'learning_rate': 1e-3,
+
 }
 
 
@@ -44,9 +39,9 @@ if __name__ == "__main__":
                                      params['translation_pixel_range_y'],
                                      params['translation_pixel_range_z'],
                                      sim_input_fn=sim_input_fn)
-    data = data_tools.simulate_condition_occ(data,
-                                             turn_on_prob=params['turn_on_prob'],
-                                             turn_off_prob=params['turn_off_prob'])
+    # data = data_tools.simulate_condition_occ(data,
+    #                                          turn_on_prob=params['turn_on_prob'],
+    #                                          turn_off_prob=params['turn_off_prob'])
 
     if params['simulate_partial_completion']:
         data = data_tools.simulate_partial_completion(data)
@@ -57,7 +52,7 @@ if __name__ == "__main__":
     # e = next(data.__iter__())
     # IPython.embed()
 
-    mr = ModelRunner(params)
+    mr = ModelRunner(training=True, params=params)
     # IPython.embed()
 
     mr.train_and_test(data)

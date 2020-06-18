@@ -7,6 +7,7 @@ import functools
 
 # Nvidia-smi GPU memory parsing.
 # Tested on nvidia-smi 370.23
+import numpy as np
 import tensorflow as tf
 
 
@@ -110,3 +111,22 @@ def memoize(func):
         return cache[key]
 
     return memoized_func
+
+
+def stack_known(inp):
+    return tf.concat([inp['known_occ'], inp['known_free']], axis=4)
+
+
+def log_normal_pdf(sample, mean, logvar, raxis=1):
+    """
+    Computes the probability density for a sample (vector) given a gaussian means and variance.
+    @param sample: vector (batch x length)
+    @param mean: vector (batch x vector_length)
+    @param logvar: vector - log of variance of gaussian
+    @param raxis: axis which to sum
+    @return:
+    """
+    log2pi = tf.math.log(2. * np.pi)
+    return tf.reduce_sum(
+        -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
+        axis=raxis)

@@ -3,10 +3,7 @@ import tensorflow as tf
 import tensorflow.keras.layers as tfl
 
 import shape_completion_training.model.nn_tools as nn
-
-
-def stack_known(inp):
-    return tf.concat([inp['known_occ'], inp['known_free']], axis=4)
+from shape_completion_training.model.utils import stack_known
 
 
 def log_normal_pdf(sample, mean, logvar, raxis=1):

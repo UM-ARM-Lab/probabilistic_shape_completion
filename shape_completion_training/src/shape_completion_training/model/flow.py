@@ -28,8 +28,7 @@ class Flow(mykerasmodel.MyKerasModel):
     def call(self, *inputs):
         return self.flow.bijector.forward(*inputs)
 
-    def predict(self, elem=None):
-
+    def build_model(self,):
         x = self.flow.distribution.sample(self.batch_size)
         r = self.flow.bijector.forward(x)
         self.built = True

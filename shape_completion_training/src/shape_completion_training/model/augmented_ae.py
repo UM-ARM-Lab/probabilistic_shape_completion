@@ -1,23 +1,12 @@
-import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
 
 import shape_completion_training.model.nn_tools as nn
+from shape_completion_training.model.utils import stack_known, log_normal_pdf
 
 """
 VAE that explicitly tries to predict angle loss as a feature
 """
-
-
-def stack_known(inp):
-    return tf.concat([inp['known_occ'], inp['known_free']], axis=4)
-
-
-def log_normal_pdf(sample, mean, logvar, raxis=1):
-    log2pi = tf.math.log(2. * np.pi)
-    return tf.reduce_sum(
-        -.5 * ((sample - mean) ** 2. * tf.exp(-logvar) + logvar + log2pi),
-        axis=raxis)
 
 
 def compute_vae_loss(z, mean, logvar, sample_logit, labels):
