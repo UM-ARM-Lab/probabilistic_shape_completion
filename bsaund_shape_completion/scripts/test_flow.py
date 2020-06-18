@@ -6,7 +6,7 @@ from bsaund_shape_completion import voxelgrid_publisher
 import tensorflow as tf
 import rospy
 from shape_completion_training.model.utils import add_batch_to_dict
-from shape_completion_training.voxelgrid.bounding_box import unflatten_bounding_box
+from shape_completion_training.voxelgrid.bounding_box import unflatten_bounding_box, flatten_bounding_box
 
 
 def get_flow():
@@ -36,10 +36,17 @@ def view_inferred_bounding_box():
         elem = sn.get(sn.train_names[i])
         elem = add_batch_to_dict(elem)
         output = mr.model(elem)
-        latent_bb = flow.bijector.forward(output['mean'])
-        bb = unflatten_bounding_box(latent_bb)
+        flat_bb = flow.bijector.forward(output['mean'])
+        flat_bb_1 = mr.model.flow.bijector.forward(output['mean'])
+        print(flat_bb - flat_bb_1)
+        bb = unflatten_bounding_box(flat_bb)
         vg_pub.publish_elem(elem)
         rospy.sleep(1)
+
+        l1 = mr.model.flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
+        bb = unflatten_bounding_box(flow.bijector.forward(l1))
+
+
         vg_pub.publish_bounding_box(bb)
         rospy.sleep(1)
 

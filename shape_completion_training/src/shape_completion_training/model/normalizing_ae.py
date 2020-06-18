@@ -17,10 +17,8 @@ class NormalizingAE(MyKerasModel):
         sampled_features = self.sample_latent(mean, logvar)
         return {"mean": mean, "logvar": logvar, "sampled_features": sampled_features}
 
-    def compute_loss(self, train_element, train_outputs):
-        bb = tf.keras.layers.Flatten()(tf.cast(train_element['bounding_box'], tf.float32))
-        expected = self.flow.bijector.inverse(bb)
-        losses = -log_normal_pdf(expected, train_outputs['mean'], train_outputs['logvar'])
+    def compute_loss(self, gt_latent, train_outputs):
+        losses = -log_normal_pdf(gt_latent, train_outputs['mean'], train_outputs['logvar'])
         loss = tf.reduce_mean(losses)
         return {"loss": loss}
 
@@ -35,6 +33,25 @@ class NormalizingAE(MyKerasModel):
 
     def predict(self, elem):
         return self(next(elem.__iter__()))
+
+    @tf.function
+    def train_step(self, train_element):
+        bb = tf.keras.layers.Flatten()(tf.cast(train_element['bounding_box'], tf.float32))
+        gt_latent = self.flow.bijector.inverse(bb)
+        # train_element['gt_latent'] = gt_latent
+        with tf.GradientTape() as tape:
+            train_outputs = self.call(train_element, training=True)
+            train_losses = self.compute_loss(gt_latent, train_outputs)
+
+        gradient_metrics = self.apply_gradients(tape, train_element, train_outputs, train_losses)
+        other_metrics = self.calculate_metrics(train_element, train_outputs)
+
+        metrics = {}
+        metrics.update(train_losses)
+        metrics.update(gradient_metrics)
+        metrics.update(other_metrics)
+
+        return train_outputs, metrics
 
 
 def make_encoder(inp_shape, params):
