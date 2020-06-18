@@ -38,6 +38,7 @@ class NormalizingAE(MyKerasModel):
     def train_step(self, train_element):
         bb = tf.keras.layers.Flatten()(tf.cast(train_element['bounding_box'], tf.float32))
         gt_latent = self.flow.bijector.inverse(bb)
+        gt_latent = tf.stop_gradient(gt_latent)
         # train_element['gt_latent'] = gt_latent
         with tf.GradientTape() as tape:
             train_outputs = self.call(train_element, training=True)

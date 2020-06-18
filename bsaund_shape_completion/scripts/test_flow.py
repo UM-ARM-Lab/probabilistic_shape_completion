@@ -30,7 +30,7 @@ def view_flow():
 def view_inferred_bounding_box():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
     sn = data_tools.get_shapenet()
-    mr = ModelRunner(training=False, trial_path="Normalizing_AE/June_17_20-47-16_bdb4e72791")
+    mr = ModelRunner(training=False, trial_path="Normalizing_AE/June_18_17-49-48_7994511873")
     flow = get_flow()
     for i in range(100):
         elem = sn.get(sn.train_names[i])
