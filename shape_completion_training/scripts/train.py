@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # e = next(data.__iter__())
     # IPython.embed()
 
-    mr = ModelRunner(training=True, params=params)
+    mr = ModelRunner(training=True, params=params, group_name="Normalizing_AE")
     # IPython.embed()
 
     mr.train_and_test(data)
