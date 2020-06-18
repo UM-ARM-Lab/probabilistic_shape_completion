@@ -135,13 +135,17 @@ class AddressableShapenet():
         self.train_ds, self.test_ds = load_shapenet_metadata(shuffle=False)
         self.train_map = {}
         self.test_map = {}
+        self.train_names = []
+        self.test_names = []
 
         if use_train:
             for i, elem in self.train_ds.enumerate():
                 self.train_map[get_unique_name(elem)] = i
+                self.train_names.append(get_unique_name(elem))
         if use_test:
             for i, elem in self.test_ds.enumerate():
                 self.test_map[get_unique_name(elem)] = i
+                self.test_names.append(get_unique_name(elem))
 
     def get(self, unique_name):
         if unique_name in self.train_map:
