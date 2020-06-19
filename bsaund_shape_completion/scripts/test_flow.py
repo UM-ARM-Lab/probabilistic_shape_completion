@@ -28,11 +28,34 @@ def view_flow():
     print("done")
 
 
+def get_untrained_model():
+    params = {
+        'num_latent_layers': 24,
+        'translation_pixel_range_x': 0,
+        'translation_pixel_range_y': 0,
+        'translation_pixel_range_z': 0,
+        'simulate_partial_completion': False,
+        'simulate_random_partial_completion': False,
+        # 'network': 'VoxelCNN',
+        # 'network': 'VAE_GAN',
+        # 'network': 'Augmented_VAE',
+        # 'network': 'Conditional_VCNN',
+        'network': 'NormalizingAE',
+        'batch_size': 16,
+        'learning_rate': 1e-3,
+
+    }
+    mr = ModelRunner(training=False, params=params)
+    return mr
+
+
 def view_inferred_bounding_box():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
     sn = data_tools.get_shapenet()
-    mr = ModelRunner(training=False, trial_path="Normalizing_AE/June_18_18-18-41_295b15b1de")
+    mr = ModelRunner(training=False, trial_path="Normalizing_AE/June_18_18-36-52_a3a10e13ee")
+    # mr = get_untrained_model()
     flow = get_flow()
+
     for i in range(100):
         elem = sn.get(sn.train_names[i])
         elem = add_batch_to_dict(elem)
@@ -45,11 +68,12 @@ def view_inferred_bounding_box():
         rospy.sleep(1)
 
         l1 = mr.model.flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
-        bb = unflatten_bounding_box(flow.bijector.forward(l1))
-
+        l2 = flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
+        # bb = unflatten_bounding_box(mr.model.flow.bijector.forward(l2.numpy()))
 
         vg_pub.publish_bounding_box(bb)
         rospy.sleep(1)
+
 
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")

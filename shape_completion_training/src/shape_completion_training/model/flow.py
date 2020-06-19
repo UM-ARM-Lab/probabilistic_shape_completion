@@ -74,8 +74,10 @@ class MAF(Flow):
 
 
 class RealNVP(Flow):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, training=False, *args, **kwargs):
         super(RealNVP, self).__init__(*args, **kwargs)
+
+
         self.dim = self.hparams['dim']
         self.num_masked = self.hparams['num_masked']
 
@@ -92,7 +94,7 @@ class RealNVP(Flow):
             )
 
             if i % 3 == 0:
-                bijectors.append(tfb.BatchNormalization())
+                bijectors.append(tfb.BatchNormalization(training=training))
 
             permutation = [i for i in reversed(range(self.dim))]
             bijectors.append(tfb.Permute(permutation=permutation))

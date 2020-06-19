@@ -59,7 +59,7 @@ class ModelRunner:
         elif self.params['network'] == 'AE_VCNN':
             self.model = AE_VCNN(self.params, batch_size=self.batch_size)
         elif self.params['network'] == "RealNVP":
-            self.model = RealNVP(self.params, batch_size=self.batch_size)
+            self.model = RealNVP(hparams=self.params, batch_size=self.batch_size, training=training)
         elif self.params['network'] == "NormalizingAE":
             self.model = NormalizingAE(self.params, batch_size=self.batch_size)
             self.model.flow = ModelRunner(training=False, trial_path="Flow/June_13_13-09-11_4bef25fbe3").model.flow
