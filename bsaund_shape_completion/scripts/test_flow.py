@@ -21,7 +21,7 @@ def get_flow():
 def view_flow():
     flow = get_flow()
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
-    X = flow.distribution.sample(10)
+    X = flow.distribution.sample(100)
     Y = flow.bijector.forward(X)
     for bb_flat in Y:
         bb = tf.reshape(bb_flat, (8, 3))
@@ -60,7 +60,7 @@ def view_inferred_bounding_box():
     # mr = get_untrained_model()
     flow = get_flow()
 
-    for i in range(100):
+    for i in range(0, 10000, 80):
         elem = sn.get(sn.train_names[i])
         elem = add_batch_to_dict(elem)
         output = mr.model(elem)
@@ -89,15 +89,54 @@ def view_latent_space():
 
     train_names = copy.deepcopy(sn.train_names)
     shuffle(train_names)
-    for name in train_names[0:1000]:
+    for name in train_names[0:500]:
         elem = sn.get(name)
         elem = add_batch_to_dict(elem)
         l = flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
         latents.append(l.numpy().tolist()[0])
     latents_array = np.array(latents)
     for i in range(0, 24, 2):
-        plt.scatter(latents_array[:,i], latents_array[:,i+1])
-        plt.show()
+        plt.scatter(latents_array[:, i], latents_array[:, i + 1])
+        plt.xlabel('latent[i]')
+        plt.ylabel('latent[j]')
+        plt.xlim([-20, 20])
+        plt.ylim([-20, 20])
+        plt.pause(0.05)
+    plt.show()
+
+
+def view_latent_space_as_movie():
+    sn = data_tools.get_shapenet()
+    flow = get_flow()
+
+    train_names = copy.deepcopy(sn.train_names)
+    # shuffle(train_names)
+
+    color_ind = -1
+    cur_id = "unlabeled"
+    colors = ['b', 'r', 'g', 'm', 'c', 'k', 'y']
+
+    for name in train_names[0:1000]:
+        elem = sn.get(name)
+        print(name)
+        elem = add_batch_to_dict(elem)
+        l = flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
+        # plt.scatter(l[0,0], l[0,1], c='b')
+        #plt.scatter(l[0,0], elem['angle'][0])
+
+        shape_id = elem['id'].numpy()[0]
+        if shape_id != cur_id:
+            cur_id = shape_id
+            color_ind += 1
+
+        latent_ind=4
+        plt.scatter(elem['angle'][0], l[0, latent_ind], c=colors[color_ind])
+        plt.xlim([-5, 365])
+        plt.ylim([-5, 5])
+        plt.xlabel("angle")
+        plt.ylabel("latent[{}]".format(latent_ind))
+        plt.pause(0.05)
+    plt.show()
 
 
 def check_loss():
@@ -114,7 +153,7 @@ def check_loss():
         l = flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
         # mean=[0.]*24
         mean = l
-        var = [.1]*24
+        var = [.1] * 24
         logvar = tf.math.log(var)
         loss = -log_normal_pdf(l, mean, logvar)
         print(loss.numpy())
@@ -122,9 +161,10 @@ def check_loss():
 
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")
-    # view_flow()
+    view_flow()
     # view_inferred_bounding_box()
-    view_latent_space()
+    # view_latent_space()
+    # view_latent_space_as_movie()
     # check_loss()
 
     # mr.train_and_test(sn.train_ds)
