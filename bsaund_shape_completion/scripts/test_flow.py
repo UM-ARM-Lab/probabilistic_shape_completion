@@ -7,7 +7,7 @@ from shape_completion_training.model.modelrunner import ModelRunner
 from bsaund_shape_completion import voxelgrid_publisher
 import tensorflow as tf
 import rospy
-from shape_completion_training.model.utils import add_batch_to_dict, log_normal_pdf
+from shape_completion_training.model.utils import add_batch_to_dict, log_normal_pdf, stack_known
 from shape_completion_training.voxelgrid.bounding_box import unflatten_bounding_box, flatten_bounding_box
 import numpy as np
 from matplotlib import pyplot as plt
@@ -79,6 +79,25 @@ def view_inferred_bounding_box():
 
         vg_pub.publish_bounding_box(bb)
         rospy.sleep(1)
+
+
+def view_augmented_ae():
+    vg_pub = voxelgrid_publisher.VoxelgridPublisher()
+    sn = data_tools.get_shapenet()
+    mr = ModelRunner(training=False, trial_path="Augmented_VAE/May_21_20-00-00_0000000000")
+
+    for i in range(0, 1000, 2):
+        elem = sn.get(sn.train_names[i])
+        elem = add_batch_to_dict(elem)
+        mean, logvar = mr.model.encode(stack_known(elem))
+        mean_f, mean_angle = mr.model.split_angle(mean)
+        logvar_f, logvar_angle = mr.model.split_angle(logvar)
+        vg_pub.publish_elem(elem)
+        print("{} +/- {}".format(mean_angle.numpy()[0,0], tf.exp(logvar_angle).numpy()[0,0]))
+        print("{} actually".format(elem['angle'].numpy()[0]))
+        rospy.sleep(1)
+
+
 
 
 def view_latent_space():
@@ -161,10 +180,11 @@ def check_loss():
 
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")
-    view_flow()
+    # view_flow()
     # view_inferred_bounding_box()
     # view_latent_space()
     # view_latent_space_as_movie()
     # check_loss()
+    view_augmented_ae()
 
     # mr.train_and_test(sn.train_ds)
