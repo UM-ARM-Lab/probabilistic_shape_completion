@@ -25,7 +25,7 @@ def compute_angle_loss(true, mean, logvar):
     return tf.reduce_mean(-log_normal_pdf(true, mean, logvar))
 
 
-def compute_l2_angle_loss(true, mean):
+def compute_squared_angle_loss(true, mean):
     return tf.reduce_mean(tf.math.square(true - mean))
 
 
@@ -116,7 +116,7 @@ class Augmented_VAE(tf.keras.Model):
 
             vae_loss = compute_vae_loss(z_f, mean_f, logvar_f, sample_logit, labels=batch['gt_occ'])
             # angle_loss = compute_angle_loss(true_angle, mean_angle, logvar_angle)
-            angle_loss = compute_angle_loss(true_angle, mean_angle)
+            angle_loss = compute_squared_angle_loss(true_angle, mean_angle)
             loss = vae_loss + angle_loss
 
             sample = tf.nn.sigmoid(sample_logit)
