@@ -30,7 +30,7 @@ class Augmented_VAE(tf.keras.Model):
         super(Augmented_VAE, self).__init__()
         self.params = params
         self.batch_size = batch_size
-        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.optimizer = tf.keras.optimizers.Adam(0.001)
 
         self.make_vae(inp_shape=[64, 64, 64, 2])
 
