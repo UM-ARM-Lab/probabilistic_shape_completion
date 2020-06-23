@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+import argparse
 
 from shape_completion_training.model import data_tools
 from shape_completion_training.model.modelrunner import ModelRunner
@@ -24,6 +25,10 @@ params = {
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process args for training")
+    parser.add_argument('--tmp', action='store_true')
+    args = parser.parse_args()
+
     train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
 
     # data = data_ycb
@@ -50,7 +55,9 @@ if __name__ == "__main__":
 
     data = data_tools.add_angle(data)
 
-    mr = ModelRunner(training=True, params=params, group_name=params['network'])
-    # mr = ModelRunner(training=True, params=params, group_name=None)
+    if args.tmp:
+        mr = ModelRunner(training=True, params=params, group_name=None)
+    else:
+        mr = ModelRunner(training=True, params=params, group_name=params['network'])
 
     mr.train_and_test(data)
