@@ -84,13 +84,13 @@ class Augmented_VAE(tf.keras.Model):
         features, angle = tf.split(inp, num_or_size_splits=[self.params['num_latent_layers'] - 1, 1], axis=1)
         return features, angle
 
-    def replace_true_angle(self, z, true_angle, mean, logvar):
+    def replace_true_angle(self, z, true_angle):
         nf = self.params['num_latent_layers']
         f, _ = tf.split(z, num_or_size_splits=[nf - 1, 1], axis=1)
         f_corrected = tf.concat([f, tf.expand_dims(true_angle, axis=1)], axis=1)
         return f_corrected
 
-    # @tf.function
+    @tf.function
     def train_step(self, batch):
         with tf.GradientTape() as tape:
             known = stack_known(batch)
@@ -99,7 +99,7 @@ class Augmented_VAE(tf.keras.Model):
 
             z = self.reparameterize(mean, logvar)
 
-            z_corrected = self.replace_true_angle(z, true_angle, mean, logvar)
+            z_corrected = self.replace_true_angle(z, true_angle)
 
             sample_logit = self.decode(z_corrected)
 
