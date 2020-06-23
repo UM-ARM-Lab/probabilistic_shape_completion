@@ -133,7 +133,7 @@ class Augmented_VAE(tf.keras.Model):
 
         m = {k: reduce(metrics[k]) for k in metrics}
         m['loss'] = loss
-        return m
+        return output, m
 
 
 def make_encoder(inp_shape, params):
