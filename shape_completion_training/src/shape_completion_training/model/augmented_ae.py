@@ -123,6 +123,7 @@ class Augmented_VAE(tf.keras.Model):
 
         metrics['loss/angle'] = angle_loss
         metrics['loss/vae'] = vae_loss
+        metrics['values/variance'] = tf.reduce_mean(tf.exp(logvar_angle))
 
         m = {k: tf.reduce_mean(metrics[k]) for k in metrics}
         m['loss'] = loss
