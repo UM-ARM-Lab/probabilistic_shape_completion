@@ -51,5 +51,6 @@ if __name__ == "__main__":
     data = data_tools.add_angle(data)
 
     mr = ModelRunner(training=True, params=params, group_name=params['network'])
+    # mr = ModelRunner(training=True, params=params, group_name=None)
 
     mr.train_and_test(data)

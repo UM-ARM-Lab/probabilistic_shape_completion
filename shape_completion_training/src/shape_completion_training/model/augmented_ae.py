@@ -25,8 +25,8 @@ def compute_angle_loss(true, mean, logvar):
     return tf.reduce_mean(-log_normal_pdf(true, mean, logvar))
 
 
-def compute_squared_angle_loss(true, mean):
-    return tf.reduce_mean(tf.math.square(true - mean))
+def compute_abs_angle_loss(true, mean):
+    return tf.reduce_mean(tf.math.abs(true - tf.squeeze(mean)))
 
 
 class Augmented_VAE(tf.keras.Model):
@@ -86,19 +86,12 @@ class Augmented_VAE(tf.keras.Model):
 
     def replace_true_angle(self, z, true_angle, mean, logvar):
         nf = self.params['num_latent_layers']
-        f, sampled_angle = tf.split(z, num_or_size_splits=[nf - 1, 1], axis=1)
+        f, _ = tf.split(z, num_or_size_splits=[nf - 1, 1], axis=1)
         f_corrected = tf.concat([f, tf.expand_dims(true_angle, axis=1)], axis=1)
+        return f_corrected
 
-        _, mean_angle = tf.split(mean, num_or_size_splits=[nf - 1, 1], axis=1)
-        _, logvar_angle = tf.split(logvar, num_or_size_splits=[nf - 1, 1], axis=1)
-
-        return f_corrected, sampled_angle, mean_angle, logvar_angle
-
-    @tf.function
+    # @tf.function
     def train_step(self, batch):
-        def reduce(val):
-            return tf.reduce_mean(val)
-
         with tf.GradientTape() as tape:
             known = stack_known(batch)
             mean, logvar = self.encode(known)
@@ -106,7 +99,7 @@ class Augmented_VAE(tf.keras.Model):
 
             z = self.reparameterize(mean, logvar)
 
-            z_corrected, sampled_angle, mean_angle, logvar_angle = self.replace_true_angle(z, true_angle, mean, logvar)
+            z_corrected = self.replace_true_angle(z, true_angle, mean, logvar)
 
             sample_logit = self.decode(z_corrected)
 
@@ -116,22 +109,22 @@ class Augmented_VAE(tf.keras.Model):
 
             vae_loss = compute_vae_loss(z_f, mean_f, logvar_f, sample_logit, labels=batch['gt_occ'])
             # angle_loss = compute_angle_loss(true_angle, mean_angle, logvar_angle)
-            angle_loss = compute_squared_angle_loss(true_angle, mean_angle)
+            angle_loss = compute_abs_angle_loss(true_angle, mean_angle)
             loss = vae_loss + angle_loss
 
-            sample = tf.nn.sigmoid(sample_logit)
-            output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
-            metrics = nn.calc_metrics(output, batch)
+        vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
+        gradients = tape.gradient(loss, vae_variables)
 
-            metrics['loss/angle'] = angle_loss
-            metrics['loss/vae'] = vae_loss
+        self.optimizer.apply_gradients(list(zip(gradients, vae_variables)))
 
-            vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
-            gradients = tape.gradient(loss, vae_variables)
+        sample = tf.nn.sigmoid(sample_logit)
+        output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
+        metrics = nn.calc_metrics(output, batch)
 
-            self.optimizer.apply_gradients(list(zip(gradients, vae_variables)))
+        metrics['loss/angle'] = angle_loss
+        metrics['loss/vae'] = vae_loss
 
-        m = {k: reduce(metrics[k]) for k in metrics}
+        m = {k: tf.reduce_mean(metrics[k]) for k in metrics}
         m['loss'] = loss
         return output, m
 
