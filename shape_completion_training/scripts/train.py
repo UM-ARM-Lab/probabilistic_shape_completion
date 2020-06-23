@@ -5,18 +5,18 @@ from shape_completion_training.model.modelrunner import ModelRunner
 
 
 params = {
-    'num_latent_layers': 24,
-    'translation_pixel_range_x': 0,
-    'translation_pixel_range_y': 0,
-    'translation_pixel_range_z': 0,
-    'use_final_unet_layer': False,
+    'num_latent_layers': 200,
+    'translation_pixel_range_x': 10,
+    'translation_pixel_range_y': 10,
+    'translation_pixel_range_z': 10,
+    # 'use_final_unet_layer': False,
     'simulate_partial_completion': False,
     'simulate_random_partial_completion': False,
     # 'network': 'VoxelCNN',
     # 'network': 'VAE_GAN',
-    # 'network': 'Augmented_VAE',
+    'network': 'Augmented_VAE',
     # 'network': 'Conditional_VCNN',
-    'network': 'NormalizingAE',
+    # 'network': 'NormalizingAE',
     'batch_size': 16,
     'learning_rate': 1e-3,
 
@@ -49,10 +49,7 @@ if __name__ == "__main__":
         data = data_tools.simulate_random_partial_completion(data)
 
     data = data_tools.add_angle(data)
-    # e = next(data.__iter__())
-    # IPython.embed()
 
-    mr = ModelRunner(training=True, params=params, group_name="Normalizing_AE")
-    # IPython.embed()
+    mr = ModelRunner(training=True, params=params, group_name=params['network'])
 
     mr.train_and_test(data)
