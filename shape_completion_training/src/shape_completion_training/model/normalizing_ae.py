@@ -35,7 +35,7 @@ class NormalizingAE(MyKerasModel):
         mean, logvar = self.encode(known)
         sampled_features = self.sample_latent(mean, logvar)
         predicted_occ=self.decode(sampled_features, apply_sigmoid=True)
-        output = {'predicted_occ': predicted_occ, 'predicted_free': 1 - predicted_oxx,
+        output = {'predicted_occ': predicted_occ, 'predicted_free': 1 - predicted_occ,
                   'latent_mean': mean, 'latent_logvar': logvar, 'sampled_latent': sampled_features}
         return output
 
