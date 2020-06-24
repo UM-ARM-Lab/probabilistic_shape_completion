@@ -36,7 +36,7 @@ def display_augmented_vae(elem):
     logvar_f, logvar_angle = model_runner.model.split_angle(inference['latent_logvar'])
     sampled_f, sampled_angle = model_runner.model.split_angle(inference['sampled_latent'])
 
-    print("{} +/- {} angle".format(mean_angle.numpy()[0,0], tf.exp(logvar_angle).numpy()[0,0]))
+    print("{} +/- {} angle".format(mean_angle.numpy()[0,0], tf.sqrt(tf.exp(logvar_angle)).numpy()[0,0]))
     print("{} sampled angle".format(sampled_angle.numpy()[0,0]))
     print("{} actual angle".format(elem['angle'][0]))
 
