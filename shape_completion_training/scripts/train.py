@@ -53,7 +53,6 @@ if __name__ == "__main__":
     if params['simulate_random_partial_completion']:
         data = data_tools.simulate_random_partial_completion(data)
 
-    data = data_tools.add_angle(data)
 
     if args.tmp:
         mr = ModelRunner(training=True, params=params, group_name=None)

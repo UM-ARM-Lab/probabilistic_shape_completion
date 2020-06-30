@@ -51,20 +51,8 @@ def simulate_depth_image(vg):
     return tf.reduce_min(dists, axis=0)
 
 
-def shift_elem(elem, x, y, z):
-    keys = ['gt_occ', 'known_occ', 'gt_free', 'known_free']
-    pad_values = {'gt_occ': 0.0,
-                  'known_occ': 0.0,
-                  'gt_free': 1.0,
-                  'known_free': 1.0}
-    for k in keys:
-        elem[k] = shift_tensor(elem[k], x, y, z, pad_values[k])
-    return elem
-
-
 @tf.function
 def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
-    # p = np.madx(np.abs([dx,dy,dz]))
     a = np.abs(max_x)
     b = np.abs(max_y)
     c = np.abs(max_z)
@@ -264,9 +252,8 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
             dz = tf.random.uniform(shape=[1], minval=-z, maxval=z, dtype=tf.int64)
         example['gt_occ'] = shift_tensor(example['gt_occ'], dx, dy, dz, 0.0, x, y, z)
         example['gt_free'] = shift_tensor(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
-        example['bounding_box'] += tf.cast([[dx[0], dy[0], dz[0]]], tf.float64)*0.01
+        example['bounding_box'] += tf.cast([[dx[0], dy[0], dz[0]]], tf.float64) * 0.01
         return example
-
 
     return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
         .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -302,18 +289,6 @@ def simulate_condition_occ(dataset, turn_on_prob=0.0, turn_off_prob=0.0):
         return elem
 
     return dataset.map(_add_conditional)
-
-
-def add_angle(dataset):
-    def _augmentation_to_angle(augmentation):
-        return np.float32(augmentation.split("_")[-1])
-
-    def _extract_angle(elem):
-        angle = tf.numpy_function(_augmentation_to_angle, [elem['augmentation']], tf.float32)
-        elem['angle'] = angle
-        return elem
-
-    return dataset.map(_extract_angle)
 
 
 def get_unique_name(datum):
