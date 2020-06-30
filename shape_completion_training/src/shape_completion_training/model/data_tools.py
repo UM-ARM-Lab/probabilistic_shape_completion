@@ -259,12 +259,14 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
         if x > 0:
             dx = tf.random.uniform(shape=[1], minval=-x, maxval=x, dtype=tf.int64)
         if y > 0:
-            dy = tf.random.uniform(shape=[1], minval=-x, maxval=x, dtype=tf.int64)
+            dy = tf.random.uniform(shape=[1], minval=-y, maxval=y, dtype=tf.int64)
         if z > 0:
-            dz = tf.random.uniform(shape=[1], minval=-x, maxval=x, dtype=tf.int64)
+            dz = tf.random.uniform(shape=[1], minval=-z, maxval=z, dtype=tf.int64)
         example['gt_occ'] = shift_tensor(example['gt_occ'], dx, dy, dz, 0.0, x, y, z)
         example['gt_free'] = shift_tensor(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
+        example['bounding_box'] += tf.cast([[dx[0], dy[0], dz[0]]], tf.float64)*0.01
         return example
+
 
     return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
         .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
