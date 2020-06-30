@@ -28,6 +28,9 @@ class Flow(mykerasmodel.MyKerasModel):
     def call(self, *inputs):
         return self.flow.bijector.forward(*inputs)
 
+    def predict(self, elem):
+        return self.build_model()
+
     def build_model(self,):
         x = self.flow.distribution.sample(self.batch_size)
         r = self.flow.bijector.forward(x)
@@ -41,7 +44,7 @@ class Flow(mykerasmodel.MyKerasModel):
             loss = -tf.reduce_mean(self.flow.log_prob(X, training=True))
             gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        return {'loss': loss}
+        return None, {'loss': loss}
 
 
 class MAF(Flow):

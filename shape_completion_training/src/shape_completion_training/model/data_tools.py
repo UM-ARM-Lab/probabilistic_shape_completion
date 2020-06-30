@@ -242,6 +242,30 @@ def load_voxelgrids(metadata_ds):
     return metadata_ds.map(_load_voxelgrids)
 
 
+def shift_dataset_element(elem, x, y, z):
+    """
+    Shift the voxelgrid and bounding box of elem by a random amount, up to the limits [x,y,z]
+    :param elem:
+    :param x: maximum x shift
+    :param y: maximum y shift
+    :param z: maximum z shift
+    :return:
+    """
+    dx = 0
+    dy = 0
+    dz = 0
+    if x > 0:
+        dx = tf.random.uniform(shape=[], minval=-x, maxval=x, dtype=tf.int64)
+    if y > 0:
+        dy = tf.random.uniform(shape=[], minval=-y, maxval=y, dtype=tf.int64)
+    if z > 0:
+        dz = tf.random.uniform(shape=[], minval=-z, maxval=z, dtype=tf.int64)
+    elem['gt_occ'] = shift_voxelgrid(elem['gt_occ'], dx, dy, dz, 0.0, x, y, z)
+    elem['gt_free'] = shift_voxelgrid(elem['gt_free'], dx, dy, dz, 1.0, x, y, z)
+    elem['bounding_box'] += tf.cast([[dx, dy, dz]], tf.float64) * 0.01
+    return elem
+
+
 def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
     def _simulate_input(example):
         known_occ, known_free = tf.numpy_function(sim_input_fn, [example['gt_occ']],
@@ -252,20 +276,9 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
         example['known_free'] = known_free
         return example
 
-    def _shift(example):
-        dx = 0
-        dy = 0
-        dz = 0
-        if x > 0:
-            dx = tf.random.uniform(shape=[], minval=-x, maxval=x, dtype=tf.int64)
-        if y > 0:
-            dy = tf.random.uniform(shape=[], minval=-y, maxval=y, dtype=tf.int64)
-        if z > 0:
-            dz = tf.random.uniform(shape=[], minval=-z, maxval=z, dtype=tf.int64)
-        example['gt_occ'] = shift_voxelgrid(example['gt_occ'], dx, dy, dz, 0.0, x, y, z)
-        example['gt_free'] = shift_voxelgrid(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
-        example['bounding_box'] += tf.cast([[dx, dy, dz]], tf.float64) * 0.01
-        return example
+    def _shift(elem):
+        return shift_dataset_element(elem, x, y, z)
+
 
     return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
         .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)

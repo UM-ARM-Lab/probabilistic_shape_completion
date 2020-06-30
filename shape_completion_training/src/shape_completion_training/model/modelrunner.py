@@ -93,8 +93,8 @@ class ModelRunner:
         with self.train_summary_writer.as_default():
             tf.summary.trace_export(name='train_trace', step=self.ckpt.step.numpy())
 
-        tf.keras.utils.plot_model(self.model, (self.trial_path / 'network.png').as_posix(),
-                                  show_shapes=True)
+        # tf.keras.utils.plot_model(self.model, (self.trial_path / 'network.png').as_posix(),
+        #                           show_shapes=True)
 
     def write_summary(self, summary_dict):
         with self.train_summary_writer.as_default():
