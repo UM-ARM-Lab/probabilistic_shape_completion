@@ -63,7 +63,8 @@ def save_gt_voxels(filepath, gt, compression="gzip"):
     data = {"gt_occ_packed": packed, "shape": tf.TensorShape(shape), "augmentation": augmentation,
             "filepath": filepath.relative_to(package_path).as_posix(),
             "category": parts[-4], "id": parts[-3], "angle": angle,
-            "bounding_box": bb
+            "bounding_box": bb,
+            "scale": 0.01
             }
 
     if compression == "bz2":

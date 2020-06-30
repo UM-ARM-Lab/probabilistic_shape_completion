@@ -267,8 +267,6 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
         example['bounding_box'] += tf.cast([[dx, dy, dz]], tf.float64) * 0.01
         return example
 
-    example = next(dataset.__iter__())
-
     return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
         .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
