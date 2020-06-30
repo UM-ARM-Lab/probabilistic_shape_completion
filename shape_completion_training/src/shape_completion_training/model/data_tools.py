@@ -52,7 +52,19 @@ def simulate_depth_image(vg):
 
 
 @tf.function
-def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
+def shift_voxelgrid(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
+    """
+    Shifts a single (non-batched) voxelgrid of shape (x,y,z,channels)
+    :param t: voxelgrid tensor to shift
+    :param dx: x shift amount (tensor of shape [])
+    :param dy: y shift amount
+    :param dz: z shift amount
+    :param pad_value: value to pad the new "empty" spaces
+    :param max_x: max x shift
+    :param max_y: max y shift
+    :param max_z: max z shift
+    :return:
+    """
     a = np.abs(max_x)
     b = np.abs(max_y)
     c = np.abs(max_z)
@@ -60,18 +72,18 @@ def shift_tensor(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
     if a > 0:
         t = tf.pad(t, paddings=tf.constant([[a, a], [0, 0], [0, 0], [0, 0]]),
                    mode="CONSTANT", constant_values=pad_value)
-        t = tf.roll(t, dx, axis=[0])
+        t = tf.roll(t, [dx], axis=[0])
         t = t[a:-a, :, :, :]
 
     if b > 0:
         t = tf.pad(t, paddings=tf.constant([[0, 0], [b, b], [0, 0], [0, 0]]),
                    mode="CONSTANT", constant_values=pad_value)
-        t = tf.roll(t, dy, axis=[1])
+        t = tf.roll(t, [dy], axis=[1])
         t = t[:, b:-b, :, :]
     if c > 0:
         t = tf.pad(t, paddings=tf.constant([[0, 0], [0, 0], [c, c], [0, 0]]),
                    mode="CONSTANT", constant_values=pad_value)
-        t = tf.roll(t, dz, axis=[2])
+        t = tf.roll(t, [dz], axis=[2])
         t = t[:, :, c:-c, :]
 
     return t
@@ -245,15 +257,17 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
         dy = 0
         dz = 0
         if x > 0:
-            dx = tf.random.uniform(shape=[1], minval=-x, maxval=x, dtype=tf.int64)
+            dx = tf.random.uniform(shape=[], minval=-x, maxval=x, dtype=tf.int64)
         if y > 0:
-            dy = tf.random.uniform(shape=[1], minval=-y, maxval=y, dtype=tf.int64)
+            dy = tf.random.uniform(shape=[], minval=-y, maxval=y, dtype=tf.int64)
         if z > 0:
-            dz = tf.random.uniform(shape=[1], minval=-z, maxval=z, dtype=tf.int64)
-        example['gt_occ'] = shift_tensor(example['gt_occ'], dx, dy, dz, 0.0, x, y, z)
-        example['gt_free'] = shift_tensor(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
-        example['bounding_box'] += tf.cast([[dx[0], dy[0], dz[0]]], tf.float64) * 0.01
+            dz = tf.random.uniform(shape=[], minval=-z, maxval=z, dtype=tf.int64)
+        example['gt_occ'] = shift_voxelgrid(example['gt_occ'], dx, dy, dz, 0.0, x, y, z)
+        example['gt_free'] = shift_voxelgrid(example['gt_free'], dx, dy, dz, 1.0, x, y, z)
+        example['bounding_box'] += tf.cast([[dx, dy, dz]], tf.float64) * 0.01
         return example
+
+    example = next(dataset.__iter__())
 
     return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
         .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
