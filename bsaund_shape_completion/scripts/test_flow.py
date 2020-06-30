@@ -56,7 +56,7 @@ def get_untrained_model():
 def view_inferred_bounding_box():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
     sn = data_tools.get_shapenet()
-    mr = ModelRunner(training=False, trial_path="Normalizing_AE/June_18_20-47-38_8394515bf0")
+    mr = ModelRunner(training=False, trial_path="NormalizingAE/June_24_00-20-38_8a52369b57")
     # mr = get_untrained_model()
     flow = get_flow()
 
@@ -64,8 +64,11 @@ def view_inferred_bounding_box():
         elem = sn.get(sn.train_names[i])
         elem = add_batch_to_dict(elem)
         output = mr.model(elem)
-        flat_bb = flow.bijector.forward(output['mean'])
-        flat_bb_1 = mr.model.flow.bijector.forward(output['mean'])
+        _, latent_bb = mr.model.split_box(output['latent_mean'])
+        flat_bb = flow.bijector.forward(latent_bb)
+
+        _, latent_bb_1 = mr.model.split_box(output['latent_mean'])
+        flat_bb_1 = mr.model.flow.bijector.forward(latent_bb_1)
         print(flat_bb - flat_bb_1)
         bb = unflatten_bounding_box(flat_bb)
         vg_pub.publish_elem(elem)
@@ -74,8 +77,8 @@ def view_inferred_bounding_box():
         l1 = mr.model.flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
         l2 = flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
         # bb = unflatten_bounding_box(mr.model.flow.bijector.forward(l2.numpy()))
-        print("mean: {}".format(output['mean'].numpy()))
-        print("var: {}".format(tf.exp(output['logvar']).numpy()))
+        # print("mean: {}".format(output['latent_mean'].numpy()))
+        # print("var: {}".format(tf.exp(output['latent_logvar']).numpy()))
 
         vg_pub.publish_bounding_box(bb)
         rospy.sleep(1)
@@ -181,10 +184,10 @@ def check_loss():
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")
     # view_flow()
-    # view_inferred_bounding_box()
+    view_inferred_bounding_box()
     # view_latent_space()
     # view_latent_space_as_movie()
     # check_loss()
-    view_augmented_ae()
+    # view_augmented_ae()
 
     # mr.train_and_test(sn.train_ds)
