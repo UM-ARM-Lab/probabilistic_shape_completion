@@ -22,12 +22,12 @@ if __name__ == "__main__":
 
 
     def _shift(elem):
-        return data_tools.shift_dataset_element(elem, params['translation_pixel_range_x'],
-                                                params['translation_pixel_range_y'],
-                                                params['translation_pixel_range_z'])
+        return data_tools.shift_bounding_box_only(elem, params['translation_pixel_range_x'],
+                                                  params['translation_pixel_range_y'],
+                                                  params['translation_pixel_range_z'])
 
 
-    # data = data.map(_shift)
+    data = data.map(_shift)
 
     mr = ModelRunner(training=True, params=params, group_name="Flow")
     # IPython.embed()

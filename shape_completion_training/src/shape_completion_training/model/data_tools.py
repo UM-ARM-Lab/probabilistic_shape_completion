@@ -266,6 +266,28 @@ def shift_dataset_element(elem, x, y, z):
     return elem
 
 
+def shift_bounding_box_only(elem, x, y, z):
+    """
+    Shift only the bounding box of elem by a random amount, up to the limits [x,y,z]
+    :param elem:
+    :param x: maximum x shift
+    :param y: maximum y shift
+    :param z: maximum z shift
+    :return:
+    """
+    dx = 0
+    dy = 0
+    dz = 0
+    if x > 0:
+        dx = tf.random.uniform(shape=[], minval=-x, maxval=x, dtype=tf.int64)
+    if y > 0:
+        dy = tf.random.uniform(shape=[], minval=-y, maxval=y, dtype=tf.int64)
+    if z > 0:
+        dz = tf.random.uniform(shape=[], minval=-z, maxval=z, dtype=tf.int64)
+    elem['bounding_box'] += tf.cast([[dx, dy, dz]], tf.float64) * 0.01
+    return elem
+
+
 def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
     def _simulate_input(example):
         known_occ, known_free = tf.numpy_function(sim_input_fn, [example['gt_occ']],
