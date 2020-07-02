@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 
 def get_flow():
     # mr = ModelRunner(training=False, trial_path="Flow/June_13_13-09-11_4bef25fbe3")
-    mr = ModelRunner(training=False, trial_path="Flow/June_30_11-40-00_be10b732f4")
+    mr = ModelRunner(training=False, trial_path="Flow/July_02_10-47-22_d8d84f5d65")
     return mr.model.flow
 
 

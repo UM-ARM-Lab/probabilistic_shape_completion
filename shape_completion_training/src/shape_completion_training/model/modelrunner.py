@@ -62,7 +62,7 @@ class ModelRunner:
             self.model = RealNVP(hparams=self.params, batch_size=self.batch_size, training=training)
         elif self.params['network'] == "NormalizingAE":
             self.model = NormalizingAE(self.params, batch_size=self.batch_size)
-            self.model.flow = ModelRunner(training=False, trial_path="Flow/June_13_13-09-11_4bef25fbe3").model.flow
+            self.model.flow = ModelRunner(training=False, trial_path=self.params['flow']).model.flow
         else:
             raise Exception('Unknown Model Type')
 
