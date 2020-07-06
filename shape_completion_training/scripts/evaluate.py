@@ -5,7 +5,8 @@ from shape_completion_training.model import data_tools
 import rospy
 
 MODELS_TO_EVALUATE = ["VAE/VAE_trial_1",
-    "Augmented_VAE/May_21_20-00-00_0000000000",
+    # "Augmented_VAE/May_21_20-00-00_0000000000",
+    "NormalizingAE/July_02_15-15-06_ede2472d34"
 ]
 
 if __name__ == "__main__":

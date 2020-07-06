@@ -57,11 +57,11 @@ def get_untrained_model():
 def view_inferred_bounding_box():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
     sn = data_tools.get_shapenet()
-    mr = ModelRunner(training=False, trial_path="Normalizing_AE/June_24_00-20-38_8a52369b57")
+    mr = ModelRunner(training=False, trial_path="Normalizing_AE/July_02_15-15-06_ede2472d34")
     # mr = get_untrained_model()
     flow = get_flow()
 
-    for i in range(0, 10000, 80):
+    for i in range(0, 10000, 15):
         elem = sn.get(sn.train_names[i])
         elem = add_batch_to_dict(elem)
         output = mr.model(elem)
@@ -182,8 +182,8 @@ def check_loss():
 
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")
-    view_flow()
-    # view_inferred_bounding_box()
+    # view_flow()
+    view_inferred_bounding_box()
     # view_latent_space()
     # view_latent_space_as_movie()
     # check_loss()
