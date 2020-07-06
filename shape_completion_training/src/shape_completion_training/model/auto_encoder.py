@@ -12,7 +12,7 @@ class AutoEncoder(tf.keras.Model):
         self.layer_names = []
         self.setup_model()
         self.batch_size = batch_size
-        self.opt = tf.keras.optimizers.Adam(0.001)
+        self.optimizer = tf.keras.optimizers.Adam(0.001)
 
     def get_model(self):
         return self
@@ -173,7 +173,7 @@ class AutoEncoder(tf.keras.Model):
                 variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
 
-                self.opt.apply_gradients(list(zip(gradients, variables)))
+                self.optimizer.apply_gradients(list(zip(gradients, variables)))
                 metrics.update(self.get_insights(variables, gradients))
                 return loss, metrics
 

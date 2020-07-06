@@ -13,7 +13,7 @@ class AE_VCNN(tf.keras.Model):
         super(AE_VCNN, self).__init__()
         self.params = params
         self.batch_size = batch_size
-        self.opt = tf.keras.optimizers.Adam(0.0001)
+        self.optimizer = tf.keras.optimizers.Adam(0.0001)
         self.make_stack_net(inp_shape=[64, 64, 64, 1])
 
     def get_model(self):
@@ -72,7 +72,7 @@ class AE_VCNN(tf.keras.Model):
                 variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
                 clipped_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in gradients]
-                self.opt.apply_gradients(list(zip(clipped_gradients, variables)))
+                self.optimizer.apply_gradients(list(zip(clipped_gradients, variables)))
                 return loss, metrics
 
         def step_fn_multiloss(batch):
@@ -109,7 +109,7 @@ class AE_VCNN(tf.keras.Model):
                 variables = self.trainable_variables
                 gradients = tape.gradient(loss, variables)
                 clipped_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in gradients]
-                self.opt.apply_gradients(list(zip(clipped_gradients, variables)))
+                self.optimizer.apply_gradients(list(zip(clipped_gradients, variables)))
                 return loss, metrics
 
         if self.params['multistep_loss']:

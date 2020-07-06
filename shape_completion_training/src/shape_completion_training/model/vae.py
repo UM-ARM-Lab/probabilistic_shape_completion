@@ -40,7 +40,7 @@ class VAE(tf.keras.Model):
         super(VAE, self).__init__()
         self.params = params
         self.batch_size = batch_size
-        self.opt = tf.keras.optimizers.Adam(0.0001)
+        self.optimizer = tf.keras.optimizers.Adam(0.0001)
 
         self.make_vae(inp_shape=[64, 64, 64, 2])
 
@@ -103,7 +103,7 @@ class VAE(tf.keras.Model):
                 vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
                 gradients = tape.gradient(vae_loss, vae_variables)
 
-                self.opt.apply_gradients(list(zip(gradients, vae_variables)))
+                self.optimizer.apply_gradients(list(zip(gradients, vae_variables)))
                 return vae_loss, metrics
 
         loss, metrics = step_fn(batch)
@@ -177,7 +177,7 @@ class VAE_GAN(VAE):
                 vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
                 vae_gradients = tape.gradient(generator_loss, vae_variables)
                 clipped_vae_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in vae_gradients]
-                self.opt.apply_gradients(list(zip(clipped_vae_gradients, vae_variables)))
+                self.optimizer.apply_gradients(list(zip(clipped_vae_gradients, vae_variables)))
 
                 dis_variables = self.discriminator.trainable_variables
                 dis_gradients = tape.gradient(dis_loss, dis_variables)
