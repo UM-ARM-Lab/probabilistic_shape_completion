@@ -10,19 +10,23 @@ import pathlib
 import tensorflow as tf
 
 
-def _get_path():
+def _get_path(trial_path):
     r = rospkg.RosPack()
-    trial_path = pathlib.Path(r.get_path('shape_completion_training')) / "trials" / "evaluation.pkl"
+    base_path = pathlib.Path(r.get_path('shape_completion_training'))
+    trial_path = base_path / "trials" / trial_path / "evaluation.pkl"
     return trial_path.as_posix()
 
 
-def load_evaluation():
-    with open(_get_path(), "rb") as f:
+def load_evaluation(trial_path):
+    with open(_get_path(trial_path), "rb") as f:
         return pickle.load(f)
 
 
 def save_evaluation(evaluation_dict):
-    with open(_get_path(), "wb") as f:
+    if len(evaluation_dict) != 1:
+        raise Exception("Wrong number of keys in evaluation_dict. Need exactly one key: the trial path")
+    trial_path = evaluation_dict.keys()[0]
+    with open(_get_path(trial_path), "wb") as f:
         pickle.dump(evaluation_dict, f)
 
 

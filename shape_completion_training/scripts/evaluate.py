@@ -22,11 +22,10 @@ if __name__ == "__main__":
 
     # test_ds = test_ds.skip(125).take(1)
 
-    evaluation = {}
-    for model_name in MODELS_TO_EVALUATE:
-        print("Evaluating {}".format(model_name))
-        mr = ModelRunner(training=False, trial_path=model_name)
-        evaluation[model_name] = model_evaluator.evaluate_model(mr.model, test_ds, test_set_size)
+    for trial_path in MODELS_TO_EVALUATE:
+        print("Evaluating {}".format(trial_path))
+        mr = ModelRunner(training=False, trial_path=trial_path)
+        evaluation = {trial_path: model_evaluator.evaluate_model(mr.model, test_ds, test_set_size)}
+        model_evaluator.save_evaluation(evaluation)
 
-    model_evaluator.save_evaluation(evaluation)
     print("Finished evaluating dataset")

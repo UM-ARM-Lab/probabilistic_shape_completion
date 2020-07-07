@@ -17,7 +17,8 @@ from shape_completion_training.voxelgrid.metrics import chamfer_distance
 
 # data_names = ["model", "shape", "best_sample_gt", ""
 model_name_map = {"VAE/VAE_trial_1": "Baseline VAE",
-                  "Augmented_VAE/May_21_20-00-00_0000000000": "Our method"}
+                  # "Augmented_VAE/May_21_20-00-00_0000000000": "Our method",
+                  "NormalizingAE/July_02_15-15-06_ede2472d34": "Normalizing Flow"}
 
 def display_histogram(evaluation):
     data = {name: [] for name in ["model", "shape", "Chamfer Distance from Plausible to Sample", "angle"]}
@@ -110,6 +111,6 @@ if __name__ == "__main__":
 
     full_evaluation = model_evaluator.load_evaluation()
     print("Loading addressable shapenet")
-    sn = data_tools.get_addressible_shapenet(use_train=False)
+    sn = data_tools.get_shapenet(use_train=False)
     # display_voxelgrids(full_evaluation)
     display_histogram(full_evaluation)
