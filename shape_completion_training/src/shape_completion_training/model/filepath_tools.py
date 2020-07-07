@@ -124,9 +124,3 @@ def _write_summary(full_trial_directory, group_name, unique_trial_subdirectory_n
         f.write(subprocess.check_output(['git', 'diff']))
 
 
-def get_default_params():
-    r = rospkg.RosPack()
-    shape_completion_training_path = pathlib.Path(r.get_path('shape_completion_training'))
-    default_params_filename = shape_completion_training_path / 'default_params.json'
-    with default_params_filename.open('r') as default_params_file:
-        return json.load(default_params_file)

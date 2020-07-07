@@ -2,6 +2,7 @@ import json
 import pathlib
 import unittest
 
+import shape_completion_training.model.default_params
 from shape_completion_training.model import filepath_tools
 
 
@@ -30,7 +31,7 @@ class FilePathToolsTest(unittest.TestCase):
     def test_get_trial_directory_load_existing(self):
         expected_trial_path = pathlib.Path('.testing/new_trial/subdir')
         params_filename = expected_trial_path / 'params.json'
-        expected_params = filepath_tools.get_default_params()
+        expected_params = shape_completion_training.model.default_params.get_default_params()
         expected_params['a'] = 2
         with params_filename.open("w") as params_file:
             json.dump(expected_params, params_file)
