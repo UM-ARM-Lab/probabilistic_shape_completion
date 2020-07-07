@@ -22,6 +22,13 @@ def load_evaluation(trial_path):
         return pickle.load(f)
 
 
+def load_evaluations(trial_paths):
+    evaluation = {}
+    for trial_path in trial_paths:
+        evaluation.update(load_evaluation(trial_path))
+    return evaluation
+
+
 def save_evaluation(evaluation_dict):
     if len(evaluation_dict) != 1:
         raise Exception("Wrong number of keys in evaluation_dict. Need exactly one key: the trial path")

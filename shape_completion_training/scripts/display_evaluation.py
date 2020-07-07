@@ -109,7 +109,7 @@ if __name__ == "__main__":
     rospy.init_node('evaluation_display')
     VG_PUB = VoxelgridPublisher()
 
-    full_evaluation = model_evaluator.load_evaluation()
+    full_evaluation = model_evaluator.load_evaluations(model_name_map.keys())
     print("Loading addressable shapenet")
     sn = data_tools.get_shapenet(use_train=False)
     # display_voxelgrids(full_evaluation)
