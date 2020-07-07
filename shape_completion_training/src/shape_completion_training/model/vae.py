@@ -85,31 +85,25 @@ class VAE(tf.keras.Model):
 
     @tf.function
     def train_step(self, batch):
-        def reduce(val):
-            return tf.reduce_mean(val)
+        with tf.GradientTape() as tape:
+            known = stack_known(batch)
+            mean, logvar = self.encode(known)
+            z = self.reparameterize(mean, logvar)
+            sample_logit = self.decode(z)
+            vae_loss = compute_vae_loss(z, mean, logvar, sample_logit, labels=batch['gt_occ'])
 
-        def step_fn(batch):
-            with tf.GradientTape() as tape:
-                known = stack_known(batch)
-                mean, logvar = self.encode(known)
-                z = self.reparameterize(mean, logvar)
-                sample_logit = self.decode(z)
-                vae_loss = compute_vae_loss(z, mean, logvar, sample_logit, labels=batch['gt_occ'])
+            sample = tf.nn.sigmoid(sample_logit)
+            output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
+            metrics = nn.calc_metrics(output, batch)
 
-                sample = tf.nn.sigmoid(sample_logit)
-                output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
-                metrics = nn.calc_metrics(output, batch)
+            vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
+            gradients = tape.gradient(vae_loss, vae_variables)
 
-                vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
-                gradients = tape.gradient(vae_loss, vae_variables)
+        self.optimizer.apply_gradients(list(zip(gradients, vae_variables)))
 
-                self.optimizer.apply_gradients(list(zip(gradients, vae_variables)))
-                return vae_loss, metrics
-
-        loss, metrics = step_fn(batch)
-        m = {k: reduce(metrics[k]) for k in metrics}
-        m['loss'] = loss
-        return m
+        metrics = {k: tf.reduce_mean(metrics[k]) for k in metrics}
+        metrics['loss'] = vae_loss
+        return output, metrics
 
 
 class VAE_GAN(VAE):
@@ -134,7 +128,7 @@ class VAE_GAN(VAE):
         gp = tf.reduce_mean((slopes - 1.) ** 2)
         return gp
 
-    # @tf.function
+    @tf.function
     def train_step(self, batch):
         def reduce(val):
             return tf.reduce_mean(val)
@@ -189,7 +183,7 @@ class VAE_GAN(VAE):
         loss, metrics = step_fn(batch)
         m = {k: reduce(metrics[k]) for k in metrics}
         m['loss'] = loss
-        return m
+        return _, m
 
 
 def make_encoder(inp_shape, params):
