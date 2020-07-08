@@ -2,6 +2,7 @@ import rospy
 from mps_shape_completion_visualization import conversions
 from mps_shape_completion_msgs.msg import OccupancyStamped
 from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Point
 import tensorflow as tf
 import numpy as np
 
@@ -62,6 +63,10 @@ class VoxelgridPublisher:
             corners = corners.numpy()
         corner_markers = MarkerArray()
 
+        edges = [(0,1), (1,3), (3,2), (2,0),
+                 (4,5), (5,7), (7,6), (6,4),
+                 (0,4), (1,5), (2,6), (3,7)]
+
         for i, pt in enumerate(corners):
             marker = Marker()
             marker.id = i
@@ -87,6 +92,32 @@ class VoxelgridPublisher:
             if i == 1:
                 marker.color.b = 1.0
                 marker.color.r = 1.0
+
+        for i, edge in enumerate(edges):
+            marker = Marker()
+            marker.id = i + 100
+            marker.header.frame_id = "object"
+            marker.type = marker.LINE_LIST
+            marker.action = marker.ADD
+            marker.scale.x = 0.001
+            marker.color.a = 1.0
+            marker.color.r = 0.0
+            marker.color.g = 0.0
+            marker.color.b = 0.0
+            marker.pose.orientation.w = 1.0
+            p1 = Point()
+            p1.x = corners[edge[0]][0]
+            p1.y = corners[edge[0]][1]
+            p1.z = corners[edge[0]][2]
+            p2 = Point()
+            p2.x = corners[edge[1]][0]
+            p2.y = corners[edge[1]][1]
+            p2.z = corners[edge[1]][2]
+
+            marker.points.append(p1)
+            marker.points.append(p2)
+
+            corner_markers.markers.append(marker)
 
         self.bb_pub.publish(corner_markers)
 

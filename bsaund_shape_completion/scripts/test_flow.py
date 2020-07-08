@@ -57,21 +57,27 @@ def get_untrained_model():
 def view_inferred_bounding_box():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
     sn = data_tools.get_shapenet()
-    mr = ModelRunner(training=False, trial_path="Normalizing_AE/July_02_15-15-06_ede2472d34")
+    mr = ModelRunner(training=False, trial_path="NormalizingAE/July_02_15-15-06_ede2472d34")
     # mr = get_untrained_model()
     flow = get_flow()
 
-    for i in range(0, 10000, 15):
+    for i in range(0, 10000, 5):
         elem = sn.get(sn.train_names[i])
         elem = add_batch_to_dict(elem)
-        output = mr.model(elem)
-        _, latent_mean_box = mr.model.split_box(output['latent_mean'])
-        flat_bb = flow.bijector.forward(latent_mean_box)
-        flat_bb_1 = mr.model.flow.bijector.forward(latent_mean_box)
-        print(flat_bb - flat_bb_1)
-        bb = unflatten_bounding_box(flat_bb)
         vg_pub.publish_elem(elem)
         rospy.sleep(1)
+
+        for i in range(10):
+            output = mr.model(elem)
+            # _, latent_box = mr.model.split_box(output['latent_mean'])
+            _, latent_box = mr.model.split_box(output['sampled_latent'])
+            flat_bb = flow.bijector.forward(latent_box)
+            # flat_bb_1 = mr.model.flow.bijector.forward(latent_mean_box)
+            # print(flat_bb - flat_bb_1)
+            bb = unflatten_bounding_box(flat_bb)
+            vg_pub.publish_bounding_box(bb)
+            rospy.sleep(0.2)
+
 
         # l1 = mr.model.flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
         # l2 = flow.bijector.inverse(flatten_bounding_box(elem['bounding_box']))
@@ -79,8 +85,7 @@ def view_inferred_bounding_box():
         # print("mean: {}".format(output['mean'].numpy()))
         # print("var: {}".format(tf.exp(output['logvar']).numpy()))
 
-        vg_pub.publish_bounding_box(bb)
-        rospy.sleep(1)
+
 
 
 def view_augmented_ae():
