@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+import argparse
+
 from shape_completion_training.model import model_evaluator
 from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import data_tools
@@ -11,6 +13,14 @@ MODELS_TO_EVALUATE = ["VAE/VAE_trial_1",
 
 if __name__ == "__main__":
     rospy.init_node('evaluation_node')
+
+    parser = argparse.ArgumentParser(description="Process args for training")
+    parser.add_argument('--trial', default=None)
+    args = parser.parse_args()
+
+    if args.trial is not None:
+        MODELS_TO_EVALUATE = [args.trial]
+
 
     train_ds, test_ds = data_tools.load_shapenet(shuffle=False)
     test_ds = data_tools.simulate_input(test_ds, 0, 0, 0)
