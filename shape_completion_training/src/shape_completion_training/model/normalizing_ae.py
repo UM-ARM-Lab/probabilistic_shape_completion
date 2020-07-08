@@ -80,8 +80,7 @@ class NormalizingAE(MyKerasModel):
     #     loss = tf.reduce_mean(losses)
     #     return {"loss": loss}
 
-    # @tf.function
-    def train_step(self, train_element):
+    @tf.function
         bb = tf.keras.layers.Flatten()(tf.cast(train_element['bounding_box'], tf.float32))
         gt_latent_box = self.flow.bijector.inverse(bb)
         gt_latent_box = tf.stop_gradient(gt_latent_box)
