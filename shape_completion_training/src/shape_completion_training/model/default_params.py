@@ -34,6 +34,17 @@ def get_default_params(group_name=None):
                 'num_latent_layers': 200,
                 'network': 'VAE'
             },
+        "Flow":
+            {
+                'batch_size': 1500,
+                'network': 'RealNVP',
+                'dim': 24,
+                'num_masked': 12,
+                'learning_rate': 1e-5,
+                'translation_pixel_range_x': 10,
+                'translation_pixel_range_y': 10,
+                'translation_pixel_range_z': 10,
+            }
     }
 
     if group_name not in group_defaults:

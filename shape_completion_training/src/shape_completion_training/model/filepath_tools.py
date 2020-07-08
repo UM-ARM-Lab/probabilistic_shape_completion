@@ -4,6 +4,7 @@ import json
 import pathlib
 import subprocess
 from datetime import datetime
+from shape_completion_training.model import default_params
 
 import git
 import rospkg
@@ -57,6 +58,11 @@ def create_or_load_trial(group_name=None, trial_path=None, params=None, trials_d
         return create_trial('tmp', params, trials_directory, write_summary)
 
 
+def get_group_name(trial_path):
+    "Extracts the group name from the trial path"
+    return trial_path.parts[-2]
+
+
 def load_trial(trial_path):
     """
     @param trial_path: full path or relative path from shape_completion_training/trials
@@ -70,9 +76,12 @@ def load_trial(trial_path):
     if not trial_path.is_dir():
         raise ValueError("Cannot load, the path {} is not an existing directory".format(trial_path))
 
+    group_name = get_group_name(trial_path)
+    params = default_params.get_default_params(group_name)
     params_filename = trial_path / 'params.json'
+
     with params_filename.open("r") as params_file:
-        params = json.load(params_file)
+        params.update(json.load(params_file))
     return trial_path, params
 
 
