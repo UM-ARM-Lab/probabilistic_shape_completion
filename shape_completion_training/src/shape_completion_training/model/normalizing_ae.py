@@ -34,6 +34,10 @@ class NormalizingAE(MyKerasModel):
         known = stack_known(dataset_element)
         mean, logvar = self.encode(known)
         sampled_features = self.sample_latent(mean, logvar)
+
+        if self.hparams['use_flow_during_inference']:
+            sampled_features = self.apply_flow_to_latent_box(sampled_features)
+
         predicted_occ=self.decode(sampled_features, apply_sigmoid=True)
         output = {'predicted_occ': predicted_occ, 'predicted_free': 1 - predicted_occ,
                   'latent_mean': mean, 'latent_logvar': logvar, 'sampled_latent': sampled_features}
@@ -52,6 +56,10 @@ class NormalizingAE(MyKerasModel):
     def replace_true_box(self, z, true_box):
         f, _ = self.split_box(z)
         return tf.concat([f, true_box], axis=1)
+
+    def apply_flow_to_latent_box(self, full_latent):
+        f, box = self.split_box(full_latent)
+        return tf.concat([f, self.flow.bijector.forward(box)], axis=1)
 
     def encode(self, x):
         mean, logvar = tf.split(self.encoder(x), num_or_size_splits=2, axis=1)
@@ -72,7 +80,7 @@ class NormalizingAE(MyKerasModel):
     #     loss = tf.reduce_mean(losses)
     #     return {"loss": loss}
 
-    @tf.function
+    # @tf.function
     def train_step(self, train_element):
         bb = tf.keras.layers.Flatten()(tf.cast(train_element['bounding_box'], tf.float32))
         gt_latent_box = self.flow.bijector.inverse(bb)
@@ -85,6 +93,10 @@ class NormalizingAE(MyKerasModel):
             mean, logvar = self.encode(known)
             sampled_latent = self.sample_latent(mean, logvar)
             corrected_latent = self.replace_true_box(sampled_latent, gt_latent_box)
+
+            if self.hparams['use_flow_during_inference']:
+                corrected_latent = self.apply_flow_to_latent_box(corrected_latent)
+
             logits = self.decode(corrected_latent)
 
             mean_f, mean_box = self.split_box(mean)

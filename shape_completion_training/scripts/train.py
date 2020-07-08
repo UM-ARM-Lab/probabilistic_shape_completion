@@ -23,6 +23,9 @@ from shape_completion_training.model import default_params
 #     'learning_rate': 1e-3,
 #     'flow': 'Flow/July_02_10-47-22_d8d84f5d65'
 # }
+override_params = {
+    "use_flow_during_inference": True
+}
 
 
 if __name__ == "__main__":
@@ -31,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument('--group', default=None)
     args = parser.parse_args()
     params = default_params.get_default_params(group_name=args.group)
+    params.update(override_params)
 
 
     train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
