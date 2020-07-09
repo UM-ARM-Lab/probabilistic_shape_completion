@@ -2,6 +2,7 @@
 Gets a bounding box for shapes
 """
 from shape_completion_training.voxelgrid import conversions
+from shape_completion_training.utils.matrix_math import rotzyx, rotxyz
 import numpy as np
 import tensorflow as tf
 
@@ -30,22 +31,15 @@ def get_aabb_from_pts(pts):
     return np.array(borders)
 
 
-def get_bounding_box_for_elem(voxelgrid, th, scale=0.01):
+def get_bounding_box_for_elem(voxelgrid, th_x, th_y, th_z, scale=0.01, degrees=False):
     # if tf.is_tensor(elem["angle"]):
     #     elem = {k: v.numpy() for k, v in elem.items()}
     # th = np.pi * int(elem["angle"]) / 180
 
-    def R(angle):
-        return np.array([[np.cos(angle), 0, np.sin(angle)],
-                         [0, 1, 0],
-                         [-np.sin(angle), 0, np.cos(angle)]
-                         ]
-                        )
-
     pts = conversions.voxelgrid_to_pointcloud(voxelgrid, scale=scale)
-    pts = np.dot(R(-th), pts.transpose()).transpose()
+    pts = np.dot(rotxyz(-th_x, -th_y, -th_z, degrees)[0:3, 0:3], pts.transpose()).transpose()
     bounds = get_aabb_from_pts(pts)
-    bounds = np.dot(R(th), bounds.transpose()).transpose()
+    bounds = np.dot(rotzyx(th_x, th_y, th_z, degrees)[0:3, 0:3], bounds.transpose()).transpose()
     # vg_oriented = conversions.transform_voxelgrid(elem["gt_occ"], T(-th), scale=0.01)
     return bounds
 

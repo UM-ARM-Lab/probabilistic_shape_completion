@@ -57,14 +57,20 @@ def save_gt_voxels(filepath, gt, compression="gzip"):
     shape = tf.TensorShape(gt.shape)
     packed = np.packbits(gt.flatten().astype(bool))
     parts = filepath.parts
+    scale = 0.01
     augmentation = filepath.stem[len("model_augmented_"):]
-    angle = int(augmentation.split("_")[-1])
-    bb = bounding_box.get_bounding_box_for_elem(gt, np.pi * angle / 180)
+    x_angle = int(augmentation.split("_")[-3])
+    y_angle = int(augmentation.split("_")[-2])
+    z_angle = int(augmentation.split("_")[-1])
+    bb = bounding_box.get_bounding_box_for_elem(gt, x_angle, y_angle, z_angle,
+                                                scale=scale, derees=True)
     data = {"gt_occ_packed": packed, "shape": tf.TensorShape(shape), "augmentation": augmentation,
             "filepath": filepath.relative_to(package_path).as_posix(),
-            "category": parts[-4], "id": parts[-3], "angle": angle,
+            "category": parts[-4], "id": parts[-3],
+            # "angle": angle,
+            "x_angle": x_angle, "y_angle": y_angle, "z_angle": z_angle,
             "bounding_box": bb,
-            "scale": 0.01
+            "scale": scale
             }
 
     if compression == "bz2":
@@ -200,5 +206,5 @@ def _split_train_and_test(shapenet_records, test_ratio):
     return train_records, test_records
 
 
-shapenet_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ShapeNetCore.v2_augmented"
+shapenet_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ShapeNetCore.v2_multirotation"
 shapenet_record_path = shapenet_load_path / "tfrecords" / "filepath"

@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import os
 
-import shape_completion_training.model.shapenet_storage
+from shape_completion_training.model import shapenet_storage
 from shape_completion_training.model import obj_tools
 from shape_completion_training.model import data_tools
 from shape_completion_training.model import filepath_tools
@@ -183,14 +183,13 @@ def binvox_object_file(fp):
 
     file_dir, file_name = fp.parent.as_posix(), fp.stem
     augmentation = file_name[len('model_augmented_'):]
-    gt = shape_completion_training.model.shapenet_storage.load_gt_voxels_from_binvox(file_dir, augmentation)
-    shape_completion_training.model.shapenet_storage.save_gt_voxels(fp.with_suffix(".pkl"), gt, compression="gzip")
+    gt = shapenet_storage.load_gt_voxels_from_binvox(file_dir, augmentation)
+    shapenet_storage.save_gt_voxels(fp.with_suffix(".pkl"), gt, compression="gzip")
 
 
 if __name__ == "__main__":
     rospy.init_node("augment_shapenet_node")
-    sn_path = filepath_tools.get_shape_completion_package_path()
-    sn_path = sn_path / "data" / "ShapeNetCore.v2_augmented"
+    sn_path = shapenet_storage.shapenet_load_path
     sn_path = sn_path / data_tools.shape_map['mug']
 
     start_time = datetime.datetime.now()

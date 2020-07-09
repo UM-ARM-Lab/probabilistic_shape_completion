@@ -5,6 +5,7 @@
 import pyassimp
 import numpy as np
 import os
+from shape_completion_training.utils.matrix_math import rotzyx
 
 """
 I expect somewhere there is an existing python library that will load my obj files nicely. I have not found such a library.
@@ -30,23 +31,18 @@ def augment(filename):
 
     savepath = os.path.dirname(filename)
 
-    y_rotations = range(0, 360, 5)
-    # x_trans = [-0.1, 0, 0.1]
-    # y_trans = [-0.1, 0, 0.1]
-    # z_trans = [-0.1, 0, 0.1]
-    x_trans = [0]
-    y_trans = [0]
-    z_trans = [0]
+    x_rotations = [0]
+    y_rotations = range(0, 360, 20)
+    z_rotations = [0, 45]
 
-    for yr in y_rotations:
-        for x in x_trans:
-            for y in y_trans:
-                for z in z_trans:
-                    transform(scene, yr, x, y, z, savepath)
+    for xr in x_rotations:
+        for yr in y_rotations:
+            for zr in z_rotations:
+                transform(scene, xr, yr, zr, savepath)
 
 
-def transform(scene, y_rot, x_trans, y_trans, z_trans, savepath):
-    m = roty(y_rot * 3.1415 / 180)
+def transform(scene, x_rot, y_rot, z_rot, savepath):
+    m = rotzyx(x_rot, y_rot, z_rot, degrees=True)
     scene.mRootNode.contents.mTransformation.a1 = m[0, 0]
     scene.mRootNode.contents.mTransformation.a2 = m[0, 1]
     scene.mRootNode.contents.mTransformation.a3 = m[0, 2]
@@ -56,42 +52,13 @@ def transform(scene, y_rot, x_trans, y_trans, z_trans, savepath):
     scene.mRootNode.contents.mTransformation.c1 = m[2, 0]
     scene.mRootNode.contents.mTransformation.c2 = m[2, 1]
     scene.mRootNode.contents.mTransformation.c3 = m[2, 2]
-    scene.mRootNode.contents.mTransformation.a4 = x_trans
-    scene.mRootNode.contents.mTransformation.b4 = y_trans
-    scene.mRootNode.contents.mTransformation.c4 = z_trans
+    scene.mRootNode.contents.mTransformation.a4 = 0
+    scene.mRootNode.contents.mTransformation.b4 = 0
+    scene.mRootNode.contents.mTransformation.c4 = 0
 
-    fn = "model_augmented_{:1.1f}_{:1.1f}_{:1.1f}_{:03d}.obj".format(x_trans, y_trans, z_trans,
-                                                                     y_rot)
+    fn = "model_augmented_{:03d}_{:03d}_{:03d}.obj".format(x_rot, y_rot, z_rot)
     savename = os.path.join(savepath, fn)
     pyassimp.export(scene, savename, 'obj')
-
-
-def rotx(rad):
-    s = np.sin(rad)
-    c = np.cos(rad)
-
-    return np.array([[1, 0, 0, 0],
-                     [0, c, -s, 0],
-                     [0, s, c, 0],
-                     [0, 0, 0, 1]])
-
-
-def roty(rad):
-    s = np.sin(rad)
-    c = np.cos(rad)
-    return np.array([[c, 0, s, 0],
-                     [0, 1, 0, 0],
-                     [-s, 0, c, 0],
-                     [0, 0, 0, 1]])
-
-
-def rotz(rad):
-    s = np.sin(rad)
-    c = np.cos(rad)
-    return np.array([[c, -s, 0, 0],
-                     [s, c, 0, 0],
-                     [0, 0, 1, 0],
-                     [0, 0, 0, 1]])
 
 
 # def load(filepath):
