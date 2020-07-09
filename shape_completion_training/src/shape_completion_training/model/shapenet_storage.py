@@ -63,7 +63,7 @@ def save_gt_voxels(filepath, gt, compression="gzip"):
     y_angle = int(augmentation.split("_")[-2])
     z_angle = int(augmentation.split("_")[-1])
     bb = bounding_box.get_bounding_box_for_elem(gt, x_angle, y_angle, z_angle,
-                                                scale=scale, derees=True)
+                                                scale=scale, degrees=True)
     data = {"gt_occ_packed": packed, "shape": tf.TensorShape(shape), "augmentation": augmentation,
             "filepath": filepath.relative_to(package_path).as_posix(),
             "category": parts[-4], "id": parts[-3],
