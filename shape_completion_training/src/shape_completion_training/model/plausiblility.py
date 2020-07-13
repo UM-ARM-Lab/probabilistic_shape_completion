@@ -6,13 +6,13 @@ from shape_completion_training.model.observation_model import observation_likeli
 from shape_completion_training.model import data_tools
 from shape_completion_training.voxelgrid import fit, conversions
 from shape_completion_training.model.utils import memoize
+from shape_completion_training.model.shapenet_storage import shapenet_load_path
 import progressbar
 
 
-def _get_path():
+def _get_path(identifier=""):
     r = rospkg.RosPack()
-    trial_path = pathlib.Path(r.get_path('shape_completion_training')) / "data" / \
-                 "ShapeNetCore.v2_augmented" / "plausibility.pkl"
+    trial_path = shapenet_load_path / "plausibility" + identifier + ".pkl"
     return trial_path.as_posix()
 
 
@@ -22,8 +22,8 @@ def load_plausibilities():
         return pickle.load(f)
 
 
-def save_plausibilities(plausibilities_dict):
-    with open(_get_path(), "wb") as f:
+def save_plausibilities(plausibilities_dict, identifier=""):
+    with open(_get_path(identifier), "wb") as f:
         pickle.dump(plausibilities_dict, f)
 
 
@@ -47,13 +47,20 @@ def get_fits_for(name):
 
 
 def compute_icp_fit_dict(metadata):
+    return compute_partial_icp_fit_dict(metadata, metadata)
+
+
+def compute_partial_icp_fit_dict(reference_metadata, other_metadata):
     best_fits = {}
     num_shapes = 0
-    for i in metadata:
+    for i in reference_metadata:
         num_shapes += 1
 
-    ds = data_tools.load_voxelgrids(metadata)
-    ds = data_tools.simulate_input(ds, 0, 0, 0)
+    reference_ds = data_tools.load_voxelgrids(reference_metadata)
+    reference_ds = data_tools.simulate_input(reference_ds, 0, 0, 0)
+
+    other_ds = data_tools.load_voxelgrids(other_metadata)
+    other_ds = data_tools.simulate_input(other_ds, 0, 0, 0)
 
     widgets = [
         '  ', progressbar.Counter(), '/', str(num_shapes),
@@ -63,13 +70,13 @@ def compute_icp_fit_dict(metadata):
     ]
 
     with progressbar.ProgressBar(widgets=widgets, max_value=num_shapes) as bar:
-        for i, reference in ds.enumerate():
+        for i, reference in reference_ds.enumerate():
             # bar.update(i.numpy())
             bar.update(i.numpy(), CurrentShape=data_tools.get_unique_name(reference))
 
             best_fit_for_reference = {}
 
-            for other in ds:
+            for other in other_ds:
                 other_name = data_tools.get_unique_name(other)
                 # print("    Fitting: {}".format(other_name))
                 T = fit.icp_transform(other['known_occ'], reference['known_occ'], scale=0.01)

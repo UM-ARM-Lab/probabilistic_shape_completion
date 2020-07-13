@@ -3,6 +3,7 @@ from shape_completion_training.model import plausiblility
 from shape_completion_training.model import data_tools
 
 if __name__ == "__main__":
+
     train_dataset, test_dataset = data_tools.load_shapenet_metadata(shuffle=False)
     # dataset = dataset.take(100)
 
