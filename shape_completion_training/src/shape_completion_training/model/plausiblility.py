@@ -12,7 +12,7 @@ import progressbar
 
 def _get_path(identifier=""):
     r = rospkg.RosPack()
-    trial_path = shapenet_load_path / "plausibility" + identifier + ".pkl"
+    trial_path = shapenet_load_path / ("plausibility" + identifier + ".pkl")
     return trial_path.as_posix()
 
 
@@ -84,6 +84,10 @@ def compute_partial_icp_fit_dict(reference_metadata, other_metadata):
                 p = observation_likelihood_geometric_mean(reference['gt_occ'], fitted,
                                                           std_dev_in_voxels=2)
                 oob = out_of_range_count(reference['gt_occ'], fitted, width=4)
+
+                # To make storage feasible, do not store fits that will not be used later
+                if oob > 10:
+                    continue
                 best_fit_for_reference[other_name] = {"T": T, "observation_probability": p,
                                                       "out_of_range_count": oob}
 
