@@ -4,7 +4,7 @@ from shape_completion_training.model import data_tools
 import argparse
 
 
-TOTAL_SHARDS = 5000
+TOTAL_SHARDS = 20
 
 """
 This script computes plausibilies for a shard of the test dataset.
