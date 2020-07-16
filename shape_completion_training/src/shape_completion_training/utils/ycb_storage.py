@@ -19,6 +19,9 @@ def write_ycb_to_filelist(test_ratio):
 def get_all_ycb_files():
     records = []
     for obj_fp in ycb_load_path.iterdir():
+        if obj_fp.stem == "tfrecords":
+            continue
+
         print("{}".format(obj_fp.name))
         all_augmentation = [f for f in (obj_fp / "google_16k").iterdir()
                             if f.name.startswith("model_augmented")
