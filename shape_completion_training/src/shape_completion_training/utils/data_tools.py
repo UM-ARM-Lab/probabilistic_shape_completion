@@ -4,6 +4,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from shape_completion_training.utils.shapenet_storage import shapenet_record_path
+from shape_completion_training.utils.ycb_storage import ycb_record_path
 from shape_completion_training.utils.dataset_storage import load_gt_only
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
@@ -166,12 +167,18 @@ def load_shapenet(shapes="all", shuffle=True):
 
 
 def load_shapenet_metadata(shapes="all", shuffle=True):
-    return _load_shapenet_metadata_train_or_test(shapes, shuffle, "train"), \
-           _load_shapenet_metadata_train_or_test(shapes, shuffle, "test"),
+    return _load_metadata_train_or_test(shapes, shuffle, "train"), \
+           _load_metadata_train_or_test(shapes, shuffle, "test"),
 
 
-def _load_shapenet_metadata_train_or_test(shapes="all", shuffle=True, prefix="train"):
-    records = [f for f in shapenet_record_path.iterdir()
+def load_ycb_metadata(shuffle=True):
+    return _load_metadata_train_or_test(shuffle=shuffle, prefix="train", record_path=ycb_record_path), \
+           _load_metadata_train_or_test(shuffle=shuffle, prefix="test", record_path=ycb_record_path),
+
+
+def _load_metadata_train_or_test(shapes="all", shuffle=True, prefix="train",
+                                 record_path=shapenet_record_path):
+    records = [f for f in record_path.iterdir()
                if f.name == prefix + "_filepaths.pkl"]
     if shapes != "all":
         print("Not yet handling partial loading")
@@ -183,6 +190,8 @@ def _load_shapenet_metadata_train_or_test(shapes="all", shuffle=True, prefix="tr
         else:
             ds = read_metadata_from_filelist(fp, shuffle)
     return ds
+
+
 
 
 def read_metadata_from_filelist(record_file, shuffle):

@@ -88,7 +88,7 @@ def compute_plausibilities_in_parallel(metadata):
 if __name__ == "__main__":
     # train_dataset, test_dataset = data_tools.load_shapenet_metadata(shuffle=False)
 
-    test_dataset = data_tools._load_shapenet_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
+    test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
     test_dataset = test_dataset.take(10)
 
     compute_plausibilities_in_parallel(test_dataset)

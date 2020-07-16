@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
 
 
-    test_dataset = data_tools._load_shapenet_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
+    test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
     sharded_test_dataset = test_dataset.shard(TOTAL_SHARDS, args.shard)
 
     fits = plausiblility.compute_partial_icp_fit_dict(sharded_test_dataset, test_dataset)

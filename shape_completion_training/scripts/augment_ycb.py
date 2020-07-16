@@ -4,7 +4,7 @@ from __future__ import print_function
 from shape_completion_training.utils import ycb_storage
 import datetime
 import rospy
-from shape_completion_training.utils.data_augmentation import NUM_THREADS, augment_category
+from shape_completion_training.utils import data_augmentation
 
 # HARDCODED_BOUNDARY = '-bb -0.6 -0.6 -0.6 0.6 0.6 0.6'
 
@@ -45,12 +45,15 @@ Then run binvox with the -pb option
 
 
 if __name__ == "__main__":
+
     rospy.init_node("augment_shapenet_node")
     ycb_path = ycb_storage.ycb_load_path
 
     start_time = datetime.datetime.now()
 
     # augment_single(sn_path)
-    augment_category(ycb_path, models_dirname="google_16k", obj_filename="textured.obj")
+    data_augmentation.HARDCODED_BOUNDARY = '-bb -0.2, -0.2, -0.2, 0.2, 0.2, 0.2'
+    data_augmentation.augment_category(ycb_path, models_dirname="google_16k", obj_filename="textured.obj")
     print("")
-    print("Augmenting with {} threads took {} seconds".format(NUM_THREADS, datetime.datetime.now() - start_time))
+    print("Augmenting with {} threads took {} seconds".format(data_augmentation.NUM_THREADS,
+                                                              datetime.datetime.now() - start_time))
