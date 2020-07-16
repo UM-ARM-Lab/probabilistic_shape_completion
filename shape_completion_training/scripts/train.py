@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import argparse
 
+import shape_completion_training.utils.shapenet_storage
 from shape_completion_training.utils import data_tools
 from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import default_params
@@ -37,7 +38,8 @@ if __name__ == "__main__":
     params.update(override_params)
 
 
-    train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([
+                                                                           shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
 
     # data = data_ycb
     data = train_data_shapenet

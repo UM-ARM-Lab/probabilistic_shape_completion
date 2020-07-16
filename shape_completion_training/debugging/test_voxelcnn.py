@@ -2,6 +2,8 @@
 import sys
 from os.path import dirname, abspath, join
 
+import shape_completion_training.utils.shapenet_storage
+
 sc_path = join(dirname(abspath(__file__)), "..")
 sys.path.append(sc_path)
 sc_path = join(dirname(abspath(__file__)), "../..")
@@ -153,7 +155,7 @@ def test_stack_net():
 
 
 if __name__ == "__main__":
-    data_shapenet = data_tools.load_shapenet([data_tools.shape_map["mug"]])
+    data_shapenet = data_tools.load_shapenet([shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
 
     # data = data_ycb
     data = data_shapenet

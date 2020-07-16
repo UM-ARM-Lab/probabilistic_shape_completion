@@ -1,8 +1,7 @@
 #! /usr/bin/env python
 from __future__ import print_function
 
-import shape_completion_training.utils.shapenet_storage
-from shape_completion_training.utils import shapenet_storage
+from shape_completion_training.utils import ycb_storage
 import datetime
 import rospy
 from shape_completion_training.utils.data_augmentation import NUM_THREADS, augment_category
@@ -47,12 +46,11 @@ Then run binvox with the -pb option
 
 if __name__ == "__main__":
     rospy.init_node("augment_shapenet_node")
-    sn_path = shapenet_storage.shapenet_load_path
-    sn_path = sn_path / shape_completion_training.utils.shapenet_storage.shape_map['mug']
+    ycb_path = ycb_storage.ycb_load_path
 
     start_time = datetime.datetime.now()
 
     # augment_single(sn_path)
-    augment_category(sn_path)
+    augment_category(ycb_path, models_dirname="google_16k", obj_filename="textured.obj")
     print("")
     print("Augmenting with {} threads took {} seconds".format(NUM_THREADS, datetime.datetime.now() - start_time))

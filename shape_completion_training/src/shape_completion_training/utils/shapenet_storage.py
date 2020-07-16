@@ -48,3 +48,5 @@ def get_all_shapenet_files(shape_ids):
 
 shapenet_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ShapeNetCore.v2_multirotation"
 shapenet_record_path = shapenet_load_path / "tfrecords" / "filepath"
+shape_map = {"airplane": "02691156",
+             "mug": "03797390"}
