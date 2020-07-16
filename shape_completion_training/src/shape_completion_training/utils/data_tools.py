@@ -3,16 +3,12 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from shape_completion_training.utils.shapenet_storage import shapenet_record_path, shape_map
+from shape_completion_training.utils.shapenet_storage import shapenet_record_path
 from shape_completion_training.utils.dataset_storage import load_gt_only
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
 import numpy as np
 import pickle
-
-
-def shapenet_labels(human_names):
-    return [shape_map[hn] for hn in human_names]
 
 
 def simulate_omniscient_input(gt):

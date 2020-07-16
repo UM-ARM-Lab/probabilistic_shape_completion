@@ -50,3 +50,7 @@ shapenet_load_path = filepath_tools.get_shape_completion_package_path() / "data"
 shapenet_record_path = shapenet_load_path / "tfrecords" / "filepath"
 shape_map = {"airplane": "02691156",
              "mug": "03797390"}
+
+
+def shapenet_labels(human_names):
+    return [shape_map[hn] for hn in human_names]
