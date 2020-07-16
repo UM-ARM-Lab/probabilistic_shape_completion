@@ -34,7 +34,7 @@ def augment(filename):
     x_rotations = [-90, 0, 90]
     # y_rotations = range(0, 360, 5)
     # z_rotations = [-150, -120, -90, -60, -45, -30, 0, 30, 45, 60, 90, 120, 150, 180]
-    y_rotations = range(0,360, 5)
+    y_rotations = range(0,360, 60)
     z_rotations = [-90, 0, 90]
 
     for xr in x_rotations:
