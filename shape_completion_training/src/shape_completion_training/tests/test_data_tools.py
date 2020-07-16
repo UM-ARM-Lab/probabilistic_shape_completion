@@ -1,7 +1,8 @@
 from unittest import TestCase
 
-import shape_completion_training.model.shapenet_storage
-from  shape_completion_training.model import data_tools, filepath_tools
+import shape_completion_training.utils.dataset_storage
+import shape_completion_training.utils.shapenet_storage
+from shape_completion_training.utils import data_tools
 import tensorflow as tf
 import numpy as np
 from shape_completion_training.voxelgrid import conversions
@@ -37,7 +38,7 @@ class TestSavingAndLoading(TestCase):
         self.assertEqual(0.0, np.min(gt))
 
 
-        shape_completion_training.model.shapenet_storage.save_gt_voxels("/tmp", "0", gt)
-        reloaded = shape_completion_training.model.shapenet_storage.load_data_with_gt("/tmp", "0")
+        shape_completion_training.utils.dataset_storage.save_gt_voxels("/tmp", "0", gt)
+        reloaded = shape_completion_training.utils.dataset_storage.load_data_with_gt("/tmp", "0")
         self.assertTrue(np.all(reloaded['gt_occ'] == gt))
         self.assertFalse("gt_occ_packed" in reloaded)

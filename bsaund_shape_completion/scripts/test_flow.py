@@ -2,7 +2,7 @@
 import copy
 from random import shuffle
 
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from shape_completion_training.model.modelrunner import ModelRunner
 from bsaund_shape_completion import voxelgrid_publisher
 import tensorflow as tf

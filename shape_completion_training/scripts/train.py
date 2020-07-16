@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import argparse
 
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import default_params
 
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # if params['network'] == 'VoxelCNN':
     #     sim_input_fn=data_tools.simulate_omniscient_input
     # elif params['network'] == 'AutoEncoder':
-    sim_input_fn=data_tools.simulate_2_5D_input
+    sim_input_fn= data_tools.simulate_2_5D_input
     
     data = data_tools.simulate_input(data,
                                      params['translation_pixel_range_x'],

@@ -1,14 +1,11 @@
 from __future__ import print_function
 import rospy
 import shape_completion_training.model.observation_model
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
-from bsaund_shape_completion.shape_selection import send_display_names_from_metadata
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model import plausiblility
-from shape_completion_training.model import model_evaluator
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 
 """

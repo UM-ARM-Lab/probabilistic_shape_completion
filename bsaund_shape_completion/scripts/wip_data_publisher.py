@@ -6,7 +6,7 @@ import rospy
 import numpy as np
 
 from shape_completion_training.model.modelrunner import ModelRunner
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from shape_completion_training.model.utils import add_batch_to_dict
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import sampling_tools

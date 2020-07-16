@@ -3,7 +3,7 @@ import argparse
 
 from shape_completion_training.model import model_evaluator
 from shape_completion_training.model.modelrunner import ModelRunner
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 import rospy
 
 MODELS_TO_EVALUATE = ["VAE/VAE_trial_1",

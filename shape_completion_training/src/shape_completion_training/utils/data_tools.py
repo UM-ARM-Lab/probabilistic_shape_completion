@@ -3,8 +3,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from shape_completion_training.model import filepath_tools
-from shape_completion_training.model.shapenet_storage import load_data_with_gt, shapenet_record_path, load_gt_only
+from shape_completion_training.utils.shapenet_storage import shapenet_record_path
+from shape_completion_training.utils.dataset_storage import load_gt_only
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
 import numpy as np

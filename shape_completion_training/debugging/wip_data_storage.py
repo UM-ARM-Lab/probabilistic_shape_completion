@@ -1,5 +1,6 @@
-from shape_completion_training.model import data_tools, filepath_tools
-from shape_completion_training.model import shapenet_storage
+import shape_completion_training.utils.dataset_storage
+from shape_completion_training.model import filepath_tools
+from shape_completion_training.utils import data_tools, shapenet_storage
 import datetime
 
 shapenet_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ShapeNetCore.v2_augmented"
@@ -25,10 +26,10 @@ def store_shapenet_augmentations_in_multiple_formats(shape_ids):
                 i += 1
                 print(i)
                 # shapenet_records.append(load_gt_voxels(f))
-                gt = shapenet_storage.load_data_with_gt(f, "gzip")
-                shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "bz2")
-                shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "gzip")
-                shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "None")
+                gt = shape_completion_training.utils.dataset_storage.load_data_with_gt(f, "gzip")
+                shape_completion_training.utils.dataset_storage.save_gt_voxels(f, gt['gt_occ'], "bz2")
+                shape_completion_training.utils.dataset_storage.save_gt_voxels(f, gt['gt_occ'], "gzip")
+                shape_completion_training.utils.dataset_storage.save_gt_voxels(f, gt['gt_occ'], "None")
 
     return shapenet_records
 
@@ -46,7 +47,7 @@ def load_all_files_and_record_time(shape_ids, compression=None):
                 i += 1
                 print(i)
                 # shapenet_records.append(load_gt_voxels(f))
-                gt = shapenet_storage.load_data_with_gt(f, compression)
+                gt = shape_completion_training.utils.dataset_storage.load_data_with_gt(f, compression)
                 # shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "bz2")
                 # shapenet_storage.save_gt_voxels(f, gt['gt_occ'], "gzip")
                 # shapenet_storage.save_gt_voxels(f, gt['gt_occ'], None)

@@ -2,13 +2,10 @@
 import rospy
 from shape_completion_training.model import model_evaluator
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from shape_completion_training.model import utils
-from shape_completion_training.model import plausiblility
 from shape_completion_training.model.modelrunner import ModelRunner
-import tensorflow as tf
 import numpy as np
-from shape_completion_training.voxelgrid import conversions
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt

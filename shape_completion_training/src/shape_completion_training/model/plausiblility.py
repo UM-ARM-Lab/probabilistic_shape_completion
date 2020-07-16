@@ -1,12 +1,11 @@
 import rospkg
-import pathlib
 import pickle
 
 from shape_completion_training.model.observation_model import observation_likelihood_geometric_mean, out_of_range_count
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from shape_completion_training.voxelgrid import fit, conversions
 from shape_completion_training.model.utils import memoize
-from shape_completion_training.model.shapenet_storage import shapenet_load_path
+from shape_completion_training.utils.shapenet_storage import shapenet_load_path
 import progressbar
 
 

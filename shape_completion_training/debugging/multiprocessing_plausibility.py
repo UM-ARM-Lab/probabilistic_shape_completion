@@ -1,7 +1,5 @@
-import Queue
 import multiprocessing as mp
-from shape_completion_training.model import data_tools
-import time
+from shape_completion_training.utils import data_tools
 import tensorflow as tf
 
 NUM_PROCESSES = 3

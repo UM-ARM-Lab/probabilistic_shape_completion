@@ -2,7 +2,7 @@ from __future__ import print_function
 import rospy
 from rviz_text_selection_panel_msgs.msg import TextSelectionOptions
 from std_msgs.msg import String
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 
 
 def send_display_names_from_metadata(metadata, callback):

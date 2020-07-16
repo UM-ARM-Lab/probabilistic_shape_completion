@@ -7,11 +7,10 @@ import numpy as np
 
 from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.model import model_evaluator
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import sampling_tools
 from shape_completion_training.voxelgrid import fit
-from shape_completion_training.voxelgrid import bounding_box
 import threading
 import tensorflow as tf
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher

@@ -1,7 +1,8 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from shape_completion_training.model import utils, data_tools
+from shape_completion_training.model import utils
+from shape_completion_training.utils import data_tools
 
 
 def observation_likelihood(observation, underlying_state, std_dev_in_voxels=1):

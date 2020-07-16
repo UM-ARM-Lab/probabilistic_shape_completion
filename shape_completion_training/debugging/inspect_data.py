@@ -1,6 +1,6 @@
 #! /usr/bin/env python
-import shape_completion_training.model.shapenet_storage
-from shape_completion_training.model import data_tools
+import shape_completion_training.utils.shapenet_storage
+from shape_completion_training.utils import data_tools
 
 
 def process(ds):
@@ -20,7 +20,7 @@ def report(ds_name, info):
 
 def write_all_files():
     with open("./file_names.txt", "w") as f:
-        for record in shape_completion_training.model.shapenet_storage.get_all_shapenet_files(shape_ids=data_tools.shapenet_labels(["mug"])):
+        for record in shape_completion_training.utils.shapenet_storage.get_all_shapenet_files(shape_ids=data_tools.shapenet_labels(["mug"])):
             f.write("{}\n".format(record.id))
 
 

@@ -1,7 +1,7 @@
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.voxelgrid.metrics import best_match_value, chamfer_distance
 from shape_completion_training.voxelgrid import conversions
-from shape_completion_training.model import data_tools
+from shape_completion_training.utils import data_tools
 from shape_completion_training.model import plausiblility
 import rospkg
 import pickle

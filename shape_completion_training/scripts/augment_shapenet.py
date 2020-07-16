@@ -4,10 +4,9 @@ from __future__ import print_function
 import sys
 import os
 
-from shape_completion_training.model import shapenet_storage
+import shape_completion_training.utils.dataset_storage
 from shape_completion_training.model import obj_tools
-from shape_completion_training.model import data_tools
-from shape_completion_training.model import filepath_tools
+from shape_completion_training.utils import data_tools, shapenet_storage
 import subprocess
 from itertools import izip_longest
 import multiprocessing as mp
@@ -134,7 +133,6 @@ def binvox_object_file_worker(queue):
             fp = queue.get(False)
         except Queue.Empty:
             return
-
         binvox_object_file(fp)
 
 
@@ -184,8 +182,8 @@ def binvox_object_file(fp):
 
     file_dir, file_name = fp.parent.as_posix(), fp.stem
     augmentation = file_name[len('model_augmented_'):]
-    gt = shapenet_storage.load_gt_voxels_from_binvox(file_dir, augmentation)
-    shapenet_storage.save_gt_voxels(fp.with_suffix(".pkl"), gt, compression="gzip")
+    gt = shape_completion_training.utils.dataset_storage.load_gt_voxels_from_binvox(file_dir, augmentation)
+    shape_completion_training.utils.dataset_storage.save_gt_voxels(fp.with_suffix(".pkl"), gt, compression="gzip")
 
 
 if __name__ == "__main__":

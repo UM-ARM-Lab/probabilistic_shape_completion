@@ -2,7 +2,7 @@
 Prepares some local files of shapes to be used in unit tests
 """
 
-import shape_completion_training.model.data_tools as data_tools
+import shape_completion_training.utils.data_tools as data_tools
 import numpy as np
 
 test_dataset_filepath = "voxel_grid_test_data.npy"
