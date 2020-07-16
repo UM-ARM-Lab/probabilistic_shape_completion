@@ -69,7 +69,7 @@ def binvox_object_file_worker(queue):
 def augment_category(object_path, models_dirname="models", obj_filename="model_normalized.obj"):
     # shape_ids = ['a1d293f5cc20d01ad7f470ee20dce9e0']
     # shapes = ['214dbcace712e49de195a69ef7c885a4']
-    shape_ids = [f.name for f in object_path.iterdir() if f.elem is not "tfrecords"]
+    shape_ids = [f.name for f in object_path.iterdir() if f.stem is not "tfrecords"]
     shape_ids.sort()
 
     q = mp.Queue()
