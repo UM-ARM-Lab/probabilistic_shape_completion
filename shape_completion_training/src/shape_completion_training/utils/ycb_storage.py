@@ -2,7 +2,6 @@ from shape_completion_training.model import filepath_tools
 from shape_completion_training.model import utils
 from shape_completion_training.utils.dataset_storage import load_metadata, _split_train_and_test, write_to_filelist
 
-
 ycb_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ycb"
 ycb_record_path = ycb_load_path / "tfrecords" / "filepath"
 
@@ -16,11 +15,11 @@ def write_ycb_to_filelist(test_ratio):
     write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(test_files),
                       ycb_record_path / "test_filepaths.pkl")
 
+
 def get_all_ycb_files():
     records = []
-    for obj_fp in ycb_load_path.iterdir():
-        if obj_fp.stem == "tfrecords":
-            continue
+    obj_fps = [fp for fp in ycb_load_path.iterdir() if fp.stem != "tfrecords"]
+    for obj_fp in sorted(obj_fps):
 
         print("{}".format(obj_fp.name))
         all_augmentation = [f for f in (obj_fp / "google_16k").iterdir()
