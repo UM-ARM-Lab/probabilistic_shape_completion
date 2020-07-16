@@ -96,6 +96,15 @@ def add_batch_to_dict(elem):
     return {k: tf.expand_dims(v, axis=0) for k, v in elem.items()}
 
 
+def remove_batch_from_dict(elem):
+    """removes the first dimension of elem, assuming it is of size 1"""
+    return {k: tf.squeeze(v, axis=0) for k, v in elem.items()}
+
+
+def numpyify(elem):
+    return {k: v.numpy() for k, v in elem.items()}
+
+
 def reduce_geometric_mean(tensor):
     return tf.exp(tf.reduce_mean(tf.math.log(tensor)))
 

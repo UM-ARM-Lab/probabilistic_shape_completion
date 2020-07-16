@@ -35,6 +35,27 @@ def simulate_2_5D_input(gt):
     return known_occ, known_free
 
 
+def simulate_slit_occlusion(known_occ, known_free, slit_zmin, slit_zmax):
+    known_occ[:, :, 0:slit_zmin, 0] = 0
+    known_free[:, :, 0:slit_zmin, 0] = 0
+
+    known_occ[:, :, slit_zmax:, 0] = 0
+    known_free[:, :, slit_zmax:, 0] = 0
+    return known_occ, known_free
+
+
+def select_slit_location(gt, min_slit_width, max_slit_width, min_observable=5):
+    z_vals = tf.where(tf.reduce_sum(gt, axis=[0, 1, 3]))
+
+    slit_width = tf.random.uniform(shape=[], minval=min_slit_width, maxval=max_slit_width, dtype=tf.int64)
+    slit_min = tf.random.uniform(shape=[],
+                                 minval=tf.reduce_min(z_vals) - slit_width + min_observable,
+                                 maxval=tf.reduce_max(z_vals) - min_observable,
+                                 dtype=tf.int64)
+
+    return slit_min, slit_min + slit_width
+
+
 def simulate_depth_image(vg):
     vg = conversions.format_voxelgrid(vg, False, False)
     size = vg.shape[1]
@@ -192,8 +213,6 @@ def _load_metadata_train_or_test(shapes="all", shuffle=True, prefix="train",
     return ds
 
 
-
-
 def read_metadata_from_filelist(record_file, shuffle):
     """
     Reads from a tfrecord file of paths and augmentations
@@ -303,9 +322,24 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
     def _shift(elem):
         return shift_dataset_element(elem, x, y, z)
 
-
     return dataset.map(_shift, num_parallel_calls=tf.data.experimental.AUTOTUNE) \
         .map(_simulate_input, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+
+def apply_slit_occlusion(dataset):
+    def _apply_slit_occlusion(elem):
+        slit_min, slit_max = select_slit_location(elem['gt_occ'], min_slit_width=5, max_slit_width=30,
+                                                min_observable=5)
+        ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
+                                                             slit_min, slit_max], [tf.float32, tf.float32])
+
+        # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
+        #                              slitmin, slitmax)
+        elem['known_occ'] = ko
+        elem['known_free'] = kf
+        return elem
+
+    return dataset.map(_apply_slit_occlusion)
 
 
 def simulate_partial_completion(dataset):
