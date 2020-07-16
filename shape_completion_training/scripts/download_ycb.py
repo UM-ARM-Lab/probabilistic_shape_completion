@@ -13,13 +13,13 @@ from shape_completion_training.model import filepath_tools
 
 package_path = filepath_tools.get_shape_completion_package_path()
 
-output_directory = package_path + "/data/ycb"
+output_directory = (package_path / "data/ycb").as_posix()
 
 # You can either set this to "all" or a list of the objects that you'd like to
 # download.
-# objects_to_download = "all"
+objects_to_download = "all"
 # objects_to_download = ["002_master_chef_can", "003_cracker_box"]
-objects_to_download = ["002_master_chef_can"]
+#objects_to_download = ["002_master_chef_can"]
 
 # You can edit this list to only download certain kinds of files.
 # 'berkeley_rgbd' contains all of the depth maps and images from the Carmines.
@@ -29,8 +29,9 @@ objects_to_download = ["002_master_chef_can"]
 # 'google_64k' contains google meshes with 64k vertices.
 # 'google_512k' contains google meshes with 512k vertices.
 # See the website for more details.
-# files_to_download = ["berkeley_rgbd", "berkeley_rgb_highres", "berkeley_processed", "google_16k", "google_64k", "google_512k"]
-files_to_download = ["berkeley_processed", "berkeley_rgbd"]
+#files_to_download = ["berkeley_rgbd", "berkeley_rgb_highres", "berkeley_processed", "google_16k", "google_64k", "google_512k"]
+#files_to_download = ["berkeley_processed", "berkeley_rgbd"]
+files_to_download = ["google_16k"]
 
 # Extract all files from the downloaded .tgz, and remove .tgz files.
 # If false, will just download all .tgz files to output_directory
@@ -99,7 +100,8 @@ def check_url(url):
 
 if __name__ == "__main__":
 
-    objects = objects_to_download  # fetch_objects(objects_url)
+    # objects = objects_to_download  # fetch_objects(objects_url)
+    objects = fetch_objects(objects_url)
 
     for object in objects:
         if objects_to_download == "all" or object in objects_to_download:
