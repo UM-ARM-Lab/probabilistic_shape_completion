@@ -182,26 +182,30 @@ class AddressableShapenet():
         return next(ds.__iter__())
 
 
-def load_dataset(dataset_name):
+def load_dataset(dataset_name, metadata_only=True):
     """
     :param dataset_name: either "ycb" or "shapenet"
     :return:
     """
     if dataset_name == 'shapenet':
         train_data, test_data = load_shapenet_metadata([
-            shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
+            shapenet_storage.shape_map["mug"]])
     elif dataset_name == 'ycb':
         train_data, test_data = load_ycb_metadata(shuffle=True)
     else:
         raise Exception("Unknown dataset: {}".format(params['dataset']))
 
+    if not metadata_only:
+        train_data = load_voxelgrids(train_data)
+        test_data = load_voxelgrids(test_data)
+
     return train_data, test_data
 
 
 
-def load_shapenet(shapes="all", shuffle=True):
-    train_ds, test_ds = load_shapenet_metadata(shapes, shuffle)
-    return load_voxelgrids(train_ds), load_voxelgrids(test_ds)
+# def load_shapenet(shapes="all", shuffle=True):
+#     train_ds, test_ds = load_shapenet_metadata(shapes, shuffle)
+#     return load_voxelgrids(train_ds), load_voxelgrids(test_ds)
 
 
 def load_shapenet_metadata(shapes="all", shuffle=True):
