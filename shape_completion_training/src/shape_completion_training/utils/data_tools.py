@@ -182,17 +182,36 @@ class AddressableShapenet():
         return next(ds.__iter__())
 
 
+def load_dataset(dataset_name):
+    """
+    :param dataset_name: either "ycb" or "shapenet"
+    :return:
+    """
+    if dataset_name == 'shapenet':
+        train_data, test_data = load_shapenet_metadata([
+            shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
+    elif dataset_name == 'ycb':
+        train_data, test_data = load_ycb_metadata(shuffle=True)
+    else:
+        raise Exception("Unknown dataset: {}".format(params['dataset']))
+
+    return train_data, test_data
+
+
+
 def load_shapenet(shapes="all", shuffle=True):
     train_ds, test_ds = load_shapenet_metadata(shapes, shuffle)
     return load_voxelgrids(train_ds), load_voxelgrids(test_ds)
 
 
 def load_shapenet_metadata(shapes="all", shuffle=True):
+    print("Loading Shapenet dataset")
     return _load_metadata_train_or_test(shapes, shuffle, "train"), \
            _load_metadata_train_or_test(shapes, shuffle, "test"),
 
 
 def load_ycb_metadata(shuffle=True):
+    print("Loading YCB dataset")
     return _load_metadata_train_or_test(shuffle=shuffle, prefix="train", record_path=ycb_record_path), \
            _load_metadata_train_or_test(shuffle=shuffle, prefix="test", record_path=ycb_record_path),
 
@@ -329,7 +348,7 @@ def simulate_input(dataset, x, y, z, sim_input_fn=simulate_2_5D_input):
 def apply_slit_occlusion(dataset):
     def _apply_slit_occlusion(elem):
         slit_min, slit_max = select_slit_location(elem['gt_occ'], min_slit_width=5, max_slit_width=30,
-                                                min_observable=5)
+                                                  min_observable=5)
         ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
                                                              slit_min, slit_max], [tf.float32, tf.float32])
 

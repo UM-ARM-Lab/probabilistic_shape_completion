@@ -15,7 +15,8 @@ def get_default_params(group_name=None):
         # 'network': 'NormalizingAE',
         'learning_rate': 1e-3,
         'batch_size': 16,
-        'dataset': 'shapenet'
+        'dataset': 'shapenet',
+        'apply_slit_occlusion': False,
     }
 
     if group_name is None:
@@ -56,8 +57,17 @@ def get_default_params(group_name=None):
                 'translation_pixel_range_x': 10,
                 'translation_pixel_range_y': 10,
                 'translation_pixel_range_z': 10,
-                'dataset': 'ycb'
-            }
+                'dataset': 'ycb',
+            },
+        "NormalizingAE_YCB":
+            {
+                'num_latent_layers': 200,
+                'flow': 'FlowYCB/July_16_20-50-01_9d37e040d4',
+                'network': 'NormalizingAE',
+                'use_flow_during_inference': False,
+                'dataset': 'ycb',
+                'apply_slit_occlusion': True,
+            },
     }
 
     if group_name not in group_defaults:

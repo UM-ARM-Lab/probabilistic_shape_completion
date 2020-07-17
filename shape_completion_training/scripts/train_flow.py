@@ -23,16 +23,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     params = default_params.get_default_params(group_name=args.group)
 
-    if params['dataset'] == 'shapenet':
-        train_data, test_data = data_tools.load_shapenet_metadata([
-            shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
-    elif params['dataset'] == 'ycb':
-        train_data, test_data = data_tools.load_ycb_metadata(shuffle=True)
-    else:
-        raise Exception("Unknown dataset: {}".format(params['dataset']))
-
-    # data = data_ycb
-    data = train_data
+    data, _ = data_tools.load_dataset(params['dataset'])
 
 
     def _shift(elem):
@@ -41,6 +32,10 @@ if __name__ == "__main__":
                                                   params['translation_pixel_range_z'])
 
     data = data.map(_shift)
+
+    if params['apply_slit_collusion']:
+        print("Applying slit occlusion")
+        data = data_tools.apply_slit_occlusion(data)
 
 
     if args.tmp:

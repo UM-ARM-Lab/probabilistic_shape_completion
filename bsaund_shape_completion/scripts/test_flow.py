@@ -14,8 +14,10 @@ from matplotlib import pyplot as plt
 
 
 def get_flow():
-    # mr = ModelRunner(training=False, trial_path="Flow/June_13_13-09-11_4bef25fbe3")
-    mr = ModelRunner(training=False, trial_path="Flow/July_02_10-47-22_d8d84f5d65")
+    # flow_trial = "Flow/July_02_10-47-22_d8d84f5d65"
+    flow_trial = "FlowYCB/July_16_20-50-01_9d37e040d4"
+    mr = ModelRunner(training=False, trial_path=flow_trial)
+
     return mr.model.flow
 
 
@@ -187,8 +189,8 @@ def check_loss():
 
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")
-    # view_flow()
-    view_inferred_bounding_box()
+    view_flow()
+    # view_inferred_bounding_box()
     # view_latent_space()
     # view_latent_space_as_movie()
     # check_loss()
