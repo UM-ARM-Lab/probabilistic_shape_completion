@@ -51,7 +51,7 @@ if __name__ == "__main__":
                                      params['translation_pixel_range_z'],
                                      sim_input_fn=sim_input_fn)
 
-    if params['apply_slit_collusion']:
+    if params['apply_slit_occlusion']:
         print("Applying slit occlusion")
         data = data_tools.apply_slit_occlusion(data)
     # data = data_tools.simulate_condition_occ(data,
