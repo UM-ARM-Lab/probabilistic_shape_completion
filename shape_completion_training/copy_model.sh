@@ -8,7 +8,7 @@ fi
 
 echo "Copying trial $1 from odin to local"
 
-rsync -r odin:~/trials/$1/. ~/catkin_ws/src/mps_shape_completion/shape_completion_training/trials/$1
+rsync -r odin:~/trials/$1/. ./trials/$1
 
 
 
