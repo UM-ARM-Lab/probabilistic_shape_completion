@@ -37,14 +37,8 @@ if __name__ == "__main__":
     params = default_params.get_default_params(group_name=args.group)
     params.update(override_params)
 
-
-    train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([
-                                                                           shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
-
     data, _ = data_tools.load_dataset(params['dataset'], metadata_only=False)
 
-    # data = data_ycb
-    data = train_data_shapenet
 
     # if params['network'] == 'VoxelCNN':
     #     sim_input_fn=data_tools.simulate_omniscient_input
