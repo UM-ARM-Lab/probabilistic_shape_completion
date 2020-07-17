@@ -33,10 +33,6 @@ if __name__ == "__main__":
 
     data = data.map(_shift)
 
-    if params['apply_slit_collusion']:
-        print("Applying slit occlusion")
-        data = data_tools.apply_slit_occlusion(data)
-
 
     if args.tmp:
         mr = ModelRunner(training=True, params=params, group_name=None)

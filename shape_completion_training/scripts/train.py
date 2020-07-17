@@ -37,12 +37,8 @@ if __name__ == "__main__":
     params = default_params.get_default_params(group_name=args.group)
     params.update(override_params)
 
+    data, _ = data_tools.load_dataset(params['dataset'])
 
-    train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([
-                                                                           shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
-
-    # data = data_ycb
-    data = train_data_shapenet
 
     # if params['network'] == 'VoxelCNN':
     #     sim_input_fn=data_tools.simulate_omniscient_input
@@ -54,6 +50,10 @@ if __name__ == "__main__":
                                      params['translation_pixel_range_y'],
                                      params['translation_pixel_range_z'],
                                      sim_input_fn=sim_input_fn)
+
+    if params['apply_slit_collusion']:
+        print("Applying slit occlusion")
+        data = data_tools.apply_slit_occlusion(data)
     # data = data_tools.simulate_condition_occ(data,
     #                                          turn_on_prob=params['turn_on_prob'],
     #                                          turn_off_prob=params['turn_off_prob'])
