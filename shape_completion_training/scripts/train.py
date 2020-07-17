@@ -67,6 +67,6 @@ if __name__ == "__main__":
     if args.tmp:
         mr = ModelRunner(training=True, params=params, group_name=None)
     else:
-        mr = ModelRunner(training=True, params=params, group_name=params['network'])
+        mr = ModelRunner(training=True, params=params, group_name=args.group)
 
     mr.train_and_test(data)

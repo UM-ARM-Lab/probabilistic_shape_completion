@@ -48,9 +48,14 @@ def select_slit_location(gt, min_slit_width, max_slit_width, min_observable=5):
     z_vals = tf.where(tf.reduce_sum(gt, axis=[0, 1, 3]))
 
     slit_width = tf.random.uniform(shape=[], minval=min_slit_width, maxval=max_slit_width, dtype=tf.int64)
+
+    slit_min_possible = tf.reduce_min(z_vals) - slit_width + min_observable
+    slit_max_possible = tf.reduce_max(z_vals) - min_observable
+    slit_max_possible = tf.maximum(slit_max_possible, slit_min_possible + 1)
+
     slit_min = tf.random.uniform(shape=[],
-                                 minval=tf.reduce_min(z_vals) - slit_width + min_observable,
-                                 maxval=tf.reduce_max(z_vals) - min_observable,
+                                 minval=slit_min_possible,
+                                 maxval=slit_max_possible,
                                  dtype=tf.int64)
 
     return slit_min, slit_min + slit_width
