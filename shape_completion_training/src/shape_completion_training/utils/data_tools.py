@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from shape_completion_training.utils.shapenet_storage import shapenet_record_path
+from shape_completion_training.utils import shapenet_storage
 from shape_completion_training.utils.ycb_storage import ycb_record_path
 from shape_completion_training.utils.dataset_storage import load_gt_only
 from shape_completion_training.voxelgrid import conversions
@@ -198,7 +198,7 @@ def load_dataset(dataset_name, metadata_only=True):
     elif dataset_name == 'ycb':
         train_data, test_data = load_ycb_metadata(shuffle=True)
     else:
-        raise Exception("Unknown dataset: {}".format(params['dataset']))
+        raise Exception("Unknown dataset: {}".format(dataset_name))
 
     if not metadata_only:
         train_data = load_voxelgrids(train_data)
@@ -226,7 +226,7 @@ def load_ycb_metadata(shuffle=True):
 
 
 def _load_metadata_train_or_test(shapes="all", shuffle=True, prefix="train",
-                                 record_path=shapenet_record_path):
+                                 record_path=shapenet_storage.shapenet_record_path):
     records = [f for f in record_path.iterdir()
                if f.name == prefix + "_filepaths.pkl"]
     if shapes != "all":
