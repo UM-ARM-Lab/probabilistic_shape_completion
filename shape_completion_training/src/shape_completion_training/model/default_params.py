@@ -15,6 +15,7 @@ def get_default_params(group_name=None):
         # 'network': 'NormalizingAE',
         'learning_rate': 1e-3,
         'batch_size': 16,
+        'dataset': 'shapenet'
     }
 
     if group_name is None:
@@ -44,6 +45,18 @@ def get_default_params(group_name=None):
                 'translation_pixel_range_x': 10,
                 'translation_pixel_range_y': 10,
                 'translation_pixel_range_z': 10,
+            },
+        "FlowYCB":
+            {
+                'batch_size': 1500,
+                'network': 'RealNVP',
+                'dim': 24,
+                'num_masked': 12,
+                'learning_rate': 1e-5,
+                'translation_pixel_range_x': 10,
+                'translation_pixel_range_y': 10,
+                'translation_pixel_range_z': 10,
+                'dataset': 'ycb'
             }
     }
 
