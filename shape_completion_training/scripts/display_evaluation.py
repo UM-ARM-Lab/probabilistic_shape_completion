@@ -18,33 +18,55 @@ model_name_map = {"VAE/July_07_12-09-24_7f65111254": "Baseline VAE",
                   "NormalizingAE/July_02_15-15-06_ede2472d34": "Normalizing Flow"}
 
 
+
+def add_coverage(data, shape_name, model_name, particle_distances):
+    angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
+    for closest_particle in list(np.min(particle_distances, axis=1)):
+        data["model"].append(model_name_map[model_name])
+        data["shape"].append(shape_name)
+        data["Chamfer Distance from each Plausible to closest Sample"].append(closest_particle)
+        data["angle"].append(angle)
+        data["Chamfer Distance from each Sample to closest Plausible"].append(None)
+
+
+def add_plausibility(data, shape_name, model_name, particle_distances):
+    angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
+    for closest_particle in list(np.min(particle_distances, axis=0)):
+        data["model"].append(model_name_map[model_name])
+        data["shape"].append(shape_name)
+        data["Chamfer Distance from each Sample to closest Plausible"].append(closest_particle)
+        data["angle"].append(angle)
+        data["Chamfer Distance from each Plausible to closest Sample"].append(None)
+
+
 def display_histogram(evaluation):
-    data = {name: [] for name in ["model", "shape", "Chamfer Distance from Plausible to Sample", "angle"]}
+    data = {name: [] for name in ["model", "shape",
+                                  "Chamfer Distance from each Plausible to closest Sample",
+                                  "Chamfer Distance from each Sample to closest Plausible",
+                                  "angle"]}
     for model_name, model_evaluation in evaluation.items():
         print("Processing data for {}".format(model_name))
         for shape_name, shape_evaluation in model_evaluation.items():
-            angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
             # if not 250 < angle < 290:
             #     continue
             d = shape_evaluation['particle_distances']
-            for closest_particle in list(np.min(d, axis=1)):
-                data["model"].append(model_name_map[model_name])
-                data["shape"].append(shape_name)
-                data["Chamfer Distance from Plausible to Sample"].append(closest_particle)
-                data["angle"].append(angle)
-            # fmri = sns.load_dataset("fmri")
-            # sns.lineplot(x="timepoint", y="signal", hue="region", style="event", data=fmri)
+            add_coverage(data, shape_name, model_name, d)
+            add_plausibility(data, shape_name, model_name, d)
+
     df = pd.DataFrame(data, columns=data.keys())
     sns.set(style="darkgrid")
-    sns.lineplot(x="shape", y="Chamfer Distance from Plausible to Sample", data=df, hue="model")
+
+    sns.lineplot(x="shape", y="Chamfer Distance from each Plausible to closest Sample", data=df, hue="model")
+    plt.show()
+
+    sns.lineplot(x="shape", y="Chamfer Distance from each Sample to closest Plausible", data=df, hue="model")
     plt.show()
 
     for unique_shape in set([s[0:10] for s in list(df['shape'])]):
         print(unique_shape)
         shape_df = df[df['shape'].str.startswith(unique_shape)]
-        sns.lineplot(x="angle", y="Chamfer Distance from Plausible to Sample", data=shape_df, hue="model")
+        sns.lineplot(x="angle", y="Chamfer Distance from each Plausible to closest Sample", data=shape_df, hue="model")
         plt.show()
-    print("wait")
 
 
 def display_voxelgrids(evaluation):

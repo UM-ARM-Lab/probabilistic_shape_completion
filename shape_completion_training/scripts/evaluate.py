@@ -22,7 +22,7 @@ if __name__ == "__main__":
         MODELS_TO_EVALUATE = [args.trial]
 
 
-    train_ds, test_ds = data_tools.load_shapenet(shuffle=False)
+    train_ds, test_ds = data_tools.load_dataset("shapenet", shuffle=False)
     test_ds = data_tools.simulate_input(test_ds, 0, 0, 0)
 
     _, test_ds_metadata = data_tools.load_shapenet_metadata(shuffle=False)

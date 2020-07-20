@@ -231,7 +231,7 @@ if __name__ == "__main__":
     else:
         dataset_params = model_runner.params
 
-    # dataset_params.update(default_translations)
+    dataset_params.update(default_translations)
     train_records, test_records = data_tools.load_dataset(dataset_name=dataset_params['dataset'],
                                                           metadata_only=True, shuffle=False)
 
