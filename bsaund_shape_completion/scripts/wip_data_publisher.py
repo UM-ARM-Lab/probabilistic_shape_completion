@@ -9,7 +9,7 @@ from shape_completion_training.model.modelrunner import ModelRunner
 from shape_completion_training.utils import data_tools
 from shape_completion_training.model.utils import add_batch_to_dict, numpyify
 from shape_completion_training.voxelgrid import metrics
-from shape_completion_training.model import sampling_tools
+from shape_completion_training.model import sampling_tools, default_params
 import tensorflow as tf
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
 from bsaund_shape_completion.shape_selection import send_display_names_from_metadata
@@ -22,10 +22,14 @@ ARGS = None
 VG_PUB = None
 
 model_runner = None
-# model_evaluator = None
+dataset_params = None
 
-stop_current_sampler = None
-sampling_thread = None
+default_dataset_params = default_params.get_default_params()
+default_translations = {
+    'translation_pixel_range_x': 0,
+    'translation_pixel_range_y': 0,
+    'translation_pixel_range_z': 0,
+}
 
 
 def display_augmented_vae(elem):
@@ -62,8 +66,10 @@ def publish_selection(metadata, ind, str_msg):
 
     ds = metadata.skip(ind).take(1)
     ds = data_tools.load_voxelgrids(ds)
-    ds = data_tools.simulate_input(ds, 0, 0, 0)
-    ds = data_tools.apply_slit_occlusion(ds)
+    ds = data_tools.preprocess_dataset(ds, dataset_params)
+    # ds = data_tools.load_voxelgrids(ds)
+    # ds = data_tools.simulate_input(ds, 0, 0, 0)
+    # ds = data_tools.apply_slit_occlusion(ds)
 
     # elem = numpyify(next(ds.__iter__()))
     # data_tools.simulate_2_5D_with_occlusion(elem['gt_occ'], 1, 32)
@@ -114,8 +120,17 @@ if __name__ == "__main__":
     rospy.loginfo("Data Publisher")
 
     # train_records, test_records = data_tools.load_shapenet_metadata(shuffle=False)
-    train_records, test_records = data_tools.load_ycb_metadata(shuffle=False)
+    # train_records, test_records = data_tools.load_ycb_metadata(shuffle=False)
     load_network()
+
+    if model_runner is None:
+        dataset_params = default_dataset_params
+    else:
+        dataset_params = model_runner.params
+
+    dataset_params.update(default_translations)
+    train_records, test_records = data_tools.load_dataset(dataset_name=dataset_params['dataset'],
+                                                          metadata_only=True, shuffle=False)
 
     VG_PUB = VoxelgridPublisher()
 

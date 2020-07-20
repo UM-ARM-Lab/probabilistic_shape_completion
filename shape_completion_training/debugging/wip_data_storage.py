@@ -56,7 +56,7 @@ def load_all_files_and_record_time(shape_ids, compression=None):
 
 def load_shapenet():
     start = datetime.datetime.now()
-    sn = data_tools.get_shapenet(use_train=False)
+    sn = data_tools.get_addressible_dataset(use_train=False)
     a = sn.test_map.keys()[0]
     md = sn.get_metadata(a)
     d = sn.get(a)

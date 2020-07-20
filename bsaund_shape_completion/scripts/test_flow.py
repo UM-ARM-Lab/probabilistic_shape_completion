@@ -58,13 +58,14 @@ def get_untrained_model():
 
 def view_inferred_bounding_box():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
-    sn = data_tools.get_shapenet()
-    mr = ModelRunner(training=False, trial_path="NormalizingAE/July_02_15-15-06_ede2472d34")
+    # mr = ModelRunner(training=False, trial_path="NormalizingAE/July_02_15-15-06_ede2472d34")
+    mr = ModelRunner(training=False, trial_path="NormalizingAE_YCB/July_16_21-36-14_4ec8969b2c")
+    ds = data_tools.get_addressible_dataset(dataset_name=mr.params['dataset'])
     # mr = get_untrained_model()
     flow = get_flow()
 
     for i in range(0, 10000, 5):
-        elem = sn.get(sn.train_names[i])
+        elem = ds.get(ds.train_names[i], params=mr.params)
         elem = add_batch_to_dict(elem)
         vg_pub.publish_elem(elem)
         rospy.sleep(1)
@@ -92,7 +93,7 @@ def view_inferred_bounding_box():
 
 def view_augmented_ae():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
-    sn = data_tools.get_shapenet()
+    sn = data_tools.get_addressible_dataset()
     mr = ModelRunner(training=False, trial_path="Augmented_VAE/May_21_20-00-00_0000000000")
 
     for i in range(0, 1000, 2):
@@ -110,7 +111,7 @@ def view_augmented_ae():
 
 
 def view_latent_space():
-    sn = data_tools.get_shapenet()
+    sn = data_tools.get_addressible_dataset()
     flow = get_flow()
 
     latents = []
@@ -134,7 +135,7 @@ def view_latent_space():
 
 
 def view_latent_space_as_movie():
-    sn = data_tools.get_shapenet()
+    sn = data_tools.get_addressible_dataset()
     flow = get_flow()
 
     train_names = copy.deepcopy(sn.train_names)
@@ -168,7 +169,7 @@ def view_latent_space_as_movie():
 
 
 def check_loss():
-    sn = data_tools.get_shapenet()
+    sn = data_tools.get_addressible_dataset()
     flow = get_flow()
 
     latents = []
@@ -189,8 +190,8 @@ def check_loss():
 
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")
-    view_flow()
-    # view_inferred_bounding_box()
+    # view_flow()
+    view_inferred_bounding_box()
     # view_latent_space()
     # view_latent_space_as_movie()
     # check_loss()

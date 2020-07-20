@@ -146,13 +146,15 @@ def simulate_random_partial_completion_input(gt):
 
 
 @memoize
-def get_shapenet(**kwargs):
-    return AddressableShapenet(**kwargs)
+def get_addressible_dataset(**kwargs):
+    return AddressableDataset(**kwargs)
 
 
-class AddressableShapenet():
-    def __init__(self, use_test=True, use_train=True):
-        self.train_ds, self.test_ds = load_shapenet_metadata(shuffle=False)
+class AddressableDataset():
+    def __init__(self, use_test=True, use_train=True, dataset_name="shapenet"):
+        self.train_ds, self.test_ds = load_dataset(dataset_name=dataset_name,
+                                                   metadata_only=True,
+                                                   shuffle=False)
         self.train_map = {}
         self.test_map = {}
         self.train_names = []
@@ -167,14 +169,20 @@ class AddressableShapenet():
                 self.test_map[get_unique_name(elem)] = i
                 self.test_names.append(get_unique_name(elem))
 
-    def get(self, unique_name):
+    def get(self, unique_name, params=None):
         if unique_name in self.train_map:
             ds = self.train_ds.skip(self.train_map[unique_name])
         elif unique_name in self.test_map:
             ds = self.test_ds.skip(self.test_map[unique_name])
         else:
             raise Exception("No element {} in dataset".format(unique_name))
-        ds = simulate_input(load_voxelgrids(ds.take(1)), 0, 0, 0)
+
+        ds = load_voxelgrids(ds.take(1))
+        if params is None:
+            ds = simulate_input(ds, 0, 0, 0)
+            return next(ds.__iter__())
+
+        ds = preprocess_dataset(ds, params)
         return next(ds.__iter__())
 
     def get_metadata(self, unique_name):
@@ -187,16 +195,17 @@ class AddressableShapenet():
         return next(ds.__iter__())
 
 
-def load_dataset(dataset_name, metadata_only=True):
+def load_dataset(dataset_name, metadata_only=True, shuffle=True):
     """
-    :param dataset_name: either "ycb" or "shapenet"
-    :return:
+    @param shuffle: shuffle the dataset
+    @param dataset_name: either "ycb" or "shapenet"
+    @param metadata_only: if True, only loads metadata without voxelgrids
     """
     if dataset_name == 'shapenet':
         train_data, test_data = load_shapenet_metadata([
-            shapenet_storage.shape_map["mug"]])
+            shapenet_storage.shape_map["mug"]], shuffle=shuffle)
     elif dataset_name == 'ycb':
-        train_data, test_data = load_ycb_metadata(shuffle=True)
+        train_data, test_data = load_ycb_metadata(shuffle=shuffle)
     else:
         raise Exception("Unknown dataset: {}".format(dataset_name))
 
@@ -205,7 +214,6 @@ def load_dataset(dataset_name, metadata_only=True):
         test_data = load_voxelgrids(test_data)
 
     return train_data, test_data
-
 
 
 # def load_shapenet(shapes="all", shuffle=True):
@@ -223,6 +231,29 @@ def load_ycb_metadata(shuffle=True):
     print("Loading YCB dataset")
     return _load_metadata_train_or_test(shuffle=shuffle, prefix="train", record_path=ycb_record_path), \
            _load_metadata_train_or_test(shuffle=shuffle, prefix="test", record_path=ycb_record_path),
+
+
+def preprocess_dataset(dataset, params):
+    sim_input_fn = simulate_2_5D_input
+
+    dataset = simulate_input(dataset,
+                             params['translation_pixel_range_x'],
+                             params['translation_pixel_range_y'],
+                             params['translation_pixel_range_z'],
+                             sim_input_fn=sim_input_fn)
+
+    if params['apply_slit_occlusion']:
+        print("Applying slit occlusion")
+        dataset = apply_slit_occlusion(dataset)
+    # data = data_tools.simulate_condition_occ(data,
+    #                                          turn_on_prob=params['turn_on_prob'],
+    #                                          turn_off_prob=params['turn_off_prob'])
+
+    if params['simulate_partial_completion']:
+        dataset = simulate_partial_completion(dataset)
+    if params['simulate_random_partial_completion']:
+        dataset = simulate_random_partial_completion(dataset)
+    return dataset
 
 
 def _load_metadata_train_or_test(shapes="all", shuffle=True, prefix="train",

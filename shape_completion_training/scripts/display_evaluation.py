@@ -109,6 +109,6 @@ if __name__ == "__main__":
 
     full_evaluation = model_evaluator.load_evaluations(model_name_map.keys())
     print("Loading addressable shapenet")
-    sn = data_tools.get_shapenet(use_train=False)
+    sn = data_tools.get_addressible_dataset(use_train=False)
     # display_voxelgrids(full_evaluation)
     display_histogram(full_evaluation)

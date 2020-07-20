@@ -43,25 +43,7 @@ if __name__ == "__main__":
     # if params['network'] == 'VoxelCNN':
     #     sim_input_fn=data_tools.simulate_omniscient_input
     # elif params['network'] == 'AutoEncoder':
-    sim_input_fn= data_tools.simulate_2_5D_input
-    
-    data = data_tools.simulate_input(data,
-                                     params['translation_pixel_range_x'],
-                                     params['translation_pixel_range_y'],
-                                     params['translation_pixel_range_z'],
-                                     sim_input_fn=sim_input_fn)
-
-    if params['apply_slit_occlusion']:
-        print("Applying slit occlusion")
-        data = data_tools.apply_slit_occlusion(data)
-    # data = data_tools.simulate_condition_occ(data,
-    #                                          turn_on_prob=params['turn_on_prob'],
-    #                                          turn_off_prob=params['turn_off_prob'])
-
-    if params['simulate_partial_completion']:
-        data = data_tools.simulate_partial_completion(data)
-    if params['simulate_random_partial_completion']:
-        data = data_tools.simulate_random_partial_completion(data)
+    data = data_tools.preprocess_dataset(data, params)
 
 
     if args.tmp:
