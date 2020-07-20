@@ -237,6 +237,7 @@ if __name__ == "__main__":
 
     VG_PUB = VoxelgridPublisher()
 
-    selection_sub = send_display_names_from_metadata(train_records, publish_selection)
+    # selection_sub = send_display_names_from_metadata(train_records, publish_selection)
+    selection_sub = send_display_names_from_metadata(test_records, publish_selection)
 
     rospy.spin()
