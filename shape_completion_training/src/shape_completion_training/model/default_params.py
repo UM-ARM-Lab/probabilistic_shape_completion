@@ -68,6 +68,17 @@ def get_default_params(group_name=None):
                 'dataset': 'ycb',
                 'apply_slit_occlusion': True,
             },
+        "3D_rec_gan":
+            {
+                'batch_size':4,
+                'dataset': 'shapenet',
+                'network': '3D_rec_gan',
+                "learning_rate": 0.0001,
+                "gan_learning_rate": 0.00005,
+                "num_latent_layers": 2000,
+                "is_u_connected": True,
+
+            },
     }
 
     if group_name not in group_defaults:
