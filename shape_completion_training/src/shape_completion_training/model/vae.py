@@ -114,7 +114,7 @@ class VAE_GAN(VAE):
         return self.discriminator(inp)
 
     def gradient_penalty(self, known, real, fake):
-        alpha = tf.random.uniform([self.batch_size, 1, 1, 1, 1], 0.0, 1.0)
+        alpha = tf.random.uniform([tf.shape(known)[0], 1, 1, 1, 1], 0.0, 1.0)
         diff = fake - real
         interp = real + (alpha * diff)
         with tf.GradientTape() as t:
