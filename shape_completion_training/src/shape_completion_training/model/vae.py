@@ -37,20 +37,16 @@ def compute_vae_loss(z, mean, logvar, sample_logit, labels):
 
 
 class VAE(MyKerasModel):
-    def __init__(self, params, batch_size):
-        super(VAE, self).__init__()
-        self.params = params
-        self.batch_size = batch_size
-        self.optimizer = tf.keras.optimizers.Adam(0.0001)
-
+    def __init__(self, hparams, batch_size, *args, **kwargs):
+        super(VAE, self).__init__(hparams, batch_size, *args, **kwargs)
         self.make_vae(inp_shape=[64, 64, 64, 2])
 
     def get_model(self):
         return self
 
     def make_vae(self, inp_shape):
-        self.encoder = make_encoder(inp_shape, self.params)
-        self.generator = make_generator(self.params)
+        self.encoder = make_encoder(inp_shape, self.hparams)
+        self.generator = make_generator(self.hparams)
 
     def predict(self, elem):
         return self(next(elem.__iter__()))
@@ -108,10 +104,10 @@ class VAE(MyKerasModel):
 
 
 class VAE_GAN(VAE):
-    def __init__(self, params, batch_size):
-        super(VAE_GAN, self).__init__(params, batch_size)
-        self.gan_opt = tf.keras.optimizers.Adam(0.00005)
-        self.discriminator = make_discriminator([64, 64, 64, 3], self.params)
+    def __init__(self, hparams, batch_size, *args, **kwargs):
+        super(VAE_GAN, self).__init__(hparams, batch_size, *args, **kwargs)
+        self.dis_opt = tf.keras.optimizers.Adam(hparams['discriminator_learning_rate'])
+        self.discriminator = make_discriminator([64, 64, 64, 3], self.hparams)
 
     def discriminate(self, known_input, output):
         inp = tf.concat([known_input, output], axis=4)
@@ -177,7 +173,7 @@ class VAE_GAN(VAE):
                 dis_variables = self.discriminator.trainable_variables
                 dis_gradients = tape.gradient(dis_loss, dis_variables)
                 clipped_dis_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in dis_gradients]
-                self.gan_opt.apply_gradients(list(zip(clipped_dis_gradients, dis_variables)))
+                self.dis_opt.apply_gradients(list(zip(clipped_dis_gradients, dis_variables)))
 
                 return generator_loss, metrics
 

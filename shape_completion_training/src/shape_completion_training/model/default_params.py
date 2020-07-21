@@ -40,6 +40,9 @@ def get_default_params(group_name=None):
             {
                 'num_latent_layers': 200,
                 'network': 'VAE_GAN',
+                'learning_rate': 0.0001,
+                'discriminator_learning_rate': 0.00005,
+
             },
         "Flow":
             {
