@@ -4,6 +4,7 @@ import tensorflow.keras.layers as tfl
 
 import shape_completion_training.model.nn_tools as nn
 from shape_completion_training.model.utils import stack_known
+from shape_completion_training.model.mykerasmodel import MyKerasModel
 
 
 def log_normal_pdf(sample, mean, logvar, raxis=1):
@@ -35,7 +36,7 @@ def compute_vae_loss(z, mean, logvar, sample_logit, labels):
     return -tf.reduce_mean(logpx_z + logpz - logqz_x)
 
 
-class VAE(tf.keras.Model):
+class VAE(MyKerasModel):
     def __init__(self, params, batch_size):
         super(VAE, self).__init__()
         self.params = params

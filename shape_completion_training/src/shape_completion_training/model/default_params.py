@@ -36,6 +36,11 @@ def get_default_params(group_name=None):
                 'num_latent_layers': 200,
                 'network': 'VAE'
             },
+        "VAE_GAN":
+            {
+                'num_latent_layers': 200,
+                'network': 'VAE_GAN',
+            },
         "Flow":
             {
                 'batch_size': 1500,
