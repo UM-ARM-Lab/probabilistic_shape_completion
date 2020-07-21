@@ -171,7 +171,7 @@ class VAE_GAN(VAE):
         clipped_dis_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in dis_gradients]
         self.dis_opt.apply_gradients(list(zip(clipped_dis_gradients, dis_variables)))
 
-        m = {k: reduce(metrics[k]) for k in metrics}
+        m = {k: tf.reduce_mean(metrics[k]) for k in metrics}
         m['loss'] = generator_loss
         return None, m
 
