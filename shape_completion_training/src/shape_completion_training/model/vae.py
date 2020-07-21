@@ -127,60 +127,53 @@ class VAE_GAN(VAE):
 
     @tf.function
     def train_step(self, batch):
-        def reduce(val):
-            return tf.reduce_mean(val)
+        with tf.GradientTape(persistent=True) as tape:
+            ##### Forward pass
+            known = stack_known(batch)
+            mean, logvar = self.encode(known)
+            z = self.reparameterize(mean, logvar)
+            sample_logit = self.decode(z)
+            sample = tf.nn.sigmoid(sample_logit)
+            output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
+            metrics = nn.calc_metrics(output, batch)
 
-        def step_fn(batch):
-            with tf.GradientTape(persistent=True) as tape:
-                ##### Forward pass
-                known = stack_known(batch)
-                mean, logvar = self.encode(known)
-                z = self.reparameterize(mean, logvar)
-                sample_logit = self.decode(z)
-                sample = tf.nn.sigmoid(sample_logit)
-                output = {'predicted_occ': sample, 'predicted_free': 1 - sample}
-                metrics = nn.calc_metrics(output, batch)
+            #### vae loss
+            vae_loss = compute_vae_loss(z, mean, logvar, sample_logit, labels=batch['gt_occ'])
+            metrics['loss/vae'] = vae_loss
 
-                #### vae loss
-                vae_loss = compute_vae_loss(z, mean, logvar, sample_logit, labels=batch['gt_occ'])
-                metrics['loss/vae'] = vae_loss
+            ### gan loss
+            fake_occ = tf.cast(sample_logit > 0, tf.float32)
+            real_pair_est = self.discriminate(known, batch['gt_occ'])
+            fake_pair_est = self.discriminate(known, fake_occ)
+            gan_loss_g = 10000 * (1 + tf.reduce_mean(-fake_pair_est))
+            gan_loss_d_no_gp = 1 + tf.reduce_mean(fake_pair_est - real_pair_est)
 
-                ### gan loss
-                fake_occ = tf.cast(sample_logit > 0, tf.float32)
-                real_pair_est = self.discriminate(known, batch['gt_occ'])
-                fake_pair_est = self.discriminate(known, fake_occ)
-                gan_loss_g = 10000 * (1 + tf.reduce_mean(-fake_pair_est))
-                gan_loss_d_no_gp = 1 + tf.reduce_mean(fake_pair_est - real_pair_est)
+            # gradient penalty
+            gp = self.gradient_penalty(known, batch['gt_occ'], fake_occ)
+            gan_loss_d = gan_loss_d_no_gp + gp
 
-                # gradient penalty
-                gp = self.gradient_penalty(known, batch['gt_occ'], fake_occ)
-                gan_loss_d = gan_loss_d_no_gp + gp
+            metrics['loss/gan_g'] = gan_loss_g
+            metrics['loss/gan_d'] = gan_loss_d
+            metrics['loss/gan_gp'] = gp
+            metrics['loss/gan_d_no_gp'] = gan_loss_d_no_gp
 
-                metrics['loss/gan_g'] = gan_loss_g
-                metrics['loss/gan_d'] = gan_loss_d
-                metrics['loss/gan_gp'] = gp
-                metrics['loss/gan_d_no_gp'] = gan_loss_d_no_gp
+            ### apply
+            generator_loss = vae_loss + gan_loss_g
+            dis_loss = gan_loss_d
 
-                ### apply
-                generator_loss = vae_loss + gan_loss_g
-                dis_loss = gan_loss_d
+        vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
+        vae_gradients = tape.gradient(generator_loss, vae_variables)
+        clipped_vae_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in vae_gradients]
+        self.optimizer.apply_gradients(list(zip(clipped_vae_gradients, vae_variables)))
 
-                vae_variables = self.encoder.trainable_variables + self.generator.trainable_variables
-                vae_gradients = tape.gradient(generator_loss, vae_variables)
-                clipped_vae_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in vae_gradients]
-                self.optimizer.apply_gradients(list(zip(clipped_vae_gradients, vae_variables)))
+        dis_variables = self.discriminator.trainable_variables
+        dis_gradients = tape.gradient(dis_loss, dis_variables)
+        clipped_dis_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in dis_gradients]
+        self.dis_opt.apply_gradients(list(zip(clipped_dis_gradients, dis_variables)))
 
-                dis_variables = self.discriminator.trainable_variables
-                dis_gradients = tape.gradient(dis_loss, dis_variables)
-                clipped_dis_gradients = [tf.clip_by_value(g, -1e6, 1e6) for g in dis_gradients]
-                self.dis_opt.apply_gradients(list(zip(clipped_dis_gradients, dis_variables)))
-
-                return generator_loss, metrics
-
-        loss, metrics = step_fn(batch)
         m = {k: reduce(metrics[k]) for k in metrics}
-        m['loss'] = loss
-        return _, m
+        m['loss'] = generator_loss
+        return None, m
 
 
 def make_encoder(inp_shape, params):
