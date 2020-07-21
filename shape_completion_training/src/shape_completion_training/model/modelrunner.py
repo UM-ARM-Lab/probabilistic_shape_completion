@@ -11,6 +11,7 @@ from shape_completion_training.model.voxelcnn import VoxelCNN
 from shape_completion_training.model.vae import VAE, VAE_GAN
 from shape_completion_training.model.conditional_vcnn import ConditionalVCNN
 from shape_completion_training.model.ae_vcnn import AE_VCNN
+from shape_completion_training.model.baselines.three_D_rec_gan import ThreeD_rec_gan
 from shape_completion_training.model.flow import Flow, RealNVP, MAF
 import progressbar
 import datetime
@@ -63,6 +64,8 @@ class ModelRunner:
         elif self.params['network'] == "NormalizingAE":
             self.model = NormalizingAE(self.params, batch_size=self.batch_size)
             self.model.flow = ModelRunner(training=False, trial_path=self.params['flow']).model.flow
+        elif self.params['network'] == "3D_rec_gan":
+            self.model = ThreeD_rec_gan(self.params, batch_size=self.batch_size)
         else:
             raise Exception('Unknown Model Type')
 
