@@ -19,6 +19,7 @@ if __name__ == "__main__":
     _, ds = data_tools.load_dataset("ycb", shuffle=False, metadata_only=True)
     # sharded_test_dataset = ds.shard(TOTAL_SHARDS, args.shard)
     # sub_ds = ds.take(2)
+    sub_ds = ds
 
     fits = plausiblility.compute_partial_icp_fit_dict(sub_ds, ds)
     plausiblility.save_plausibilities(fits, dataset_name="ycb")
