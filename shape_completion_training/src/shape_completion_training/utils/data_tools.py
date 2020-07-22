@@ -261,7 +261,7 @@ def preprocess_test_dataset(dataset, params):
     dataset = simulate_input(dataset, 0, 0, 0, sim_input_fn=simulate_2_5D_input)
 
     if params['apply_slit_occlusion']:
-        print("Applying slit occlusion")
+        print("Applying fixed slit occlusion")
         dataset = apply_fixed_slit_occlusion(dataset)
 
     return dataset

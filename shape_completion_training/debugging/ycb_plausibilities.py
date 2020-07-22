@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     params = {'apply_slit_occlusion': True}
 
-    fits = plausiblility.compute_partial_icp_fit_dict(sub_ds, ds)
+    fits = plausiblility.compute_partial_icp_fit_dict(sub_ds, ds, params)
     plausiblility.save_plausibilities(fits, dataset_name="ycb")
     #
     # loaded_fits = plausiblility.load_plausibilities()
