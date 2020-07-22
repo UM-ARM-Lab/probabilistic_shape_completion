@@ -4,7 +4,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from shape_completion_training.utils import shapenet_storage
-from shape_completion_training.utils.ycb_storage import ycb_record_path
+from shape_completion_training.utils import ycb_storage
 from shape_completion_training.utils.dataset_storage import load_gt_only
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
@@ -195,6 +195,12 @@ class AddressableDataset():
         return next(ds.__iter__())
 
 
+def get_dataset_path(dataset_name):
+    paths = {"shapenet": shapenet_storage.shapenet_load_path,
+             "ycb": ycb_storage.ycb_load_path}
+    return paths[dataset_name]
+
+
 def load_dataset(dataset_name, metadata_only=True, shuffle=True):
     """
     @param shuffle: shuffle the dataset
@@ -229,30 +235,35 @@ def load_shapenet_metadata(shapes="all", shuffle=True):
 
 def load_ycb_metadata(shuffle=True):
     print("Loading YCB dataset")
-    return _load_metadata_train_or_test(shuffle=shuffle, prefix="train", record_path=ycb_record_path), \
-           _load_metadata_train_or_test(shuffle=shuffle, prefix="test", record_path=ycb_record_path),
+    return _load_metadata_train_or_test(shuffle=shuffle, prefix="train", record_path=ycb_storage.ycb_record_path), \
+           _load_metadata_train_or_test(shuffle=shuffle, prefix="test", record_path=ycb_storage.ycb_record_path),
 
 
 def preprocess_dataset(dataset, params):
-    sim_input_fn = simulate_2_5D_input
-
     dataset = simulate_input(dataset,
                              params['translation_pixel_range_x'],
                              params['translation_pixel_range_y'],
                              params['translation_pixel_range_z'],
-                             sim_input_fn=sim_input_fn)
+                             sim_input_fn=simulate_2_5D_input)
 
     if params['apply_slit_occlusion']:
         print("Applying slit occlusion")
         dataset = apply_slit_occlusion(dataset)
-    # data = data_tools.simulate_condition_occ(data,
-    #                                          turn_on_prob=params['turn_on_prob'],
-    #                                          turn_off_prob=params['turn_off_prob'])
 
     if params['simulate_partial_completion']:
         dataset = simulate_partial_completion(dataset)
     if params['simulate_random_partial_completion']:
         dataset = simulate_random_partial_completion(dataset)
+    return dataset
+
+
+def preprocess_test_dataset(dataset, params):
+    dataset = simulate_input(dataset, 0, 0, 0, sim_input_fn=simulate_2_5D_input)
+
+    if params['apply_slit_occlusion']:
+        print("Applying fixed slit occlusion")
+        dataset = apply_fixed_slit_occlusion(dataset)
+
     return dataset
 
 
@@ -389,6 +400,28 @@ def apply_slit_occlusion(dataset):
     def _apply_slit_occlusion(elem):
         slit_min, slit_max = select_slit_location(elem['gt_occ'], min_slit_width=5, max_slit_width=30,
                                                   min_observable=5)
+        ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
+                                                             slit_min, slit_max], [tf.float32, tf.float32])
+
+        # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
+        #                              slitmin, slitmax)
+        elem['known_occ'] = ko
+        elem['known_free'] = kf
+        return elem
+
+    return dataset.map(_apply_slit_occlusion)
+
+
+def apply_fixed_slit_occlusion(dataset):
+    def _apply_slit_occlusion(elem):
+
+        slit_width=6
+
+        z_vals = tf.where(tf.reduce_sum(elem['gt_occ'], axis=[0, 1, 3]))
+        slit_min = tf.reduce_min(z_vals) + 2
+        slit_max = slit_min + slit_width
+
+
         ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
                                                              slit_min, slit_max], [tf.float32, tf.float32])
 

@@ -7,7 +7,9 @@ if __name__ == "__main__":
     train_dataset, test_dataset = data_tools.load_shapenet_metadata(shuffle=False)
     # dataset = dataset.take(100)
 
-    fits = plausiblility.compute_icp_fit_dict(test_dataset)
+    params = {'apply_slit_occlusion': False}
+
+    fits = plausiblility.compute_icp_fit_dict(test_dataset, params)
     plausiblility.save_plausibilities(fits)
 
     loaded_fits = plausiblility.load_plausibilities()

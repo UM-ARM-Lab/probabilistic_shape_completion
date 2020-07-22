@@ -5,61 +5,49 @@ from shape_completion_training.model.observation_model import observation_likeli
 from shape_completion_training.utils import data_tools
 from shape_completion_training.voxelgrid import fit, conversions
 from shape_completion_training.model.utils import memoize
-from shape_completion_training.utils.shapenet_storage import shapenet_load_path
 import progressbar
 
 
-def _get_path(identifier=""):
+def _get_path(dataset_name, identifier=""):
     r = rospkg.RosPack()
-    trial_path = shapenet_load_path / ("plausibility" + identifier + ".pkl")
+    trial_path = data_tools.get_dataset_path(dataset_name) / ("plausibility" + identifier + ".pkl")
     return trial_path.as_posix()
 
 
 @memoize
-def load_plausibilities():
-    with open(_get_path(), "rb") as f:
+def load_plausibilities(dataset_name):
+    with open(_get_path(dataset_name), "rb") as f:
         return pickle.load(f)
 
 
-def save_plausibilities(plausibilities_dict, identifier=""):
-    with open(_get_path(identifier), "wb") as f:
+def save_plausibilities(plausibilities_dict, dataset_name, identifier=""):
+    with open(_get_path(dataset_name, identifier), "wb") as f:
         pickle.dump(plausibilities_dict, f)
 
 
-def get_valid_fits(name):
-    fits = load_plausibilities()[name]
+def get_plausibilities_for(shape_name, dataset_name):
+    fits = load_plausibilities(dataset_name)[shape_name]
     valid_fits = [(k, v["T"], v["observation_probability"], v["out_of_range_count"])
                   for k, v in fits.items()
                   if v["out_of_range_count"] == 0]
     return valid_fits
 
 
-def get_fits_for(name):
-    """
-    @param name:
-    @return: sorted list of (other_name, T, observation_probability, out_of_range_count)
-    """
-    fits = load_plausibilities()[name]
-    return sorted([(k, v["T"], v["observation_probability"], v["out_of_range_count"]) for k, v in fits.items()],
-                  key=lambda x: x[2],
-                  reverse=True)
+def compute_icp_fit_dict(metadata, params):
+    return compute_partial_icp_fit_dict(metadata, metadata, params)
 
 
-def compute_icp_fit_dict(metadata):
-    return compute_partial_icp_fit_dict(metadata, metadata)
-
-
-def compute_partial_icp_fit_dict(reference_metadata, other_metadata):
+def compute_partial_icp_fit_dict(reference_metadata, other_metadata, params):
     best_fits = {}
     num_shapes = 0
     for i in reference_metadata:
         num_shapes += 1
 
     reference_ds = data_tools.load_voxelgrids(reference_metadata)
-    reference_ds = data_tools.simulate_input(reference_ds, 0, 0, 0)
+    reference_ds = data_tools.preprocess_test_dataset(reference_ds, params)
 
     other_ds = data_tools.load_voxelgrids(other_metadata)
-    other_ds = data_tools.simulate_input(other_ds, 0, 0, 0)
+    other_ds = data_tools.preprocess_test_dataset(reference_ds, params)
 
     widgets = [
         '  ', progressbar.Counter(), '/', str(num_shapes),

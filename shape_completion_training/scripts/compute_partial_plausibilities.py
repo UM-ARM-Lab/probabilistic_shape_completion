@@ -20,7 +20,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
 
-
     test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
     sharded_test_dataset = test_dataset.shard(TOTAL_SHARDS, args.shard)
 
