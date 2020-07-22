@@ -9,9 +9,27 @@ ycb_record_path = ycb_load_path / "tfrecords" / "filepath"
 def write_ycb_to_filelist():
     all_files = get_all_ycb_files()
 
+    test_objects = ["002", #master chef can
+                    "003", #cracker box
+                    "004", #sugar box
+                    "005", #tomato soup can
+                    "006", #mustard bottle
+                    "008", #pudding box
+                    "019", #pitcher base
+                    "021", #bleach cleanser
+                    "022", #windex bottle
+                    "035", #power drill
+                    "036", #wood block
+                    ]
+
+    test_files = []
+    for record in all_files:
+        if record["id"][0:3] in test_objects:
+            test_files.append(record)
+
     write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(all_files),
                       ycb_record_path / "train_filepaths.pkl")
-    write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(all_files),
+    write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(test_files),
                       ycb_record_path / "test_filepaths.pkl")
 
 
