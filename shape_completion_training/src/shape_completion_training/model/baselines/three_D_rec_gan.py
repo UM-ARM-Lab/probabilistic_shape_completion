@@ -192,7 +192,8 @@ class ThreeD_rec_gan(MyKerasModel):
                                                                labels=batch['gt_occ'])
             aeu_loss = tf.reduce_mean(aeu_loss)
             ### gan loss
-            fake_occ = tf.cast(output_logits > 0, tf.float32)
+            # fake_occ = tf.cast(output_logits > 0, tf.float32)
+            fake_occ = tf.sigmoid(output_logits)
             real_pair_est = self.discriminate(batch['known_occ'], batch['gt_occ'])
             fake_pair_est = self.discriminate(batch['known_occ'], fake_occ)
             gan_loss_g = tf.reduce_mean(-fake_pair_est)
