@@ -35,7 +35,8 @@ if __name__ == "__main__":
         test_ds = data_tools.load_voxelgrids(test_ds)
         test_ds = data_tools.preprocess_test_dataset(test_ds, mr.params)
 
-        evaluation = {trial_path: model_evaluator.evaluate_model(mr.model, test_ds, test_set_size)}
+        evaluation = {trial_path: model_evaluator.evaluate_model(mr.model, test_ds, test_set_size,
+                                                                 mr.params['dataset'], )}
         model_evaluator.save_evaluation(evaluation)
 
     print("Finished evaluating dataset")

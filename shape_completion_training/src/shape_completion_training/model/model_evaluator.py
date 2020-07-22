@@ -37,9 +37,9 @@ def save_evaluation(evaluation_dict):
         pickle.dump(evaluation_dict, f)
 
 
-def get_plausibles(shape_name):
-    sn = data_tools.get_addressible_dataset()
-    valid_fits = plausiblility.get_plausibilities_for(shape_name)
+def get_plausibles(shape_name, dataset_name):
+    sn = data_tools.get_addressible_dataset(dataset_name=dataset_name)
+    valid_fits = plausiblility.get_plausibilities_for(shape_name, dataset_name)
     plausibles = [conversions.transform_voxelgrid(sn.get(name)['gt_occ'], T, scale=0.01)
                   for name, T, _, _ in valid_fits]
     return plausibles
@@ -50,15 +50,15 @@ def sample_particles(model, input_elem, num_particles):
     return [model(input_elem)['predicted_occ'] for _ in range(num_particles)]
 
 
-def compute_plausible_distances(ref_name, particles):
-    plausibles = get_plausibles(ref_name)
+def compute_plausible_distances(ref_name, particles, dataset_name):
+    plausibles = get_plausibles(ref_name, dataset_name)
     distances = [[chamfer_distance(tf.cast(a > 0.2, tf.float32), b,
                                    scale=0.01, downsample=4).numpy()
                   for a in particles] for b in plausibles]
     return distances
 
 
-def evaluate_model(model, test_set, test_set_size, num_particles=100):
+def evaluate_model(model, test_set, test_set_size, dataset_name, num_particles=100):
     all_metrics = {}
 
     widgets = [
@@ -78,7 +78,7 @@ def evaluate_model(model, test_set, test_set_size, num_particles=100):
             results["best_particle_chamfer"] = \
                 best_match_value(elem['gt_occ'], particles,
                                  metric=lambda a, b: chamfer_distance(a, b, scale=0.01, downsample=4)).numpy()
-            results["particle_distances"] = compute_plausible_distances(elem_name, particles)
+            results["particle_distances"] = compute_plausible_distances(elem_name, particles, dataset_name)
             all_metrics[elem_name] = results
 
     return all_metrics
