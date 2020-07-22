@@ -143,7 +143,7 @@ class VAE_GAN(VAE):
 
             ### gan loss
             # fake_occ = tf.cast(sample_logit > 0, tf.float32)
-            fake_occ = tf.sigmord(sample_logit)
+            fake_occ = tf.sigmoid(sample_logit)
             real_pair_est = self.discriminate(known, batch['gt_occ'])
             fake_pair_est = self.discriminate(known, fake_occ)
             gan_loss_g = 10000 * (1 + tf.reduce_mean(-fake_pair_est))

@@ -1,3 +1,5 @@
+#Note: THis is the raw 3D_rec_gan++ code, written in tensorflow 1
+
 import os
 import shutil
 import numpy as np
