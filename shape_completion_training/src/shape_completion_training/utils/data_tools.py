@@ -414,10 +414,16 @@ def apply_slit_occlusion(dataset):
 
 def apply_fixed_slit_occlusion(dataset):
     def _apply_slit_occlusion(elem):
-        slit_min, slit_max = select_slit_location(elem['gt_occ'], min_slit_width=5, max_slit_width=30,
-                                                  min_observable=5)
+
+        slit_width=6
+
+        z_vals = tf.where(tf.reduce_sum(elem['gt_occ'], axis=[0, 1, 3]))
+        slit_min = tf.reduce_min(z_vals) + 2
+        slit_max = slit_min + slit_width
+
+
         ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
-                                                             32, 38], [tf.float32, tf.float32])
+                                                             slit_min, slit_max], [tf.float32, tf.float32])
 
         # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
         #                              slitmin, slitmax)
