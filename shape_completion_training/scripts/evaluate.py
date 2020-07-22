@@ -15,14 +15,14 @@ MODELS_TO_EVALUATE = [
 ]
 
 if __name__ == "__main__":
-    rospy.init_node('evaluation_node')
-
     parser = argparse.ArgumentParser(description="Process args for training")
     parser.add_argument('--trial', default=None)
     args = parser.parse_args()
 
     if args.trial is not None:
         MODELS_TO_EVALUATE = [args.trial]
+
+    rospy.init_node('evaluation_node_' + MODELS_TO_EVALUATE[0])
 
     for trial_path in MODELS_TO_EVALUATE:
         print("Evaluating {}".format(trial_path))
