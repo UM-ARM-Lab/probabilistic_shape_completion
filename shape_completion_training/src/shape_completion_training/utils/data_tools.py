@@ -240,25 +240,30 @@ def load_ycb_metadata(shuffle=True):
 
 
 def preprocess_dataset(dataset, params):
-    sim_input_fn = simulate_2_5D_input
-
     dataset = simulate_input(dataset,
                              params['translation_pixel_range_x'],
                              params['translation_pixel_range_y'],
                              params['translation_pixel_range_z'],
-                             sim_input_fn=sim_input_fn)
+                             sim_input_fn=simulate_2_5D_input)
 
     if params['apply_slit_occlusion']:
         print("Applying slit occlusion")
         dataset = apply_slit_occlusion(dataset)
-    # data = data_tools.simulate_condition_occ(data,
-    #                                          turn_on_prob=params['turn_on_prob'],
-    #                                          turn_off_prob=params['turn_off_prob'])
 
     if params['simulate_partial_completion']:
         dataset = simulate_partial_completion(dataset)
     if params['simulate_random_partial_completion']:
         dataset = simulate_random_partial_completion(dataset)
+    return dataset
+
+
+def preprocess_test_dataset(dataset, params):
+    dataset = simulate_input(dataset, 0, 0, 0, sim_input_fn=simulate_2_5D_input)
+
+    if params['apply_slit_occlusion']:
+        print("Applying slit occlusion")
+        dataset = apply_fixed_slit_occlusion(dataset)
+
     return dataset
 
 
@@ -397,6 +402,22 @@ def apply_slit_occlusion(dataset):
                                                   min_observable=5)
         ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
                                                              slit_min, slit_max], [tf.float32, tf.float32])
+
+        # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
+        #                              slitmin, slitmax)
+        elem['known_occ'] = ko
+        elem['known_free'] = kf
+        return elem
+
+    return dataset.map(_apply_slit_occlusion)
+
+
+def apply_fixed_slit_occlusion(dataset):
+    def _apply_slit_occlusion(elem):
+        slit_min, slit_max = select_slit_location(elem['gt_occ'], min_slit_width=5, max_slit_width=30,
+                                                  min_observable=5)
+        ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
+                                                             32, 38], [tf.float32, tf.float32])
 
         # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
         #                              slitmin, slitmax)

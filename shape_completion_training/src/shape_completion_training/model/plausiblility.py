@@ -33,21 +33,21 @@ def get_plausibilities_for(shape_name, dataset_name):
     return valid_fits
 
 
-def compute_icp_fit_dict(metadata):
-    return compute_partial_icp_fit_dict(metadata, metadata)
+def compute_icp_fit_dict(metadata, params):
+    return compute_partial_icp_fit_dict(metadata, metadata, params)
 
 
-def compute_partial_icp_fit_dict(reference_metadata, other_metadata):
+def compute_partial_icp_fit_dict(reference_metadata, other_metadata, params):
     best_fits = {}
     num_shapes = 0
     for i in reference_metadata:
         num_shapes += 1
 
     reference_ds = data_tools.load_voxelgrids(reference_metadata)
-    reference_ds = data_tools.simulate_input(reference_ds, 0, 0, 0)
+    reference_ds = data_tools.preprocess_test_dataset(reference_ds, params)
 
     other_ds = data_tools.load_voxelgrids(other_metadata)
-    other_ds = data_tools.simulate_input(other_ds, 0, 0, 0)
+    other_ds = data_tools.preprocess_test_dataset(reference_ds, params)
 
     widgets = [
         '  ', progressbar.Counter(), '/', str(num_shapes),

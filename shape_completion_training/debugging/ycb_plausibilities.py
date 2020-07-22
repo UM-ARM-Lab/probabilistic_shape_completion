@@ -21,6 +21,8 @@ if __name__ == "__main__":
     # sub_ds = ds.take(2)
     sub_ds = ds
 
+    params = {'apply_slit_occlusion': True}
+
     fits = plausiblility.compute_partial_icp_fit_dict(sub_ds, ds)
     plausiblility.save_plausibilities(fits, dataset_name="ycb")
     #

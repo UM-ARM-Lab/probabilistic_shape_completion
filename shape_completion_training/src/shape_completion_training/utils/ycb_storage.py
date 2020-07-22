@@ -15,6 +15,7 @@ def write_ycb_to_filelist():
                     "005", #tomato soup can
                     "006", #mustard bottle
                     "008", #pudding box
+                    "013", #apple
                     "019", #pitcher base
                     "021", #bleach cleanser
                     "022", #windex bottle
