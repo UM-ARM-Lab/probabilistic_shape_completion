@@ -20,11 +20,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
 
-    test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
-    sharded_test_dataset = test_dataset.shard(TOTAL_SHARDS, args.shard)
+    # test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
+    ds, _ = data_tools.load_dataset("ycb", shuffle=False, metadata_only=True)
+    # sharded_test_dataset = ds.shard(TOTAL_SHARDS, args.shard)
+    sub_ds = ds.take(2)
 
-    fits = plausiblility.compute_partial_icp_fit_dict(sharded_test_dataset, test_dataset)
-    plausiblility.save_plausibilities(fits, identifier="_{}_{}".format(args.shard, TOTAL_SHARDS))
+    fits = plausiblility.compute_partial_icp_fit_dict(sub_ds, ds)
+    plausiblility.save_plausibilities(fits, dataset_name="ycb")
     #
     # loaded_fits = plausiblility.load_plausibilities()
-    print("Finished computing plausibilities for shard {}/{}".format(args.shard, TOTAL_SHARDS))
+    print("Finished computing plausibilities")

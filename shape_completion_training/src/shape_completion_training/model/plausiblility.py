@@ -5,7 +5,6 @@ from shape_completion_training.model.observation_model import observation_likeli
 from shape_completion_training.utils import data_tools
 from shape_completion_training.voxelgrid import fit, conversions
 from shape_completion_training.model.utils import memoize
-from shape_completion_training.utils.shapenet_storage import shapenet_load_path
 import progressbar
 
 
@@ -32,17 +31,6 @@ def get_plausibilities_for(shape_name, dataset_name):
                   for k, v in fits.items()
                   if v["out_of_range_count"] == 0]
     return valid_fits
-
-
-def get_fits_for(name):
-    """
-    @param name:
-    @return: sorted list of (other_name, T, observation_probability, out_of_range_count)
-    """
-    fits = load_plausibilities()[name]
-    return sorted([(k, v["T"], v["observation_probability"], v["out_of_range_count"]) for k, v in fits.items()],
-                  key=lambda x: x[2],
-                  reverse=True)
 
 
 def compute_icp_fit_dict(metadata):
