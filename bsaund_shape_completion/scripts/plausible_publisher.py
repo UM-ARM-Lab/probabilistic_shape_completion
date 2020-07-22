@@ -9,7 +9,8 @@ from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model import plausiblility
 
 
-DATASET = "shapenet"
+DATASET = "ycb"
+
 
 def publish_selection(metadata, ind, str_msg):
     ds = metadata.skip(ind).take(1)

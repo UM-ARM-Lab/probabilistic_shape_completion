@@ -14,16 +14,11 @@ I would use multiprocessing, but that does not behave well with tensorflow
 """
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Arguments for sharded plausibility computation")
-    parser.add_argument('shard', type=int)
-
-    args = parser.parse_args()
-
 
     # test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
-    ds, _ = data_tools.load_dataset("ycb", shuffle=False, metadata_only=True)
+    _, ds = data_tools.load_dataset("ycb", shuffle=False, metadata_only=True)
     # sharded_test_dataset = ds.shard(TOTAL_SHARDS, args.shard)
-    sub_ds = ds.take(2)
+    # sub_ds = ds.take(2)
 
     fits = plausiblility.compute_partial_icp_fit_dict(sub_ds, ds)
     plausiblility.save_plausibilities(fits, dataset_name="ycb")
