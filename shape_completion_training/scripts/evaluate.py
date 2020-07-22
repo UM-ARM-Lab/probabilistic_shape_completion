@@ -22,7 +22,7 @@ if __name__ == "__main__":
     if args.trial is not None:
         MODELS_TO_EVALUATE = [args.trial]
 
-    rospy.init_node('evaluation_node_' + MODELS_TO_EVALUATE[0])
+    rospy.init_node('evaluation_node_' + "_".join(MODELS_TO_EVALUATE).replace("/", ""))
 
     for trial_path in MODELS_TO_EVALUATE:
         print("Evaluating {}".format(trial_path))
