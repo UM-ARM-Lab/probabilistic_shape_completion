@@ -24,14 +24,13 @@ if __name__ == "__main__":
     if args.trial is not None:
         MODELS_TO_EVALUATE = [args.trial]
 
-
-
     for trial_path in MODELS_TO_EVALUATE:
         print("Evaluating {}".format(trial_path))
         mr = ModelRunner(training=False, trial_path=trial_path)
 
         _, test_ds = data_tools.load_dataset(mr.params['dataset'], shuffle=False, metadata_only=True)
-        for _ in test_ds_metadata:
+        test_set_size = 0
+        for _ in test_ds:
             test_set_size += 1
         test_ds = data_tools.load_voxelgrids(test_ds)
         test_ds = data_tools.preprocess_test_dataset(test_ds, mr.params)
