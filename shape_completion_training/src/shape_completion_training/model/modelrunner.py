@@ -104,7 +104,7 @@ class ModelRunner:
             for k in summary_dict:
                 tf.summary.scalar(k, summary_dict[k].numpy(), step=self.ckpt.step.numpy())
 
-    def train_batch(self, dataset):
+    def train_batch(self, dataset, summary_period=10):
         if self.num_batches is not None:
             max_size = str(self.num_batches)
         else:
@@ -129,7 +129,8 @@ class ModelRunner:
                 time_str = str(datetime.timedelta(seconds=int(self.ckpt.train_time.numpy())))
                 bar.update(self.num_batches, Loss=ret['loss'].numpy(),
                            TrainTime=time_str)
-                self.write_summary(ret)
+                if self.num_batches % summary_period == 0:
+                    self.write_summary(ret)
                 self.ckpt.train_time.assign_add(time.time() - t0)
                 t0 = time.time()
 
