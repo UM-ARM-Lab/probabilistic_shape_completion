@@ -9,25 +9,25 @@ from shape_completion_training.utils.shapenet_storage import shapenet_load_path
 import progressbar
 
 
-def _get_path(identifier=""):
+def _get_path(dataset_name, identifier=""):
     r = rospkg.RosPack()
-    trial_path = shapenet_load_path / ("plausibility" + identifier + ".pkl")
+    trial_path = data_tools.get_dataset_path(dataset_name) / ("plausibility" + identifier + ".pkl")
     return trial_path.as_posix()
 
 
 @memoize
-def load_plausibilities():
-    with open(_get_path(), "rb") as f:
+def load_plausibilities(dataset_name):
+    with open(_get_path(dataset_name), "rb") as f:
         return pickle.load(f)
 
 
-def save_plausibilities(plausibilities_dict, identifier=""):
-    with open(_get_path(identifier), "wb") as f:
+def save_plausibilities(plausibilities_dict, dataset_name, identifier=""):
+    with open(_get_path(dataset_name, identifier), "wb") as f:
         pickle.dump(plausibilities_dict, f)
 
 
-def get_valid_fits(name):
-    fits = load_plausibilities()[name]
+def get_plausibilities_for(shape_name, dataset_name):
+    fits = load_plausibilities(dataset_name)[shape_name]
     valid_fits = [(k, v["T"], v["observation_probability"], v["out_of_range_count"])
                   for k, v in fits.items()
                   if v["out_of_range_count"] == 0]

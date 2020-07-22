@@ -4,7 +4,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from shape_completion_training.utils import shapenet_storage
-from shape_completion_training.utils.ycb_storage import ycb_record_path
+from shape_completion_training.utils import ycb_storage
 from shape_completion_training.utils.dataset_storage import load_gt_only
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
@@ -195,6 +195,12 @@ class AddressableDataset():
         return next(ds.__iter__())
 
 
+def get_dataset_path(dataset_name):
+    paths = {"shapenet": shapenet_storage.shapenet_load_path,
+             "ycb": ycb_storage.ycb_load_path}
+    return paths[dataset_name]
+
+
 def load_dataset(dataset_name, metadata_only=True, shuffle=True):
     """
     @param shuffle: shuffle the dataset
@@ -229,8 +235,8 @@ def load_shapenet_metadata(shapes="all", shuffle=True):
 
 def load_ycb_metadata(shuffle=True):
     print("Loading YCB dataset")
-    return _load_metadata_train_or_test(shuffle=shuffle, prefix="train", record_path=ycb_record_path), \
-           _load_metadata_train_or_test(shuffle=shuffle, prefix="test", record_path=ycb_record_path),
+    return _load_metadata_train_or_test(shuffle=shuffle, prefix="train", record_path=ycb_storage.ycb_record_path), \
+           _load_metadata_train_or_test(shuffle=shuffle, prefix="test", record_path=ycb_storage.ycb_record_path),
 
 
 def preprocess_dataset(dataset, params):

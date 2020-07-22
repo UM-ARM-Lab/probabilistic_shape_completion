@@ -39,7 +39,7 @@ def save_evaluation(evaluation_dict):
 
 def get_plausibles(shape_name):
     sn = data_tools.get_addressible_dataset()
-    valid_fits = plausiblility.get_valid_fits(shape_name)
+    valid_fits = plausiblility.get_plausibilities_for(shape_name)
     plausibles = [conversions.transform_voxelgrid(sn.get(name)['gt_occ'], T, scale=0.01)
                   for name, T, _, _ in valid_fits]
     return plausibles

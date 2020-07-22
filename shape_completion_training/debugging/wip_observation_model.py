@@ -70,9 +70,9 @@ def run():
 
 
 def compare():
-    sn = data_tools.get_addressible_shapenet(use_train=False)
+    sn = data_tools.get_addressible_dataset(dataset_name="shapenet", use_train=False)
     name = "9737c77d3263062b8ca7a0a01bcd55b60.0_0.0_0.0_265"
-    best_fits = plausiblility.get_fits_for(name)
+    best_fits = plausiblility.get_plausibilities_for(name, "shapenet")
     for i in range(30):
         info = best_fits[i]
         other_name, T, _, _ = best_fits[i]
