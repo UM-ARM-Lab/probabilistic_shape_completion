@@ -44,6 +44,14 @@ def simulate_slit_occlusion(known_occ, known_free, slit_zmin, slit_zmax):
     return known_occ, known_free
 
 
+def get_slit_occlusion_2D_mask(slit_min, slit_width, mask_shape):
+    slit_max = slit_min + slit_width
+    mask = np.zeros(mask_shape)
+    mask[:, 0:slit_min] = 1.0
+    mask[:, slit_max:] = 1.0
+    return mask
+
+
 def select_slit_location(gt, min_slit_width, max_slit_width, min_observable=5):
     z_vals = tf.where(tf.reduce_sum(gt, axis=[0, 1, 3]))
 
@@ -262,7 +270,7 @@ def preprocess_test_dataset(dataset, params):
 
     if params['apply_slit_occlusion']:
         print("Applying fixed slit occlusion")
-        dataset = apply_fixed_slit_occlusion(dataset)
+        dataset = apply_deterministic_slit_occlusion(dataset)
 
     return dataset
 
@@ -412,21 +420,34 @@ def apply_slit_occlusion(dataset):
     return dataset.map(_apply_slit_occlusion)
 
 
-def apply_fixed_slit_occlusion(dataset):
+def apply_deterministic_slit_occlusion(dataset):
+    # def _apply_slit_occlusion(elem):
+    #
+    #     slit_width=6
+    #
+    #     z_vals = tf.where(tf.reduce_sum(elem['gt_occ'], axis=[0, 1, 3]))
+    #     slit_min = tf.reduce_min(z_vals) + 2
+    #     slit_max = slit_min + slit_width
+    #
+    #
+    #     ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
+    #                                                          slit_min, slit_max], [tf.float32, tf.float32])
+    #
+    #     # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
+    #     #                              slitmin, slitmax)
+    #     elem['known_occ'] = ko
+    #     elem['known_free'] = kf
+    #     return elem
+    #
+    # return dataset.map(_apply_slit_occlusion)
+    return apply_fixed_slit_occlusion(dataset, 28, 6)
+
+
+def apply_fixed_slit_occlusion(dataset, slit_min, slit_width):
     def _apply_slit_occlusion(elem):
 
-        slit_width=6
-
-        z_vals = tf.where(tf.reduce_sum(elem['gt_occ'], axis=[0, 1, 3]))
-        slit_min = tf.reduce_min(z_vals) + 2
-        slit_max = slit_min + slit_width
-
-
         ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
-                                                             slit_min, slit_max], [tf.float32, tf.float32])
-
-        # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
-        #                              slitmin, slitmax)
+                                                             slit_min, slit_min+slit_width], [tf.float32, tf.float32])
         elem['known_occ'] = ko
         elem['known_free'] = kf
         return elem

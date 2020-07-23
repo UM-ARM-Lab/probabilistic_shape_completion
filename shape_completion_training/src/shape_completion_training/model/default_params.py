@@ -62,7 +62,7 @@ def get_default_params(group_name=None):
                 'dim': 24,
                 'num_masked': 12,
                 'learning_rate': 1e-5,
-                'translation_pixel_range_x': 10,
+                'translation_pixel_range_x': 20,
                 'translation_pixel_range_y': 10,
                 'translation_pixel_range_z': 10,
                 'dataset': 'ycb',
@@ -74,6 +74,9 @@ def get_default_params(group_name=None):
                 'network': 'NormalizingAE',
                 'use_flow_during_inference': False,
                 'dataset': 'ycb',
+                'translation_pixel_range_x': 20,
+                'translation_pixel_range_y': 10,
+                'translation_pixel_range_z': 10,
                 'apply_slit_occlusion': True,
             },
         "3D_rec_gan":

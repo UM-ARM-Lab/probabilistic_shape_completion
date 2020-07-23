@@ -22,6 +22,8 @@ def write_ycb_to_filelist():
                     "035", #power drill
                     "036", #wood block
                     ]
+    # test_objects = ["003",  # cracker box
+    #                 ]
 
     test_files = []
     for record in all_files:

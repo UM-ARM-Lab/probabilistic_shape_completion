@@ -30,7 +30,7 @@ def range_likelihood(error, width):
     return tf.cast(tf.abs(error) < width, tf.float32)
 
 
-def out_of_range_count(observation, underlying_state, width=4):
+def out_of_range_count(observation, underlying_state, width=4, additional_mask=None):
     """
     return the number of voxels in the observation that are out of the specified range
     given an underlying state
@@ -47,6 +47,8 @@ def out_of_range_count(observation, underlying_state, width=4):
 
     mask = mask_high_gradient(expected_depth)
     p = p * (1 - mask) + mask
+    if additional_mask is not None:
+        p = p * (1 - additional_mask) + additional_mask
 
     return tf.reduce_sum(1 - p)
 
