@@ -70,7 +70,7 @@ def get_default_params(group_name=None):
         "NormalizingAE_YCB":
             {
                 'num_latent_layers': 200,
-                'flow': 'FlowYCB/July_16_20-50-01_9d37e040d4',
+                'flow': 'FlowYCB/July_23_16-35-55_7d12d68bee',
                 'network': 'NormalizingAE',
                 'use_flow_during_inference': False,
                 'dataset': 'ycb',
