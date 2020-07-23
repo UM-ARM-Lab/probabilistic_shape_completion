@@ -51,7 +51,7 @@ def best_match_value(test_vg, vg_list, metric, maximize=True):
     @param metric:
     @return: the value of the best match
     """
-    ind, elem = highest_match(test_vg, vg_list, metric=metric)
+    ind, elem = highest_match(test_vg, vg_list, metric=metric, maximize=maximize)
     return metric(test_vg, elem)
 
 

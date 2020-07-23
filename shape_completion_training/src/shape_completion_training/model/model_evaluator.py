@@ -77,7 +77,8 @@ def evaluate_model(model, test_set, test_set_size, dataset_name, num_particles=1
             results["best_particle_iou"] = best_match_value(elem['gt_occ'], particles, metric=metrics.iou).numpy()
             results["best_particle_chamfer"] = \
                 best_match_value(elem['gt_occ'], particles,
-                                 metric=lambda a, b: chamfer_distance(a, b, scale=0.01, downsample=4)).numpy()
+                                 metric=lambda a, b: chamfer_distance(a, b, scale=0.01, downsample=4),
+                                 maximize=False).numpy()
             results["particle_distances"] = compute_plausible_distances(elem_name, particles, dataset_name)
             all_metrics[elem_name] = results
 
