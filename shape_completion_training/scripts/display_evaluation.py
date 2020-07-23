@@ -10,12 +10,29 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 from shape_completion_training.voxelgrid.metrics import chamfer_distance
+from shape_completion_training.model import filepath_tools
+
+
+save_folder = filepath_tools.get_shape_completion_package_path() / "results"
 
 # data_names = ["model", "shape", "best_sample_gt", ""
-model_name_map = {"VAE/July_07_12-09-24_7f65111254": "Baseline VAE",
+model_name_map = {"VAE/July_07_12-09-24_7f65111254": "VAE",
+                  "3D_rec_gan/July_20_19-36-48_7ed486bdf5": " 3DrecGAN++",
+                  "VAE_GAN/July_20_23-46-36_8849b5bd57": "VAE_GAN",
                   # "VAE/VAE_trial_1": "Baseline VAE",
                   # "Augmented_VAE/May_21_20-00-00_0000000000": "Our method",
-                  "NormalizingAE/July_02_15-15-06_ede2472d34": "Normalizing Flow"}
+                  "NormalizingAE/July_02_15-15-06_ede2472d34": "Ours",
+                  }
+
+
+def save_numerics(df):
+    averages = df.groupby('model').mean()
+    averages.to_csv((save_folder / "all_averages.csv").as_posix())
+    ambiguous = df[df['angle'] > 249]
+    ambiguous = ambiguous[ambiguous['angle'] < 289]
+    ambiguous_averages = ambiguous.groupby('model').mean()
+    ambiguous_averages.to_csv((save_folder / "ambiguous_averages.csv").as_posix())
+
 
 
 
@@ -27,6 +44,7 @@ def add_coverage(data, shape_name, model_name, particle_distances):
         data["Chamfer Distance from each Plausible to closest Sample"].append(closest_particle)
         data["angle"].append(angle)
         data["Chamfer Distance from each Sample to closest Plausible"].append(None)
+        data["accuracy"].append(None)
 
 
 def add_plausibility(data, shape_name, model_name, particle_distances):
@@ -37,13 +55,23 @@ def add_plausibility(data, shape_name, model_name, particle_distances):
         data["Chamfer Distance from each Sample to closest Plausible"].append(closest_particle)
         data["angle"].append(angle)
         data["Chamfer Distance from each Plausible to closest Sample"].append(None)
+        data["accuracy"].append(None)
+
+def add_accuracy(data, shape_name, model_name, distance_to_gt):
+    angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
+    data["model"].append(model_name_map[model_name])
+    data["shape"].append(shape_name)
+    data["Chamfer Distance from each Plausible to closest Sample"].append(None)
+    data["angle"].append(angle)
+    data["Chamfer Distance from each Sample to closest Plausible"].append(None)
+    data["accuracy"].append(distance_to_gt)
 
 
-def display_histogram(evaluation):
+def process_evaluation_into_dataframe(evaluation):
     data = {name: [] for name in ["model", "shape",
                                   "Chamfer Distance from each Plausible to closest Sample",
                                   "Chamfer Distance from each Sample to closest Plausible",
-                                  "angle"]}
+                                  "angle", "accuracy"]}
     for model_name, model_evaluation in evaluation.items():
         print("Processing data for {}".format(model_name))
         for shape_name, shape_evaluation in model_evaluation.items():
@@ -52,21 +80,39 @@ def display_histogram(evaluation):
             d = shape_evaluation['particle_distances']
             add_coverage(data, shape_name, model_name, d)
             add_plausibility(data, shape_name, model_name, d)
+            add_accuracy(data, shape_name, model_name, shape_evaluation['best_particle_chamfer'])
 
-    df = pd.DataFrame(data, columns=data.keys())
+    return pd.DataFrame(data, columns=data.keys())
+
+
+def display_histogram(df):
+
     sns.set(style="darkgrid")
 
     sns.lineplot(x="shape", y="Chamfer Distance from each Plausible to closest Sample", data=df, hue="model")
-    plt.show()
+    # plt.show()
+    plt.savefig((save_folder / "Coverage.png").as_posix())
+    plt.clf()
 
     sns.lineplot(x="shape", y="Chamfer Distance from each Sample to closest Plausible", data=df, hue="model")
-    plt.show()
+    # plt.show()
+    plt.savefig((save_folder / "Plausibility.png").as_posix())
+    plt.clf()
+
+    sns.lineplot(x="shape", y="accuracy", data=df, hue="model")
+    # plt.show()
+    plt.savefig((save_folder / "Accuracy.png").as_posix())
+    plt.clf()
 
     for unique_shape in set([s[0:10] for s in list(df['shape'])]):
         print(unique_shape)
         shape_df = df[df['shape'].str.startswith(unique_shape)]
-        sns.lineplot(x="angle", y="Chamfer Distance from each Plausible to closest Sample", data=shape_df, hue="model")
-        plt.show()
+        fig = sns.lineplot(x="angle", y="Chamfer Distance from each Plausible to closest Sample", data=shape_df, hue="model")
+        # plt.show()
+        fig.set_ylim([0, 0.007])
+        fig.get_legend().remove()
+        plt.savefig((save_folder / (unique_shape + ".png")).as_posix())
+        plt.clf()
 
 
 def display_voxelgrids(evaluation):
@@ -133,4 +179,6 @@ if __name__ == "__main__":
     print("Loading addressable shapenet")
     sn = data_tools.get_addressible_dataset(use_train=False)
     # display_voxelgrids(full_evaluation)
-    display_histogram(full_evaluation)
+    df = process_evaluation_into_dataframe(full_evaluation)
+    display_histogram(df)
+    save_numerics(df)
