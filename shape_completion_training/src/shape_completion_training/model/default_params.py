@@ -42,7 +42,6 @@ def get_default_params(group_name=None):
                 'network': 'VAE_GAN',
                 'learning_rate': 0.0001,
                 'discriminator_learning_rate': 0.00005,
-
             },
         "Flow":
             {
@@ -67,6 +66,16 @@ def get_default_params(group_name=None):
                 'translation_pixel_range_z': 10,
                 'dataset': 'ycb',
             },
+        "3D_rec_gan":
+            {
+                'batch_size':4,
+                'dataset': 'shapenet',
+                'network': '3D_rec_gan',
+                "learning_rate": 0.0001,
+                "gan_learning_rate": 0.00005,
+                "num_latent_layers": 2000,
+                "is_u_connected": True,
+            },
         "NormalizingAE_YCB":
             {
                 'num_latent_layers': 200,
@@ -79,16 +88,33 @@ def get_default_params(group_name=None):
                 'translation_pixel_range_z': 10,
                 'apply_slit_occlusion': True,
             },
-        "3D_rec_gan":
+        "VAE_YCB":
             {
-                'batch_size':4,
+                'num_latent_layers': 200,
+                'network': 'VAE',
+                'dataset': 'ycb',
+                'apply_slit_occlusion': True,
+            },
+        "VAE_GAN_YCB":
+        {
+            'num_latent_layers': 200,
+            'network': 'VAE_GAN',
+            'learning_rate': 0.0001,
+            'discriminator_learning_rate': 0.00005,
+            'dataset': 'ycb',
+            'apply_slit_occlusion': True,
+        },
+        "3D_rec_gan_YCB":
+            {
+                'batch_size': 4,
                 'dataset': 'shapenet',
                 'network': '3D_rec_gan',
                 "learning_rate": 0.0001,
                 "gan_learning_rate": 0.00005,
                 "num_latent_layers": 2000,
                 "is_u_connected": True,
-
+                'dataset': 'ycb',
+                'apply_slit_occlusion': True,
             },
     }
 
