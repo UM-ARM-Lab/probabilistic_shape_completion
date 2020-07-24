@@ -83,7 +83,7 @@ def get_default_params(group_name=None):
                 'network': 'NormalizingAE',
                 'use_flow_during_inference': False,
                 'dataset': 'ycb',
-                'translation_pixel_range_x': 20,
+                'translation_pixel_range_x': 15,
                 'translation_pixel_range_y': 10,
                 'translation_pixel_range_z': 10,
                 'apply_slit_occlusion': True,
@@ -94,6 +94,9 @@ def get_default_params(group_name=None):
                 'network': 'VAE',
                 'dataset': 'ycb',
                 'apply_slit_occlusion': True,
+                'translation_pixel_range_x': 15,
+                'translation_pixel_range_y': 10,
+                'translation_pixel_range_z': 10,
             },
         "VAE_GAN_YCB":
         {
@@ -103,6 +106,9 @@ def get_default_params(group_name=None):
             'discriminator_learning_rate': 0.00005,
             'dataset': 'ycb',
             'apply_slit_occlusion': True,
+            'translation_pixel_range_x': 15,
+            'translation_pixel_range_y': 10,
+            'translation_pixel_range_z': 10,
         },
         "3D_rec_gan_YCB":
             {
@@ -115,6 +121,9 @@ def get_default_params(group_name=None):
                 "is_u_connected": True,
                 'dataset': 'ycb',
                 'apply_slit_occlusion': True,
+                'translation_pixel_range_x': 15,
+                'translation_pixel_range_y': 10,
+                'translation_pixel_range_z': 10,
             },
     }
 
