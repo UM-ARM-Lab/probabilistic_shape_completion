@@ -36,7 +36,9 @@ if __name__ == "__main__":
     plausible_ds = data_tools.preprocess_test_dataset(plausible_ds, params)
     sharded_test_ds = data_tools.preprocess_test_dataset(sharded_test_ds, params)
 
-    fits = plausiblility.compute_partial_icp_fit_dict(sharded_test_ds, plausible_ds)
+    print("Computing shapenet plausibilities for shard {}/{}".format(args.shard, TOTAL_SHARDS))
+
+    fits = plausiblility.compute_partial_icp_fit_dict(sharded_test_ds, plausible_ds, reference_ds_size=ref_size)
     plausiblility.save_plausibilities(fits, identifier="_{}_{}".format(args.shard, TOTAL_SHARDS))
     #
     # loaded_fits = plausiblility.load_plausibilities()
