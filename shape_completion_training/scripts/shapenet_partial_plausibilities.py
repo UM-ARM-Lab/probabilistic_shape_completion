@@ -14,6 +14,9 @@ I would use multiprocessing, but that does not behave well with tensorflow
 
 
 def compute_plausibles_for_shard(shard):
+    if shard > TOTAL_SHARDS:
+        print ("Cannot process shard {}. Only {} total shards".format(shard, TOTAL_SHARDS))
+
     params = {'apply_slit_occlusion': False}
 
     train_ds, test_ds = data_tools.load_dataset("shapenet", shuffle=False, metadata_only=True)
@@ -42,14 +45,17 @@ def compute_plausibles_for_shard(shard):
 
 
 def combine_shards():
+    print("Combining shards")
     plausibles = {}
     for shard in range(TOTAL_SHARDS):
         identifier = "_{}_{}".format(shard, TOTAL_SHARDS)
         plausibles_shard = plausiblility.load_plausibilities(dataset_name="shapenet", identifier=identifier)
-        for k, v in plausibles_shard:
+        for k, v in plausibles_shard.items():
             if k in plausibles:
                 raise Exception("key {} already in another shard".format(k))
             plausibles[k] = v
+    plausiblility.save_plausibilities(plausibles, dataset_name="shapenet")
+    print("Combined all shards for a total test set size of {} shapes".format(len(plausibles)))
 
 
 if __name__ == "__main__":
@@ -61,4 +67,8 @@ if __name__ == "__main__":
                         action='store_true')
 
     args = parser.parse_args()
-    compute_plausibles_for_shard(args.shard)
+
+    if args.combine_shards:
+        combine_shards()
+    else:
+        compute_plausibles_for_shard(args.shard)

@@ -68,7 +68,7 @@ def run_inference(elem):
         for plausible in plausiblility.get_plausibilities_for(data_tools.get_unique_name(elem)[0],
                                                               model_runner.params['dataset']):
             elem_name, T, p, oob = plausible
-            sn = data_tools.get_addressible_dataset(use_train=False, dataset_name=model_runner.params['dataset'])
+            sn = data_tools.get_addressible_dataset(dataset_name=model_runner.params['dataset'])
             elem = sn.get(elem_name)
             fitted = conversions.transform_voxelgrid(elem['gt_occ'], T, scale=0.01)
             VG_PUB.publish("plausible", fitted)
