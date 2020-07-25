@@ -16,8 +16,8 @@ def _get_path(dataset_name, identifier=""):
 
 
 @memoize
-def load_plausibilities(dataset_name):
-    with open(_get_path(dataset_name), "rb") as f:
+def load_plausibilities(dataset_name, identifier=""):
+    with open(_get_path(dataset_name, identifier), "rb") as f:
         return pickle.load(f)
 
 
