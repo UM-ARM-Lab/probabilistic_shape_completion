@@ -19,11 +19,24 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    params = {'apply_slit_occlusion': False}
 
-    test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
-    sharded_test_dataset = test_dataset.shard(TOTAL_SHARDS, args.shard)
+    train_ds, test_ds = data_tools.load_dataset("shapenet", shuffle=False, metadata_only=True)
+    sharded_test_ds = test_ds.shard(TOTAL_SHARDS, args.shard)
 
-    fits = plausiblility.compute_partial_icp_fit_dict(sharded_test_dataset, test_dataset)
+    ref_size = 0
+    for _ in sharded_test_ds:
+        ref_size += 1
+
+    plausible_ds = test_ds.concatenate(train_ds)
+
+    plausible_ds = data_tools.load_voxelgrids(plausible_ds)
+    sharded_test_ds = data_tools.load_voxelgrids(sharded_test_ds)
+
+    plausible_ds = data_tools.preprocess_test_dataset(plausible_ds, params)
+    sharded_test_ds = data_tools.preprocess_test_dataset(sharded_test_ds)
+
+    fits = plausiblility.compute_partial_icp_fit_dict(sharded_test_ds, plausible_ds)
     plausiblility.save_plausibilities(fits, identifier="_{}_{}".format(args.shard, TOTAL_SHARDS))
     #
     # loaded_fits = plausiblility.load_plausibilities()
