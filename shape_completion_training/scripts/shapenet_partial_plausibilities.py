@@ -4,7 +4,7 @@ from shape_completion_training.utils import data_tools
 import argparse
 
 
-TOTAL_SHARDS = 8
+TOTAL_SHARDS = 300
 
 """
 This script computes plausibilies for a shard of the test dataset.
@@ -28,7 +28,10 @@ if __name__ == "__main__":
     for _ in sharded_test_ds:
         ref_size += 1
 
-    plausible_ds = test_ds.concatenate(train_ds.take(70*72))
+    plausible_ds = test_ds.concatenate(train_ds.take(1*72))
+
+
+    # plausible_ds = test_ds.concatenate(train_ds.take(70*72))
 
     plausible_ds = data_tools.load_voxelgrids(plausible_ds)
     sharded_test_ds = data_tools.load_voxelgrids(sharded_test_ds)
@@ -39,7 +42,7 @@ if __name__ == "__main__":
     print("Computing shapenet plausibilities for shard {}/{}".format(args.shard, TOTAL_SHARDS))
 
     fits = plausiblility.compute_partial_icp_fit_dict(sharded_test_ds, plausible_ds, reference_ds_size=ref_size)
-    plausiblility.save_plausibilities(fits, identifier="_{}_{}".format(args.shard, TOTAL_SHARDS))
+    plausiblility.save_plausibilities(fits, dataset_name="shapenet", identifier="_{}_{}".format(args.shard, TOTAL_SHARDS))
     #
     # loaded_fits = plausiblility.load_plausibilities()
     print("Finished computing plausibilities for shard {}/{}".format(args.shard, TOTAL_SHARDS))
