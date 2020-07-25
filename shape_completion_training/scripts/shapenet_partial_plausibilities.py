@@ -28,7 +28,7 @@ if __name__ == "__main__":
     for _ in sharded_test_ds:
         ref_size += 1
 
-    plausible_ds = test_ds.concatenate(train_ds)
+    plausible_ds = test_ds.concatenate(train_ds.take(20*72))
 
     plausible_ds = data_tools.load_voxelgrids(plausible_ds)
     sharded_test_ds = data_tools.load_voxelgrids(sharded_test_ds)
