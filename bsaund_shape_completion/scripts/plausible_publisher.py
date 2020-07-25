@@ -9,11 +9,11 @@ from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model import plausiblility
 from shape_completion_training.model import default_params
 
-DATASET = "ycb"
+DATASET = "shapenet"
 
 default_dataset_params = default_params.get_default_params()
 default_dataset_params.update({
-    'apply_slit_occlusion': True,
+    # 'apply_slit_occlusion': True,
 })
 
 dataset_params = default_dataset_params
@@ -26,11 +26,8 @@ def publish_selection(metadata, ind, str_msg):
     # ds = data_tools.simulate_input(ds, 0, 0, 0, sim_input_fn=data_tools.simulate_2_5D_input)
     # ds = data_tools.apply_fixed_slit_occlusion(ds, 35, 6)
     elem = next(ds.__iter__())
-    elem['gt_occ'] = data_tools.shift_voxelgrid(elem['gt_occ'], 1, 0, 0, 0, 1, 1, 1)
+    # elem['gt_occ'] = data_tools.shift_voxelgrid(elem['gt_occ'], 1, 0, 0, 0, 1, 1, 1)
     VG_PUB.publish_elem(elem)
-
-
-
     fit_2_5D_view(metadata, elem)
 
 

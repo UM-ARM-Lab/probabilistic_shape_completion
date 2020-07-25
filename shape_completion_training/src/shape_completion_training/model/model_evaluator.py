@@ -52,7 +52,7 @@ def sample_particles(model, input_elem, num_particles):
 
 def compute_plausible_distances(ref_name, particles, dataset_name):
     plausibles = get_plausibles(ref_name, dataset_name)
-    distances = [[chamfer_distance(tf.cast(a > 0.2, tf.float32), b,
+    distances = [[chamfer_distance(tf.cast(a > 0.5, tf.float32), b,
                                    scale=0.01, downsample=4).numpy()
                   for a in particles] for b in plausibles]
     return distances

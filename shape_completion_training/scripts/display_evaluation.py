@@ -45,6 +45,7 @@ def add_coverage(data, shape_name, model_name, particle_distances):
         data["angle"].append(angle)
         data["Chamfer Distance from each Sample to closest Plausible"].append(None)
         data["accuracy"].append(None)
+        data["hausdorff"].append(None)
 
 
 def add_plausibility(data, shape_name, model_name, particle_distances):
@@ -56,6 +57,7 @@ def add_plausibility(data, shape_name, model_name, particle_distances):
         data["angle"].append(angle)
         data["Chamfer Distance from each Plausible to closest Sample"].append(None)
         data["accuracy"].append(None)
+        data["hausdorff"].append(None)
 
 def add_accuracy(data, shape_name, model_name, distance_to_gt):
     angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
@@ -65,13 +67,27 @@ def add_accuracy(data, shape_name, model_name, distance_to_gt):
     data["angle"].append(angle)
     data["Chamfer Distance from each Sample to closest Plausible"].append(None)
     data["accuracy"].append(distance_to_gt)
+    data["hausdorff"].append(None)
+
+
+def add_hausdorff(data, shape_name, model_name, particle_distances):
+    angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
+    # for closest_particle in np.max(np.min(particle_distances, axis=0)):
+    hausdorff_distance = max(np.max(np.min(particle_distances, axis=0)), np.max(np.min(particle_distances, axis=1)))
+    data["model"].append(model_name_map[model_name])
+    data["shape"].append(shape_name)
+    data["Chamfer Distance from each Sample to closest Plausible"].append(None)
+    data["angle"].append(angle)
+    data["Chamfer Distance from each Plausible to closest Sample"].append(None)
+    data["accuracy"].append(None)
+    data["hausdorff"].append(hausdorff_distance)
 
 
 def process_evaluation_into_dataframe(evaluation):
     data = {name: [] for name in ["model", "shape",
                                   "Chamfer Distance from each Plausible to closest Sample",
                                   "Chamfer Distance from each Sample to closest Plausible",
-                                  "angle", "accuracy"]}
+                                  "angle", "accuracy", "hausdorff"]}
     for model_name, model_evaluation in evaluation.items():
         print("Processing data for {}".format(model_name))
         for shape_name, shape_evaluation in model_evaluation.items():
@@ -81,6 +97,7 @@ def process_evaluation_into_dataframe(evaluation):
             add_coverage(data, shape_name, model_name, d)
             add_plausibility(data, shape_name, model_name, d)
             add_accuracy(data, shape_name, model_name, shape_evaluation['best_particle_chamfer'])
+            add_hausdorff(data, shape_name, model_name, d)
 
     return pd.DataFrame(data, columns=data.keys())
 
@@ -102,6 +119,11 @@ def display_histogram(df):
     sns.lineplot(x="shape", y="accuracy", data=df, hue="model")
     # plt.show()
     plt.savefig((save_folder / "Accuracy.png").as_posix())
+    plt.clf()
+
+    sns.lineplot(x="shape", y="hausdorff", data=df, hue="model")
+    # plt.show()
+    plt.savefig((save_folder / "Hausdorff.png").as_posix())
     plt.clf()
 
     for unique_shape in set([s[0:10] for s in list(df['shape'])]):
