@@ -20,7 +20,7 @@ MODELS_TO_EVALUATE = [
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process args for training")
     parser.add_argument('--trial', default=None)
-    parser.add_argument('--num_network_sample', default=100)
+    parser.add_argument('--num_network_samples', default=100)
     args = parser.parse_args()
 
     if args.trial is not None:
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
         evaluation = {trial_path: model_evaluator.evaluate_model(mr.model, test_ds, test_set_size,
                                                                  mr.params['dataset'],
-                                                                 num_particles=parser.num_network_samples)}
+                                                                 num_particles=args.num_network_samples)}
         model_evaluator.save_evaluation(evaluation)
 
     print("Finished evaluating dataset")
