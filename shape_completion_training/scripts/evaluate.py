@@ -20,7 +20,7 @@ MODELS_TO_EVALUATE = [
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process args for training")
     parser.add_argument('--trial', default=None)
-    parser.add_argument('--num_network_samples', default=100)
+    parser.add_argument('--num_network_samples', default=100, type=int)
     args = parser.parse_args()
 
     if args.trial is not None:
