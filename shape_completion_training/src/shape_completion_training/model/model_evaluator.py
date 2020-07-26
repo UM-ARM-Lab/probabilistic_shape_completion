@@ -72,14 +72,19 @@ def evaluate_model(model, test_set, test_set_size, dataset_name, num_particles=1
             # print("Evaluating {}".format(data_tools.get_unique_name(elem)))
             elem_name = data_tools.get_unique_name(elem)[0]
             bar.update(i.numpy(), CurrentShape=elem_name)
+
+            if tf.reduce_sum(elem['known_occ']) == 0.0:
+                print("No visible points for {}. Skipping".format(elem_name))
+                continue
+
             particles = sample_particles(model, elem, num_particles)
             results = {}
             results["best_particle_iou"] = best_match_value(elem['gt_occ'], particles, metric=metrics.iou).numpy()
-            # results["best_particle_chamfer"] = \
-            #     best_match_value(elem['gt_occ'], particles,
-            #                      metric=lambda a, b: chamfer_distance(a, b, scale=0.01, downsample=4),
-            #                      maximize=False).numpy()
-            # results["particle_distances"] = compute_plausible_distances(elem_name, particles, dataset_name)
+            results["best_particle_chamfer"] = \
+                best_match_value(elem['gt_occ'], particles,
+                                 metric=lambda a, b: chamfer_distance(a, b, scale=0.01, downsample=4),
+                                 maximize=False).numpy()
+            results["particle_distances"] = compute_plausible_distances(elem_name, particles, dataset_name)
             all_metrics[elem_name] = results
 
     return all_metrics
