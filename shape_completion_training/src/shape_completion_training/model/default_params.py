@@ -68,7 +68,7 @@ def get_default_params(group_name=None):
             },
         "3D_rec_gan":
             {
-                'batch_size':4,
+                'batch_size': 4,
                 'dataset': 'shapenet',
                 'network': '3D_rec_gan',
                 "learning_rate": 0.0001,
@@ -99,17 +99,17 @@ def get_default_params(group_name=None):
                 'translation_pixel_range_z': 10,
             },
         "VAE_GAN_YCB":
-        {
-            'num_latent_layers': 200,
-            'network': 'VAE_GAN',
-            'learning_rate': 0.0001,
-            'discriminator_learning_rate': 0.00005,
-            'dataset': 'ycb',
-            'apply_slit_occlusion': True,
-            'translation_pixel_range_x': 15,
-            'translation_pixel_range_y': 10,
-            'translation_pixel_range_z': 10,
-        },
+            {
+                'num_latent_layers': 200,
+                'network': 'VAE_GAN',
+                'learning_rate': 0.0001,
+                'discriminator_learning_rate': 0.00005,
+                'dataset': 'ycb',
+                'apply_slit_occlusion': True,
+                'translation_pixel_range_x': 15,
+                'translation_pixel_range_y': 10,
+                'translation_pixel_range_z': 10,
+            },
         "3D_rec_gan_YCB":
             {
                 'batch_size': 4,
