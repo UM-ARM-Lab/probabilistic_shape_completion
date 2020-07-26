@@ -9,9 +9,12 @@ import rospy
 MODELS_TO_EVALUATE = [
     # "VAE/VAE_trial_1",
     # "Augmented_VAE/May_21_20-00-00_0000000000",
+    # "VAE/July_07_12-09-24_7f65111254",
     # "NormalizingAE/July_02_15-15-06_ede2472d34",
-    "VAE_GAN/July_20_23-46-36_8849b5bd57",
-    "3D_rec_gan/July_20_19-36-48_7ed486bdf5"
+    # "VAE_GAN/July_20_23-46-36_8849b5bd57",
+    # "3D_rec_gan/July_20_19-36-48_7ed486bdf5"
+    "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768",
+    "VAE_YCB/July_24_11-21-49_f2aea4d768",
 ]
 
 if __name__ == "__main__":

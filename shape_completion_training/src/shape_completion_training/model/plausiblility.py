@@ -27,7 +27,12 @@ def save_plausibilities(plausibilities_dict, dataset_name, identifier=""):
 
 
 def get_plausibilities_for(shape_name, dataset_name):
-    fits = load_plausibilities(dataset_name)[shape_name]
+    try:
+        fits = load_plausibilities(dataset_name)[shape_name]
+    except KeyError as err:
+        print("No plausibles for shape {}".format(shape_name))
+        return []
+
     valid_fits = [(k[1], v["T"], v["observation_probability"], v["out_of_range_count"])
                   for k, v in fits.items()
                   if v["out_of_range_count"] == 0]
