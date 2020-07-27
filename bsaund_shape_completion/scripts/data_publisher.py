@@ -130,6 +130,7 @@ def publish_selection(metadata, ind, str_msg):
     ds = metadata.skip(ind).take(1)
     ds = data_tools.load_voxelgrids(ds)
     ds = data_tools.preprocess_test_dataset(ds, dataset_params)
+    # ds = data_tools.apply_sensor_noise(ds)
     # ds = data_tools.simulate_input(ds, 0, 0, 0)
     # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3 * 4/8)
     # sim_input_fn = lambda gt: data_tools.simulate_first_n_input(gt, 64**3)

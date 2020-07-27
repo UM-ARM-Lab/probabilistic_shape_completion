@@ -70,6 +70,7 @@ def select_slit_location(gt, min_slit_width, max_slit_width, min_observable=5):
 
 
 def simulate_depth_image(vg):
+    """Note: I have a more efficient way to do this now. See conversions.py"""
     vg = conversions.format_voxelgrid(vg, False, False)
     size = vg.shape[1]
     z_inds = tf.expand_dims(tf.expand_dims(tf.range(size), axis=-1), axis=-1)
@@ -441,6 +442,30 @@ def apply_deterministic_slit_occlusion(dataset):
     #
     # return dataset.map(_apply_slit_occlusion)
     return apply_fixed_slit_occlusion(dataset, 28, 6)
+
+
+def helper_apply_sensor_noise(elem):
+    img = conversions.to_2_5D(elem['known_occ'])
+    noise = tf.random.normal(img.shape, stddev=1.0) * tf.cast(img < 64, tf.float32)
+    img = img + noise
+
+    ko = conversions.img_to_voxelgrid(img)
+    elem['known_occ'] = ko
+    return elem
+
+
+def apply_sensor_noise(dataset):
+    def _apply_sensor_noise(elem):
+        img = conversions.to_2_5D(elem['known_occ'])
+        noise = tf.random.normal(img.shape, stddev=1.0) * tf.cast(img < 64, tf.float32)
+        img = img + noise
+
+        ko = conversions.img_to_voxelgrid(img)
+        elem['known_occ'] = ko
+        return elem
+
+    return dataset.map(_apply_sensor_noise)
+
 
 
 def apply_fixed_slit_occlusion(dataset, slit_min, slit_width):
