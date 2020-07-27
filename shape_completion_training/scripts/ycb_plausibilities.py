@@ -30,7 +30,7 @@ def compute_plausibles_for_shard(shard):
 
     reference_ds = ds.shard(TOTAL_SHARDS, shard)
     ref_size = 0
-    for _ in ds:
+    for _ in reference_ds:
         ref_size += 1
     reference_ds = data_tools.load_voxelgrids(reference_ds)
     reference_ds = data_tools.preprocess_test_dataset(reference_ds, params)

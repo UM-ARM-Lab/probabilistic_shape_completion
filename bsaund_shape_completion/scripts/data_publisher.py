@@ -29,6 +29,7 @@ stop_current_sampler = None
 sampling_thread = None
 
 default_dataset_params = default_params.get_default_params()
+
 default_translations = {
     'translation_pixel_range_x': 0,
     'translation_pixel_range_y': 0,
@@ -264,8 +265,13 @@ if __name__ == "__main__":
 
     if model_runner is None:
         dataset_params = default_dataset_params
+
     else:
         dataset_params = model_runner.params
+        dataset_params.update({
+            "slit_start": 17,
+            "slit_width": 30
+        })
 
     dataset_params.update(default_translations)
     train_records, test_records = data_tools.load_dataset(dataset_name=dataset_params['dataset'],
