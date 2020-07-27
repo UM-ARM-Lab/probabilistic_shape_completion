@@ -50,7 +50,7 @@ def compute_plausibles_for_shard(shard):
 
     print("Computing shapenet plausibilities for shard {}/{}".format(shard, TOTAL_SHARDS))
 
-    # reference_ds = reference_ds.take(10) # Comment this in to do a quick run to verify computation
+    reference_ds = reference_ds.take(10) # Comment this in to do a quick run to verify computation
 
     fits = plausiblility.compute_partial_icp_fit_dict(reference_ds, match_ds, ref_size, occlusion_mask=mask)
     plausiblility.save_plausibilities(fits, dataset_name="ycb", identifier="_{}_{}".format(shard, TOTAL_SHARDS))
@@ -60,7 +60,17 @@ def compute_plausibles_for_shard(shard):
 
 
 def combine_shards():
-    pass
+    print("Combining shards")
+    plausibles = {}
+    for shard in range(TOTAL_SHARDS):
+        identifier = "_{}_{}".format(shard, TOTAL_SHARDS)
+        plausibles_shard = plausiblility.load_plausibilities(dataset_name="ycb", identifier=identifier)
+        for k, v in plausibles_shard.items():
+            if k in plausibles:
+                raise Exception("key {} already in another shard".format(k))
+            plausibles[k] = v
+    plausiblility.save_plausibilities(plausibles, dataset_name="ycb")
+    print("Combined all shards for a total test set size of {} shapes".format(len(plausibles)))
 
 
 if __name__ == "__main__":
