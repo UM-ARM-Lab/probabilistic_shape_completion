@@ -270,6 +270,7 @@ def preprocess_test_dataset(dataset, params):
 
     if params['apply_slit_occlusion']:
         print("Applying fixed slit occlusion")
+        dataset = apply_fixed_slit_occlusion(dataset, params['slit_start'], params['slit_width'])
         dataset = apply_deterministic_slit_occlusion(dataset)
 
     return dataset
@@ -421,6 +422,9 @@ def apply_slit_occlusion(dataset):
 
 
 def apply_deterministic_slit_occlusion(dataset):
+    #Deprecated
+    raise Exception("Deprecated")
+
     # def _apply_slit_occlusion(elem):
     #
     #     slit_width=6
