@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from shape_completion_training.voxelgrid.metrics import chamfer_distance
 from shape_completion_training.model import filepath_tools
+from scipy.optimize import linear_sum_assignment
 
 save_folder = filepath_tools.get_shape_completion_package_path() / "results"
 
@@ -26,11 +27,13 @@ save_folder = filepath_tools.get_shape_completion_package_path() / "results"
 #                   "NormalizingAE/July_02_15-15-06_ede2472d34": "Ours",
 #                   }
 
-#YCB
-sn = data_tools.get_addressible_dataset(dataset_name = "ycb")
+# YCB
+sn = data_tools.get_addressible_dataset(dataset_name="ycb")
 model_name_map = {"NormalizingAE_YCB/July_24_11-21-46_f2aea4d768": "Ours",
                   "VAE_YCB/July_24_11-21-49_f2aea4d768": "VAE",
-                  }
+                  "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3": "VAE_GAN",
+                  "3D_rec_gan_YCB/July_25_22-51-08_0f55a0f6b3": "3DrecGAN++"
+}
 
 def save_numerics(df):
     averages = df.groupby('model').mean()
@@ -39,6 +42,27 @@ def save_numerics(df):
     ambiguous = ambiguous[ambiguous['angle'] < 289]
     ambiguous_averages = ambiguous.groupby('model').mean()
     ambiguous_averages.to_csv((save_folder / "ambiguous_averages.csv").as_posix())
+
+
+def add_optimal_assignment(data, shape_name, model_name, particle_distances):
+    d = np.array(particle_distances)
+    d = d[:, ~np.any(np.isnan(d), axis=0)]
+    angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
+    try:
+        opt_assignment = linear_sum_assignment(d)
+    except:
+        pass
+    opt_match_distance = d[opt_assignment]
+    for match_dist in opt_match_distance:
+        data["model"].append(model_name_map[model_name])
+        data["shape"].append(shape_name)
+        data["Chamfer Distance from each Plausible to closest Sample"].append(None)
+        data["angle"].append(angle)
+        data["Chamfer Distance from each Sample to closest Plausible"].append(None)
+        data["accuracy"].append(None)
+        data["hausdorff"].append(None)
+        data["assignment"].append(match_dist)
+
 
 
 def add_coverage(data, shape_name, model_name, particle_distances):
@@ -51,6 +75,7 @@ def add_coverage(data, shape_name, model_name, particle_distances):
         data["Chamfer Distance from each Sample to closest Plausible"].append(None)
         data["accuracy"].append(None)
         data["hausdorff"].append(None)
+        data["assignment"].append(None)
 
 
 def add_plausibility(data, shape_name, model_name, particle_distances):
@@ -63,6 +88,8 @@ def add_plausibility(data, shape_name, model_name, particle_distances):
         data["Chamfer Distance from each Plausible to closest Sample"].append(None)
         data["accuracy"].append(None)
         data["hausdorff"].append(None)
+        data["assignment"].append(None)
+
 
 
 def add_accuracy(data, shape_name, model_name, distance_to_gt):
@@ -74,6 +101,7 @@ def add_accuracy(data, shape_name, model_name, distance_to_gt):
     data["Chamfer Distance from each Sample to closest Plausible"].append(None)
     data["accuracy"].append(distance_to_gt)
     data["hausdorff"].append(None)
+    data["assignment"].append(None)
 
 
 def add_hausdorff(data, shape_name, model_name, particle_distances):
@@ -87,13 +115,14 @@ def add_hausdorff(data, shape_name, model_name, particle_distances):
     data["Chamfer Distance from each Plausible to closest Sample"].append(None)
     data["accuracy"].append(None)
     data["hausdorff"].append(hausdorff_distance)
+    data["assignment"].append(None)
 
 
 def process_evaluation_into_dataframe(evaluation):
     data = {name: [] for name in ["model", "shape",
                                   "Chamfer Distance from each Plausible to closest Sample",
                                   "Chamfer Distance from each Sample to closest Plausible",
-                                  "angle", "accuracy", "hausdorff"]}
+                                  "angle", "accuracy", "hausdorff", "assignment"]}
     for model_name, model_evaluation in evaluation.items():
         print("Processing data for {}".format(model_name))
         for shape_name, shape_evaluation in model_evaluation.items():
@@ -104,6 +133,7 @@ def process_evaluation_into_dataframe(evaluation):
             add_plausibility(data, shape_name, model_name, d)
             add_accuracy(data, shape_name, model_name, shape_evaluation['best_particle_chamfer'])
             add_hausdorff(data, shape_name, model_name, d)
+            add_optimal_assignment(data, shape_name, model_name, d)
 
     return pd.DataFrame(data, columns=data.keys())
 
@@ -127,8 +157,11 @@ def display_histogram(df):
     plt.clf()
 
     sns.lineplot(x="shape", y="hausdorff", data=df, hue="model")
-    # plt.show()
     plt.savefig((save_folder / "Hausdorff.png").as_posix())
+    plt.clf()
+
+    sns.lineplot(x="shape", y="assignment", data=df, hue="model")
+    plt.savefig((save_folder / "assignment.png").as_posix())
     plt.clf()
 
     for unique_shape in set([s[0:10] for s in list(df['shape'])]):
@@ -205,7 +238,6 @@ if __name__ == "__main__":
 
     full_evaluation = model_evaluator.load_evaluations(model_name_map.keys())
     print("Loading addressable shapenet")
-
 
     # display_voxelgrids(full_evaluation)
     df = process_evaluation_into_dataframe(full_evaluation)
