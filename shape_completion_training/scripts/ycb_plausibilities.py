@@ -9,6 +9,15 @@ import argparse
 Plausibilities for the YCB dataset with slit occlusion
 """
 
+# 6 slit params
+# slit_start = 28
+# slit_width = 6
+
+# 30 slit params
+slit_start = 17
+slit_width = 30
+
+
 if __name__ == "__main__":
 
     # test_dataset = data_tools._load_metadata_train_or_test(shapes="all", shuffle=False, prefix="test")
@@ -34,7 +43,9 @@ if __name__ == "__main__":
             continue
         match_ds = match_ds.concatenate(data_tools.apply_fixed_slit_occlusion(single_match_ds, slit_min, 6))
 
-    mask = data_tools.get_slit_occlusion_2D_mask(28, 6, (64, 64))
+    mask = data_tools.get_slit_occlusion_2D_mask(slit_start, slit_width, (64, 64))
+
+    # reference_ds = reference_ds.shard(10,0).take(10) # Comment this in to do a quick run to verify computation
 
     fits = plausiblility.compute_partial_icp_fit_dict(reference_ds, match_ds, ref_size, occlusion_mask=mask)
     plausiblility.save_plausibilities(fits, dataset_name="ycb")
