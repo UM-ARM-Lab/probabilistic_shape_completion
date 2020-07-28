@@ -14,12 +14,49 @@ from mps_shape_completion_visualization import conversions as msg_conversions
 import ros_numpy
 from mps_shape_completion_msgs.msg import OccupancyStamped
 from shape_completion_training.model.modelrunner import ModelRunner
+from shape_completion_training.utils import data_tools
+import tensorflow as tf
+from shape_completion_training.model import utils
+from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
 
 # target_frame = "mocap_world"
 target_frame = "victor_root"
 
-scale = 0.01
-origin = (0, -0.5, 0.5)
+# Mug fitting
+# scale = 0.003
+# origin = (2.35, -0.48, 0.75)
+# x_bounds = (0, 64)
+# y_bounds = (20, 45)
+# z_bounds = (0, 64)
+
+# YCB fitting
+scale = 0.004
+origin = (2.35, -0.48, 0.75)
+x_bounds = (28, 37)
+y_bounds = (15, 40)
+z_bounds = (0, 64)
+
+
+# trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
+trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
+
+
+def swap_y_z_elem(elem):
+    for k in ['known_occ', 'known_free']:
+        elem[k] = tf.transpose(elem[k], perm=[0, 1, 3, 2, 4])
+    return elem
+
+def swap_y_z_inference(elem):
+    for k in ['predicted_occ']:
+        elem[k] = tf.transpose(elem[k], perm=[0,1,3,2,4])
+    return elem
+
+
+def crop_vg(vg):
+    # vg = tf.convert_to_tensor(vg)
+    vg_crop = vg.copy()
+    vg_crop[z_bounds[0]:z_bounds[1], x_bounds[0]:x_bounds[1], y_bounds[0]:y_bounds[1], :] = 0
+    return vg - vg_crop
 
 
 def to_msg(voxelgrid):
@@ -30,16 +67,34 @@ def to_msg(voxelgrid):
                                                     origin=origin)
 
 
+def infer(elem):
+    elem = utils.add_batch_to_dict(elem)
+    elem = swap_y_z_elem(elem)
+    inference = model_runner.model(elem)
+    inference = swap_y_z_inference(inference)
+    VG_PUB.publish_elem_cautious(inference)
+
+
 def voxelize_point_cloud(pts):
-    vg = conversions.pointcloud_to_voxelgrid(pts, scale=scale, origin=origin)
-    msg = to_msg(vg)
-    vg_pub.publish(msg)
+    xyz_array = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(pts)
+    vg = conversions.pointcloud_to_voxelgrid(xyz_array, scale=scale, origin=origin, add_trailing_dim=True,
+                                             add_leading_dim=False)
+    vg = crop_vg(vg)
+    # vg = np.swapaxes(vg, 1,2)
+    elem = {'known_occ': vg}
+    ko, kf = data_tools.simulate_2_5D_input(vg)
+    elem['known_free'] = kf
+    return elem
 
-    # vg_pub.publish
-    pass
 
-def publish_kinect(vg):
-    pass
+def publish_elem(elem):
+    VG_PUB.publish_elem_cautious(elem)
+    # known_occ_pub.publish(to_msg(elem['known_occ']))
+    # known_free_pub.publish(to_msg(elem['known_free']))
+    # if 'predicted_occ' in elem:
+    #     infer_pub.publish(to_msg(elem['predicted_occ']))
+    # else:
+    #     print("no prediction to publish")
 
 
 def kinect_callback(msg):
@@ -60,20 +115,27 @@ def kinect_callback(msg):
     # for point in sensor_msgs.point_cloud2.read_points(cloud_out, skip_nans=True):
     #     points.append(point)
 
-    xyz_array = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(cloud_out)
-    voxelize_point_cloud(cloud_out)
+    elem = voxelize_point_cloud(cloud_out)
+    publish_elem(elem)
+    # infer(elem)
+
 
     # msg = to_msg(vg)
     print("Made a cloud")
 
 
 if __name__ == "__main__":
-    model_runner = ModelRunner(training=False, trial_path="NormalizingAE/July_02_15-15-06_ede2472d34")
+    model_runner = ModelRunner(training=False, trial_path=trial)
     rospy.init_node("kinect_voxelizer")
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
 
     kinect_sub = rospy.Subscriber("/kinect2_victor_head/sd/points", PointCloud2, kinect_callback)
-    recomputed_pub = rospy.Publisher("/recomputed_cloud", PointCloud2)
-    vg_pub = rospy.Publisher("/kinect_voxels", OccupancyStamped, queue_size=1)
+
+    VG_PUB = VoxelgridPublisher(frame=target_frame, scale=scale, origin=origin)
+
+    # recomputed_pub = rospy.Publisher("/recomputed_cloud", PointCloud2)
+    # known_occ_pub = rospy.Publisher("/kinect_voxels", OccupancyStamped, queue_size=1)
+    # known_free_pub = rospy.Publisher("/known_free", OccupancyStamped, queue_size=1)
+    # infer_pub = rospy.Publisher("/predicted_occ", OccupancyStamped, queue_size=1)
     rospy.spin()
