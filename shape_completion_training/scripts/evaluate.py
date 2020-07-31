@@ -19,6 +19,12 @@ MODELS_TO_EVALUATE = [
     "3D_rec_gan_YCB/July_25_22-51-08_0f55a0f6b3"
 ]
 
+# 30 slit params
+slit_params = {
+    "slit_start": 17,
+    "slit_width": 30
+}
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process args for training")
     parser.add_argument('--trial', default=None)
@@ -33,6 +39,8 @@ if __name__ == "__main__":
     for trial_path in MODELS_TO_EVALUATE:
         print("Evaluating {}".format(trial_path))
         mr = ModelRunner(training=False, trial_path=trial_path)
+        if mr.params['dataset'] == 'ycb':
+            mr.params.update(slit_params)
 
         _, test_ds = data_tools.load_dataset(mr.params['dataset'], shuffle=False, metadata_only=True)
         test_set_size = 0
