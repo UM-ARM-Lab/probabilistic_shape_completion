@@ -5,11 +5,12 @@ import argparse
 import rospy
 import numpy as np
 
-from shape_completion_training.model.modelrunner import ModelRunner
+from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.utils import data_tools
 from shape_completion_training.model.utils import add_batch_to_dict, numpyify
 from shape_completion_training.voxelgrid import metrics
-from shape_completion_training.model import sampling_tools, default_params
+from shape_completion_training.model import default_params
+from shape_completion_training.model.other_model_architectures import sampling_tools
 import tensorflow as tf
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
 from bsaund_shape_completion.shape_selection import send_display_names_from_metadata

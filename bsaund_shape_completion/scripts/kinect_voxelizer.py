@@ -13,7 +13,7 @@ from shape_completion_training.voxelgrid import conversions
 from mps_shape_completion_visualization import conversions as msg_conversions
 import ros_numpy
 from mps_shape_completion_msgs.msg import OccupancyStamped
-from shape_completion_training.model.modelrunner import ModelRunner
+from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.utils import data_tools
 import tensorflow as tf
 from shape_completion_training.model import utils

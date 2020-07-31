@@ -4,15 +4,15 @@ from shape_completion_training.model.normalizing_ae import NormalizingAE
 utils.set_gpu_with_lowest_memory()
 import tensorflow as tf
 from shape_completion_training.model import filepath_tools
-from shape_completion_training.model.auto_encoder import AutoEncoder
-from shape_completion_training.model.augmented_ae import Augmented_VAE
+from shape_completion_training.model.other_model_architectures.auto_encoder import AutoEncoder
+from shape_completion_training.model.other_model_architectures.augmented_ae import Augmented_VAE
 # from voxelcnn import VoxelCNN, StackedVoxelCNN
-from shape_completion_training.model.voxelcnn import VoxelCNN
-from shape_completion_training.model.vae import VAE, VAE_GAN
-from shape_completion_training.model.conditional_vcnn import ConditionalVCNN
-from shape_completion_training.model.ae_vcnn import AE_VCNN
+from shape_completion_training.model.other_model_architectures.voxelcnn import VoxelCNN
+from shape_completion_training.model.baselines.vae import VAE, VAE_GAN
+from shape_completion_training.model.other_model_architectures.conditional_vcnn import ConditionalVCNN
+from shape_completion_training.model.other_model_architectures.ae_vcnn import AE_VCNN
 from shape_completion_training.model.baselines.three_D_rec_gan import ThreeD_rec_gan
-from shape_completion_training.model.flow import Flow, RealNVP, MAF
+from shape_completion_training.model.flow import RealNVP
 import progressbar
 import datetime
 import time

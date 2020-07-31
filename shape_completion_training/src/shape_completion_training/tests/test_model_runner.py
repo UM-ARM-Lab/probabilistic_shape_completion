@@ -3,8 +3,8 @@ import unittest
 import tensorflow as tf
 
 from shape_completion_training.model.utils import reduce_mean_dict
-from shape_completion_training.model_runner import ModelRunner
-from shape_completion_training.mykerasmodel import MyKerasModel
+from shape_completion_training.model.model_runner import ModelRunner
+from shape_completion_training.model.mykerasmodel import MyKerasModel
 
 params = {
     'num_latent_layers': 200,
@@ -33,7 +33,7 @@ params = {
 
 class FakeModel(MyKerasModel):
     def __init__(self, params, batch_size=16):
-        super().__init__(hparams=params, batch_size=batch_size)
+        super(FakeModel, self).__init__(hparams=params, batch_size=batch_size)
         self.dense = tf.keras.layers.Dense(1)
 
     def call(self, dataset_element, training=False, **kwargs):

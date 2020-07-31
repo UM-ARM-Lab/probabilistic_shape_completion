@@ -2,7 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from shape_completion_training.model.modelrunner import ModelRunner
+from shape_completion_training.model.model_runner import ModelRunner
 
 params = {
     'num_latent_layers': 200,

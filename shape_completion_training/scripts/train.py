@@ -3,7 +3,7 @@ import argparse
 
 import shape_completion_training.utils.shapenet_storage
 from shape_completion_training.utils import data_tools
-from shape_completion_training.model.modelrunner import ModelRunner
+from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.model import default_params
 
 

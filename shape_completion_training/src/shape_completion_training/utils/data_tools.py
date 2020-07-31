@@ -422,32 +422,6 @@ def apply_slit_occlusion(dataset):
     return dataset.map(_apply_slit_occlusion)
 
 
-def apply_deterministic_slit_occlusion(dataset):
-    #Deprecated
-    raise Exception("Deprecated")
-
-    # def _apply_slit_occlusion(elem):
-    #
-    #     slit_width=6
-    #
-    #     z_vals = tf.where(tf.reduce_sum(elem['gt_occ'], axis=[0, 1, 3]))
-    #     slit_min = tf.reduce_min(z_vals) + 2
-    #     slit_max = slit_min + slit_width
-    #
-    #
-    #     ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
-    #                                                          slit_min, slit_max], [tf.float32, tf.float32])
-    #
-    #     # ko, kf = simulate_slit_occlusion(elem['known_occ'].numpy(), elem_raw['known_free'].numpy(),
-    #     #                              slitmin, slitmax)
-    #     elem['known_occ'] = ko
-    #     elem['known_free'] = kf
-    #     return elem
-    #
-    # return dataset.map(_apply_slit_occlusion)
-    return apply_fixed_slit_occlusion(dataset, 28, 6)
-
-
 def helper_apply_sensor_noise(elem):
     img = conversions.to_2_5D(elem['known_occ'])
     noise = tf.random.normal(img.shape, stddev=1.0) * tf.cast(img < 64, tf.float32)

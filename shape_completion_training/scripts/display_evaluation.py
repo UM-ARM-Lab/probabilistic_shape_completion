@@ -4,7 +4,7 @@ from shape_completion_training.model import model_evaluator
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
 from shape_completion_training.utils import data_tools
 from shape_completion_training.model import utils
-from shape_completion_training.model.modelrunner import ModelRunner
+from shape_completion_training.model.model_runner import ModelRunner
 import numpy as np
 import seaborn as sns
 import pandas as pd
