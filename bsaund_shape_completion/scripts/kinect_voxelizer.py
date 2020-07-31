@@ -31,9 +31,9 @@ target_frame = "victor_root"
 
 # YCB fitting
 scale = 0.004
-origin = (2.35, -0.48, 0.75)
+origin = (2.45, -0.48, 0.75)
 x_bounds = (28, 37)
-y_bounds = (15, 40)
+y_bounds = (15, 64)
 z_bounds = (0, 64)
 
 
@@ -83,6 +83,12 @@ def voxelize_point_cloud(pts):
     # vg = np.swapaxes(vg, 1,2)
     elem = {'known_occ': vg}
     ko, kf = data_tools.simulate_2_5D_input(vg)
+
+    if "YCB" in trial:
+        # ko, kf = data_tools.simulate_slit_occlusion(ko, kf, x_bounds[0], x_bounds[1])
+        kf[:, 0:x_bounds[0], :, 0] = 0
+        kf[:, x_bounds[1]:, :, 0] = 0
+
     elem['known_free'] = kf
     return elem
 
@@ -117,7 +123,7 @@ def kinect_callback(msg):
 
     elem = voxelize_point_cloud(cloud_out)
     publish_elem(elem)
-    # infer(elem)
+    infer(elem)
 
 
     # msg = to_msg(vg)
