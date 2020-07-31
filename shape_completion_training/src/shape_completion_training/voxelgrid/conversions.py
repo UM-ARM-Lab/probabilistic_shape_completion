@@ -78,7 +78,6 @@ def pointcloud_to_voxelgrid(pointcloud, scale=1.0, origin=(0, 0, 0), shape=(64, 
 
 def transform_voxelgrid(vg, transform, scale=1.0, origin=(0, 0, 0)):
     """
-
     @param vg: voxelgrid
     @param transform: 4x4 homogeneous tramsform matrix
     @return:
@@ -125,3 +124,21 @@ def downsample(voxelgrid, kernel_size=2):
                        padding="VALID"),
         leading, trailing)
     return formatted
+
+
+def to_2_5D(voxelgrid, width=64):
+    ind = tf.where(voxelgrid)
+    img = tf.scatter_nd(ind[:,1:], ind[:,0], (width, width, 1))
+    img = tf.cast(img, tf.float32)
+    img = img + 64 * tf.cast(img == 0, tf.float32)
+    return img
+
+
+def img_to_voxelgrid(img, max_depth=64):
+    ind = tf.where(img < max_depth)
+    depths = tf.cast(tf.gather_nd(img, ind), tf.int64)
+    depths = tf.expand_dims(depths, 1)
+
+    ko_ind = tf.concat([depths, ind], 1)
+    updates = tf.cast(ko_ind[:,0] * 0 + 1, tf.float32)
+    return tf.scatter_nd(ko_ind, updates, (max_depth,max_depth,max_depth,1))
