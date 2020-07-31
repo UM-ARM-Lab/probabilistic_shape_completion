@@ -69,7 +69,7 @@ def pointcloud_to_voxelgrid(pointcloud, scale=1.0, origin=(0, 0, 0), shape=(64, 
     vg = np.zeros(shape)
     if tf.is_tensor(pointcloud):
         pointcloud = pointcloud.numpy()
-    s = (pointcloud / scale + origin).astype(int)
+    s = ((pointcloud - origin) / scale).astype(int)
     valid = np.logical_and(np.min(s, axis=1) > 0, np.max(s, axis=1) < shape[0])
     s = s[valid]
     vg[s[:, 0], s[:, 1], s[:, 2]] = 1.0

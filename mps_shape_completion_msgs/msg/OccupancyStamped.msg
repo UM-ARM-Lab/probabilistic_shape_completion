@@ -3,6 +3,7 @@ Header header
 
 # Distance between voxel centers
 float32 scale
+geometry_msgs/Point origin
 
 # Occupancy probability
 # For binary thresholding, use:

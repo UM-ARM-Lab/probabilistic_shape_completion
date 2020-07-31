@@ -76,9 +76,9 @@ namespace mps_shape_completion_visualization
                     }
                     
                     rviz::PointCloud::Point p;
-                    p.position.x = scale/2 + i*scale;
-                    p.position.y = scale/2 + j*scale;
-                    p.position.z = scale/2 + k*scale;
+                    p.position.x = scale/2 + i*scale + latest_msg.origin.x;
+                    p.position.y = scale/2 + j*scale + latest_msg.origin.y;
+                    p.position.z = scale/2 + k*scale + latest_msg.origin.z;
 
                     if(binary_display_)
                     {

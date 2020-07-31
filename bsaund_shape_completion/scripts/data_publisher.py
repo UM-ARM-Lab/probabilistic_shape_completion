@@ -55,7 +55,7 @@ def run_inference(elem):
     #     raw_input("Ready to publish final sample?")
     # sample_evaluation = model_evaluator.evaluate_element(elem, num_samples=10)
     if ARGS.publish_each_sample:
-        for particle in model_evaluator.sample_particles(model_runner.model, elem, 20):
+        for particle in model_evaluator.sample_particles(model_runner.model, elem, 5):
             VG_PUB.publish("predicted_occ", particle)
             rospy.sleep(0.5)
 
@@ -270,8 +270,8 @@ if __name__ == "__main__":
     else:
         dataset_params = model_runner.params
         dataset_params.update({
-            "slit_start": 17,
-            "slit_width": 30
+            "slit_start": 28,
+            "slit_width": 6
         })
 
     dataset_params.update(default_translations)

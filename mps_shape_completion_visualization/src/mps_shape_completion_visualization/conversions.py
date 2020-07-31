@@ -19,11 +19,15 @@ def vox_to_float_array(voxel_grid, dim):
 def msg_to_vox(msg):
     return np.reshape(msg.data, tuple(d.size for d in msg.layout.dim))
 
-def vox_to_occupancy_stamped(voxel_grid, dim, scale, frame_id):
+
+def vox_to_occupancy_stamped(voxel_grid, dim, scale, frame_id, origin=(0,0,0)):
     msg = OccupancyStamped()
     msg.header.frame_id = frame_id
     msg.occupancy = vox_to_float_array(voxel_grid, dim)
     msg.scale = scale
+    msg.origin.x = origin[0]
+    msg.origin.y = origin[1]
+    msg.origin.z = origin[2]
     return msg
 
 

@@ -129,6 +129,9 @@ def process_evaluation_into_dataframe(evaluation):
             # if not 250 < angle < 290:
             #     continue
             d = shape_evaluation['particle_distances']
+            if np.array(d).shape[0] == 0:
+                print("No particle distances for {}".format(shape_name))
+                continue
             add_coverage(data, shape_name, model_name, d)
             add_plausibility(data, shape_name, model_name, d)
             add_accuracy(data, shape_name, model_name, shape_evaluation['best_particle_chamfer'])

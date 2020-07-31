@@ -7,21 +7,25 @@ import tensorflow as tf
 import numpy as np
 
 
-def to_msg(voxelgrid):
+def to_msg(voxelgrid, frame, scale, origin):
     return conversions.vox_to_occupancy_stamped(voxelgrid,
                                                 dim=voxelgrid.shape[1],
-                                                scale=0.01,
-                                                frame_id="object")
+                                                scale=scale,
+                                                frame_id=frame,
+                                                origin=origin)
 
 
 class VoxelgridPublisher:
-    def __init__(self):
+    def __init__(self, frame="object", scale=0.01, origin=(0,0,0)):
         self.pubs = {}
         pub_names = ["gt", "known_occ", "known_free", "predicted_occ", "predicted_free", "sampled_occ",
                      "conditioned_occ", "mismatch", "aux", "plausible"]
         for name in pub_names:
             self.add(name, name + "_voxel_grid")
         self.bb_pub = rospy.Publisher("bounding_box", MarkerArray, queue_size=1)
+        self.frame = frame
+        self.origin = origin
+        self.scale = scale
 
     def add(self, short_name, topic):
         self.pubs[short_name] = rospy.Publisher(topic, OccupancyStamped, queue_size=1)
@@ -29,7 +33,12 @@ class VoxelgridPublisher:
     def publish(self, short_name, voxelgrid):
         if tf.is_tensor(voxelgrid):
             voxelgrid = voxelgrid.numpy()
-        self.pubs[short_name].publish(to_msg(voxelgrid))
+        self.pubs[short_name].publish(to_msg(voxelgrid, self.frame, scale=self.scale, origin=self.origin))
+
+    def publish_elem_cautious(self, elem):
+        for name in ['known_occ', 'known_free', 'predicted_occ']:
+            if name in elem:
+                self.publish(name, elem[name])
 
     def publish_elem(self, elem):
         self.publish("gt", elem["gt_occ"])

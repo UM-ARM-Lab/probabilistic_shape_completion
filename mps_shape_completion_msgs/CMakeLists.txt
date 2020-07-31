@@ -9,6 +9,7 @@ project(mps_shape_completion_msgs)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED
   message_generation
+  geometry_msgs
   std_msgs)
 
 ## System dependencies are found with CMake's conventions
@@ -67,6 +68,7 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs  # Or other packages containing msgs
+  geometry_msgs
 )
 
 ################################################
