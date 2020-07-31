@@ -2,6 +2,7 @@
 import sys
 from os.path import dirname, abspath, join
 
+import shape_completion_training.utils.exploratory_data_tools
 import shape_completion_training.utils.shapenet_storage
 
 sc_path = join(dirname(abspath(__file__)), "..")
@@ -160,14 +161,14 @@ if __name__ == "__main__":
     # data = data_ycb
     data = data_shapenet
 
-    sim_input_fn=data_tools.simulate_omniscient_input
+    sim_input_fn= shape_completion_training.utils.exploratory_data_tools.simulate_omniscient_input
     
     data = data_tools.simulate_input(data,
                                      params['translation_pixel_range_x'],
                                      params['translation_pixel_range_y'],
                                      params['translation_pixel_range_z'],
                                      sim_input_fn=sim_input_fn)
-    data = data_tools.simulate_condition_occ(data)
+    data = shape_completion_training.utils.exploratory_data_tools.simulate_condition_occ(data)
 
 
     

@@ -6,19 +6,12 @@ import tensorflow as tf
 from shape_completion_training.utils import shapenet_storage
 from shape_completion_training.utils import ycb_storage
 from shape_completion_training.utils.dataset_storage import load_gt_only
+from shape_completion_training.utils.exploratory_data_tools import simulate_partial_completion, \
+    simulate_random_partial_completion
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
 import numpy as np
 import pickle
-
-
-def simulate_omniscient_input(gt):
-    """
-    Given a single ground truth mask occupied list,
-    return ground truth occupied and free,
-    as well as simulate the known occupied and free
-    """
-    return gt, 1.0 - gt
 
 
 def simulate_2_5D_input(gt):
@@ -53,6 +46,14 @@ def get_slit_occlusion_2D_mask(slit_min, slit_width, mask_shape):
 
 
 def select_slit_location(gt, min_slit_width, max_slit_width, min_observable=5):
+    """
+    Randomly select a slit location
+    @param gt: voxelgrid of shape
+    @param min_slit_width:
+    @param max_slit_width:
+    @param min_observable: minimum columns of voxelgrid that must be visible
+    @return:
+    """
     z_vals = tf.where(tf.reduce_sum(gt, axis=[0, 1, 3]))
 
     slit_width = tf.random.uniform(shape=[], minval=min_slit_width, maxval=max_slit_width, dtype=tf.int64)
@@ -118,48 +119,16 @@ def shift_voxelgrid(t, dx, dy, dz, pad_value, max_x, max_y, max_z):
     return t
 
 
-# @tf.function
-def simulate_first_n_input(gt, n):
-    gt_occ = gt
-    gt_free = 1.0 - gt
-    mask = tf.concat([tf.ones(n), tf.zeros(tf.size(gt) - n)], axis=0)
-    shape = gt.shape
-    gt_occ_masked = tf.reshape(tf.reshape(gt_occ, [-1]) * mask, shape)
-    gt_free_masked = tf.reshape(tf.reshape(gt_free, [-1]) * mask, shape)
-    return gt_occ_masked, gt_free_masked
-
-
-# @tf.function
-def simulate_first_random_input(gt):
-    n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
-    return simulate_first_n_input(gt, n)
-
-
-def simulate_random_partial_completion_input(gt):
-    gt_occ = gt
-    gt_free = 1.0 - gt
-
-    # mask_n = tf.random.uniform(shape=[1], minval=0, maxval=tf.size(gt), dtype=tf.int32)
-    mask_n = tf.random.uniform(shape=[1])
-    mask_n = tf.pow(mask_n, 8.0)
-    mask_n = tf.cast(mask_n * tf.cast(tf.size(gt), tf.float32), tf.int32)
-    mask = tf.concat([tf.ones(mask_n), tf.zeros(tf.size(gt) - mask_n)], axis=0)
-
-    mask = tf.random.shuffle(mask)
-
-    shape = gt.shape
-
-    gt_occ_masked = tf.reshape(tf.reshape(gt_occ, [-1]) * mask, shape)
-    gt_free_masked = tf.reshape(tf.reshape(gt_free, [-1]) * mask, shape)
-    return gt_occ_masked, gt_free_masked
-
-
 @memoize
 def get_addressible_dataset(**kwargs):
     return AddressableDataset(**kwargs)
 
 
 class AddressableDataset():
+    """
+    Shape dataset where shapes can be looked up by name or index. Useful for
+    Manually visualizing and examining shapes
+    """
     def __init__(self, use_test=True, use_train=True, dataset_name="shapenet"):
         self.train_ds, self.test_ds = load_dataset(dataset_name=dataset_name,
                                                    metadata_only=True,
@@ -231,11 +200,6 @@ def load_dataset(dataset_name, metadata_only=True, shuffle=True):
     return train_data, test_data
 
 
-# def load_shapenet(shapes="all", shuffle=True):
-#     train_ds, test_ds = load_shapenet_metadata(shapes, shuffle)
-#     return load_voxelgrids(train_ds), load_voxelgrids(test_ds)
-
-
 def load_shapenet_metadata(shapes="all", shuffle=True):
     print("Loading Shapenet dataset")
     return _load_metadata_train_or_test(shapes, shuffle, "train"), \
@@ -259,6 +223,7 @@ def preprocess_dataset(dataset, params):
         print("Applying slit occlusion")
         dataset = apply_slit_occlusion(dataset)
 
+    # Experimental processing used in exploratory methods. Not used in main paper
     if params['simulate_partial_completion']:
         dataset = simulate_partial_completion(dataset)
     if params['simulate_random_partial_completion']:
@@ -279,6 +244,14 @@ def preprocess_test_dataset(dataset, params):
 
 def _load_metadata_train_or_test(shapes="all", shuffle=True, prefix="train",
                                  record_path=shapenet_storage.shapenet_record_path):
+    """
+    Loads either the test or train data
+    @param shapes: "all", or a list of shape names to load
+    @param shuffle: True shuffles the dataset
+    @param prefix: "train" or "test"
+    @param record_path: pathlib path to the record files
+    @return:
+    """
     records = [f for f in record_path.iterdir()
                if f.name == prefix + "_filepaths.pkl"]
     if shapes != "all":
@@ -295,9 +268,18 @@ def _load_metadata_train_or_test(shapes="all", shuffle=True, prefix="train",
 
 def read_metadata_from_filelist(record_file, shuffle):
     """
-    Reads from a tfrecord file of paths and augmentations
-    Loads the binvox files, simulates the input tensors, and returns a dataset
+    Returns a tensorflow dataset from a record list of filepaths
+    This dataset has the voxelgrid shape information, but not the actual voxelgrids,
+    so that loading and iterating through the dataset is fast
+    @param record_file:
+    @param shuffle:
+    @return:
     """
+
+    # Note: Commented below is the "tensorflow" way of reading and writing a dataset.
+    #  I got fed up with the boilerplate required to change fields and other random annoyances.
+    #  Instead I just store .pkl files
+    #
     # print("Reading from filepath record")
     # raw_dataset = tf.data.TFRecordDataset(record_file.as_posix())
     #
@@ -445,7 +427,6 @@ def apply_sensor_noise(dataset):
     return dataset.map(_apply_sensor_noise)
 
 
-
 def apply_fixed_slit_occlusion(dataset, slit_min, slit_width):
     def _apply_slit_occlusion(elem):
 
@@ -456,38 +437,6 @@ def apply_fixed_slit_occlusion(dataset, slit_min, slit_width):
         return elem
 
     return dataset.map(_apply_slit_occlusion)
-
-
-def simulate_partial_completion(dataset):
-    def _add_partial_gt(elem):
-        partial_occ, partial_free = simulate_first_random_input(elem['gt_occ'])
-        elem['known_occ'] = tf.clip_by_value(elem['known_occ'] + partial_occ, 0.0, 1.0)
-        elem['known_free'] = tf.clip_by_value(elem['known_free'] + partial_free, 0.0, 1.0)
-        return elem
-
-    return dataset.map(_add_partial_gt)
-
-
-def simulate_random_partial_completion(dataset):
-    def _add_partial_gt(elem):
-        partial_occ, partial_free = simulate_random_partial_completion_input(elem['gt_occ'])
-        elem['known_occ'] = tf.clip_by_value(elem['known_occ'] + partial_occ, 0.0, 1.0)
-        elem['known_free'] = tf.clip_by_value(elem['known_free'] + partial_free, 0.0, 1.0)
-        return elem
-
-    return dataset.map(_add_partial_gt)
-
-
-def simulate_condition_occ(dataset, turn_on_prob=0.0, turn_off_prob=0.0):
-    def _add_conditional(elem):
-        x = elem['gt_occ']
-        x = x + tf.cast(tf.random.uniform(x.shape) < turn_on_prob, tf.float32)
-        x = x - tf.cast(tf.random.uniform(x.shape) < turn_off_prob, tf.float32)
-        x = tf.clip_by_value(x, 0.0, 1.0)
-        elem['conditioned_occ'] = x
-        return elem
-
-    return dataset.map(_add_conditional)
 
 
 def get_unique_name(datum):
