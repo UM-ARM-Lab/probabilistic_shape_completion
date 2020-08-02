@@ -20,12 +20,21 @@ def simulate_2_5D_input(gt):
     known_occ = gt + 0.0
     known_free = gt_free + 0.0
     unknown_mask = np.zeros((gt.shape[1], gt.shape[2]))
-    for h in range(gt.shape[1]):
+    for h in range(gt.shape[0]):
         known_occ[h, :, :, 0] = np.clip(known_occ[h, :, :, 0] - unknown_mask, 0, 1)
         known_free[h, :, :, 0] = np.clip(known_free[h, :, :, 0] - unknown_mask, 0, 1)
         unknown_mask = unknown_mask + gt_occ[h, :, :, 0]
         unknown_mask = np.clip(unknown_mask, 0, 1)
     return known_occ, known_free
+
+
+def simulate_2_5D_known_free(known_occ):
+    unknown_mask = np.zeros((known_occ.shape[1], known_occ.shape[2]))
+    known_free = 1.0 - known_occ
+    for h in range(known_occ.shape[0]):
+        known_free[h, :, :, 0] = np.clip(known_free[h, :, :, 0] - unknown_mask, 0, 1)
+        unknown_mask = np.clip(unknown_mask + known_occ[h, :, :, 0], 0, 1)
+    return known_free
 
 
 def simulate_slit_occlusion(known_occ, known_free, slit_zmin, slit_zmax):
@@ -129,6 +138,7 @@ class AddressableDataset():
     Shape dataset where shapes can be looked up by name or index. Useful for
     Manually visualizing and examining shapes
     """
+
     def __init__(self, use_test=True, use_train=True, dataset_name="shapenet"):
         self.train_ds, self.test_ds = load_dataset(dataset_name=dataset_name,
                                                    metadata_only=True,
@@ -219,6 +229,9 @@ def preprocess_dataset(dataset, params):
                              params['translation_pixel_range_z'],
                              sim_input_fn=simulate_2_5D_input)
 
+    if params['apply_depth_sensor_noise']:
+        dataset = apply_sensor_noise(dataset)
+
     if params['apply_slit_occlusion']:
         print("Applying slit occlusion")
         dataset = apply_slit_occlusion(dataset)
@@ -234,10 +247,12 @@ def preprocess_dataset(dataset, params):
 def preprocess_test_dataset(dataset, params):
     dataset = simulate_input(dataset, 0, 0, 0, sim_input_fn=simulate_2_5D_input)
 
+    if params['apply_depth_sensor_noise']:
+        dataset = apply_sensor_noise(dataset)
+
     if params['apply_slit_occlusion']:
         print("Applying fixed slit occlusion")
         dataset = apply_fixed_slit_occlusion(dataset, params['slit_start'], params['slit_width'])
-        # dataset = apply_deterministic_slit_occlusion(dataset)
 
     return dataset
 
@@ -422,6 +437,8 @@ def apply_sensor_noise(dataset):
 
         ko = conversions.img_to_voxelgrid(img)
         elem['known_occ'] = ko
+        elem['known_free'], = tf.numpy_function(simulate_2_5D_known_free, [ko],
+                                               [tf.float32])
         return elem
 
     return dataset.map(_apply_sensor_noise)
@@ -429,9 +446,8 @@ def apply_sensor_noise(dataset):
 
 def apply_fixed_slit_occlusion(dataset, slit_min, slit_width):
     def _apply_slit_occlusion(elem):
-
         ko, kf = tf.numpy_function(simulate_slit_occlusion, [elem['known_occ'], elem['known_free'],
-                                                             slit_min, slit_min+slit_width], [tf.float32, tf.float32])
+                                                             slit_min, slit_min + slit_width], [tf.float32, tf.float32])
         elem['known_occ'] = ko
         elem['known_free'] = kf
         return elem

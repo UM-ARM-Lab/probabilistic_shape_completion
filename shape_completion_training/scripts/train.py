@@ -38,13 +38,7 @@ if __name__ == "__main__":
     params.update(override_params)
 
     data, _ = data_tools.load_dataset(params['dataset'], metadata_only=False)
-
-
-    # if params['network'] == 'VoxelCNN':
-    #     sim_input_fn=data_tools.simulate_omniscient_input
-    # elif params['network'] == 'AutoEncoder':
     data = data_tools.preprocess_dataset(data, params)
-
 
     if args.tmp:
         mr = ModelRunner(training=True, params=params, group_name=None)
