@@ -264,14 +264,12 @@ if __name__ == "__main__":
 
     load_network()
 
-    if model_runner is None:
-        dataset_params = default_dataset_params
-
-    else:
-        dataset_params = model_runner.params
+    dataset_params = default_dataset_params
+    if model_runner is not None:
+        dataset_params.update(model_runner.params)
         dataset_params.update({
-            "slit_start": 28,
-            "slit_width": 6
+            "slit_start": 32,
+            "slit_width": 32,
         })
 
     dataset_params.update(default_translations)

@@ -17,6 +17,7 @@ def get_default_params(group_name=None):
         'batch_size': 16,
         'dataset': 'shapenet',
         'apply_slit_occlusion': False,
+        'apply_depth_sensor_noise': False,
     }
 
     if group_name is None:
@@ -124,6 +125,19 @@ def get_default_params(group_name=None):
                 'translation_pixel_range_x': 15,
                 'translation_pixel_range_y': 10,
                 'translation_pixel_range_z': 10,
+            },
+        "NormalizingAE_YCB_noise":
+            {
+                'num_latent_layers': 200,
+                'flow': 'FlowYCB/July_23_16-35-55_7d12d68bee',
+                'network': 'NormalizingAE',
+                'use_flow_during_inference': False,
+                'dataset': 'ycb',
+                'translation_pixel_range_x': 15,
+                'translation_pixel_range_y': 10,
+                'translation_pixel_range_z': 10,
+                'apply_slit_occlusion': True,
+                'apply_depth_sensor_noise': True,
             },
     }
 
