@@ -135,7 +135,7 @@ def to_2_5D(voxelgrid, width=64):
 
 
 def img_to_voxelgrid(img, max_depth=64):
-    ind = tf.where(img < max_depth)
+    ind = tf.where(tf.logical_and(0 <= img, img < max_depth))
     depths = tf.cast(tf.gather_nd(img, ind), tf.int64)
     depths = tf.expand_dims(depths, 1)
 
