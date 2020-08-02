@@ -1,6 +1,6 @@
 import rospy
-from mps_shape_completion_visualization import conversions
-from mps_shape_completion_msgs.msg import OccupancyStamped
+from rviz_voxelgrid_visuals import conversions
+from rviz_voxelgrid_visuals_msgs.msg import VoxelgridStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
 import tensorflow as tf
@@ -8,7 +8,7 @@ import numpy as np
 
 
 def to_msg(voxelgrid, frame, scale, origin):
-    return conversions.vox_to_occupancy_stamped(voxelgrid,
+    return conversions.vox_to_voxelgrid_stamped(voxelgrid,
                                                 dim=voxelgrid.shape[1],
                                                 scale=scale,
                                                 frame_id=frame,
@@ -28,7 +28,7 @@ class VoxelgridPublisher:
         self.scale = scale
 
     def add(self, short_name, topic):
-        self.pubs[short_name] = rospy.Publisher(topic, OccupancyStamped, queue_size=1)
+        self.pubs[short_name] = rospy.Publisher(topic, VoxelgridStamped, queue_size=1)
 
     def publish(self, short_name, voxelgrid):
         if tf.is_tensor(voxelgrid):

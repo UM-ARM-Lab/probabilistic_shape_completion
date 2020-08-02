@@ -10,8 +10,8 @@ This has been used in the "Moving Piles of Stuff" project.
 There are multiple directories.
  - `shape_completion_training`: Generating, training, evaluating the shape completion model
  - `mps_shape_completion`: ROS interface for running shape completion inference
- - `mps_shape_completion_msgs`: ROS message types
- - `mps_shape_completion_visualization`: ROS/RViz tools for viewing voxelgrids
+ - `rviz_voxelgrid_visuals_msgs`: ROS message types
+ - `rviz_voxelgrid_visuals`: ROS/RViz tools for viewing voxelgrids
 
 ### Prerequisites
 The code is developed and tested on
