@@ -16,8 +16,8 @@ from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.voxelgrid.metrics import chamfer_distance
 import threading
 import tensorflow as tf
-from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
-from bsaund_shape_completion.shape_selection import send_display_names_from_metadata
+from shape_completion_visualization.voxelgrid_publisher import VoxelgridPublisher
+from shape_completion_visualization.shape_selection import send_display_names_from_metadata
 
 ARGS = None
 VG_PUB = None

@@ -12,8 +12,8 @@ from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.model import default_params
 from shape_completion_training.model.other_model_architectures import sampling_tools
 import tensorflow as tf
-from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
-from bsaund_shape_completion.shape_selection import send_display_names_from_metadata
+from shape_completion_visualization.voxelgrid_publisher import VoxelgridPublisher
+from shape_completion_visualization.shape_selection import send_display_names_from_metadata
 
 """
 Simplified version of data_publisher that I will make changes to, to explore specific models

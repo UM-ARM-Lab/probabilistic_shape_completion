@@ -4,7 +4,7 @@ from random import shuffle
 
 from shape_completion_training.utils import data_tools
 from shape_completion_training.model.model_runner import ModelRunner
-from bsaund_shape_completion import voxelgrid_publisher
+from shape_completion_visualization import voxelgrid_publisher
 import tensorflow as tf
 import rospy
 from shape_completion_training.model.utils import add_batch_to_dict, log_normal_pdf, stack_known

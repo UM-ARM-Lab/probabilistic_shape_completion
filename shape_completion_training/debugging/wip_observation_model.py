@@ -2,7 +2,7 @@ from __future__ import print_function
 import rospy
 import shape_completion_training.model.observation_model
 from shape_completion_training.utils import data_tools
-from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
+from shape_completion_visualization.voxelgrid_publisher import VoxelgridPublisher
 from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model import plausiblility
 import numpy as np

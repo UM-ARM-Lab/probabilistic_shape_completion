@@ -13,7 +13,7 @@ from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.utils import data_tools
 import tensorflow as tf
 from shape_completion_training.model import utils
-from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
+from shape_completion_visualization.voxelgrid_publisher import VoxelgridPublisher
 import rospkg
 import pickle
 import numpy as np
@@ -26,7 +26,7 @@ scale = 0.003
 origin = (2.446 - scale * 32, -0.384 - scale * 32, 0.86 - scale * 32)
 x_bounds = (0, 64)
 # x_bounds = (20, 43)
-y_bounds = (23, 46)
+y_bounds = (20, 46)
 z_bounds = (0, 64)
 
 # YCB fitting
@@ -88,7 +88,7 @@ def publish_simulated_mug():
     Publish mug from simulated data, to verify axes of simulated data match real data
     :return:
     """
-    path = rospkg.RosPack().get_path('bsaund_shape_completion') + "/example_data/"
+    path = rospkg.RosPack().get_path('shape_completion_visualization') + "/example_data/"
     # path += "front_left_mug.pkl"
     path += "mug_hidden_handle.pkl"
 

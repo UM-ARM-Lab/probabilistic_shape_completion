@@ -3,7 +3,7 @@ from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 d = generate_distutils_setup(
-    packages=['bsaund_shape_completion'],
+    packages=['shape_completion_visualization'],
     package_dir={'': 'src'}
 )
 setup(**d)
