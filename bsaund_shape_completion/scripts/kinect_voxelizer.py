@@ -1,18 +1,14 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-import argparse
 import rospy
-import numpy as np
 from sensor_msgs.msg import PointCloud2
-import sensor_msgs.point_cloud2
 import tf2_ros
 import tf2_py as tf2
 from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
 from shape_completion_training.voxelgrid import conversions
-from mps_shape_completion_visualization import conversions as msg_conversions
+from rviz_voxelgrid_visuals import conversions as msg_conversions
 import ros_numpy
-from mps_shape_completion_msgs.msg import OccupancyStamped
 from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.utils import data_tools
 import tensorflow as tf
@@ -141,7 +137,7 @@ if __name__ == "__main__":
     VG_PUB = VoxelgridPublisher(frame=target_frame, scale=scale, origin=origin)
 
     # recomputed_pub = rospy.Publisher("/recomputed_cloud", PointCloud2)
-    # known_occ_pub = rospy.Publisher("/kinect_voxels", OccupancyStamped, queue_size=1)
-    # known_free_pub = rospy.Publisher("/known_free", OccupancyStamped, queue_size=1)
-    # infer_pub = rospy.Publisher("/predicted_occ", OccupancyStamped, queue_size=1)
+    # known_occ_pub = rospy.Publisher("/kinect_voxels", VoxelgridStamped, queue_size=1)
+    # known_free_pub = rospy.Publisher("/known_free", VoxelgridStamped, queue_size=1)
+    # infer_pub = rospy.Publisher("/predicted_occ", VoxelgridStamped, queue_size=1)
     rospy.spin()

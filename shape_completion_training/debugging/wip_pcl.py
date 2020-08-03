@@ -2,14 +2,9 @@ import numpy as np
 import pcl
 from numpy import cos, sin
 from shape_completion_training.tests.setup_data_for_unit_tests import load_test_files
-from mps_shape_completion_visualization.quick_publish import publish_voxelgrid, publish_object_transform
-from shape_completion_training.voxelgrid import conversions
+from rviz_voxelgrid_visuals.quick_publish import publish_voxelgrid
 from shape_completion_training.voxelgrid import fit
 import rospy
-
-from scipy.spatial.transform import Rotation
-from pcl import IterativeClosestPoint
-import unittest
 
 p = pcl.PointCloud(10)  # "empty" point cloud
 a = np.asarray(p)  # NumPy view on the cloud
