@@ -271,9 +271,9 @@ if __name__ == "__main__":
             "slit_start": 32,
             "slit_width": 32,
         })
-    dataset_params.update({
-        "apply_depth_sensor_noise": True,
-    })
+    # dataset_params.update({
+    #     "apply_depth_sensor_noise": True,
+    # })
 
     dataset_params.update(default_translations)
     train_records, test_records = data_tools.load_dataset(dataset_name=dataset_params['dataset'],
