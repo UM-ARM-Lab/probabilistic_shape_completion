@@ -14,37 +14,57 @@ from shape_completion_training.utils import data_tools
 import tensorflow as tf
 from shape_completion_training.model import utils
 from bsaund_shape_completion.voxelgrid_publisher import VoxelgridPublisher
+import rospkg
+import pickle
+import numpy as np
 
 # target_frame = "mocap_world"
 target_frame = "victor_root"
 
 # Mug fitting
-# scale = 0.003
-# origin = (2.35, -0.48, 0.75)
-# x_bounds = (0, 64)
-# y_bounds = (20, 45)
-# z_bounds = (0, 64)
-
-# YCB fitting
-scale = 0.004
-origin = (2.45, -0.48, 0.75)
-x_bounds = (28, 37)
-y_bounds = (15, 64)
+scale = 0.003
+origin = (2.446 - scale * 32, -0.384 - scale * 32, 0.86 - scale * 32)
+x_bounds = (0, 64)
+# x_bounds = (20, 43)
+y_bounds = (23, 46)
 z_bounds = (0, 64)
 
+# YCB fitting
+# scale = 0.004
+# origin = (2.45, -0.48, 0.75)
+# x_bounds = (28, 37)
+# y_bounds = (15, 64)
+# z_bounds = (0, 64)
 
-# trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
-trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
+
+trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
+
+
+# trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
+
+
+# Networks were trained with a different axis, a different notion of "up"
+def transform_to_network(vg):
+    vg = tf.reverse(vg, axis=[2])
+    vg = tf.transpose(vg, perm=[0, 1, 3, 2, 4])
+    return vg
+
+
+def transform_from_network(vg):
+    vg = tf.transpose(vg, perm=[0, 1, 3, 2, 4])
+    vg = tf.reverse(vg, axis=[2])
+    return vg
 
 
 def swap_y_z_elem(elem):
     for k in ['known_occ', 'known_free']:
-        elem[k] = tf.transpose(elem[k], perm=[0, 1, 3, 2, 4])
+        elem[k] = transform_to_network(elem[k])
     return elem
+
 
 def swap_y_z_inference(elem):
     for k in ['predicted_occ']:
-        elem[k] = tf.transpose(elem[k], perm=[0,1,3,2,4])
+        elem[k] = transform_from_network(elem[k])
     return elem
 
 
@@ -63,12 +83,30 @@ def to_msg(voxelgrid):
                                                     origin=origin)
 
 
+def publish_simulated_mug():
+    """
+    Publish mug from simulated data, to verify axes of simulated data match real data
+    :return:
+    """
+    path = rospkg.RosPack().get_path('bsaund_shape_completion') + "/example_data/"
+    # path += "front_left_mug.pkl"
+    path += "mug_hidden_handle.pkl"
+
+    with open(path) as f:
+        mug = pickle.load(f)
+    mug = transform_from_network(mug)
+    VG_PUB.publish('predicted_occ', mug)
+
+
 def infer(elem):
     elem = utils.add_batch_to_dict(elem)
     elem = swap_y_z_elem(elem)
-    inference = model_runner.model(elem)
-    inference = swap_y_z_inference(inference)
-    VG_PUB.publish_elem_cautious(inference)
+
+    for i in range(5):
+        inference = model_runner.model(elem)
+        inference = swap_y_z_inference(inference)
+        VG_PUB.publish_elem_cautious(inference)
+        rospy.sleep(0.2)
 
 
 def voxelize_point_cloud(pts):
@@ -119,8 +157,8 @@ def kinect_callback(msg):
 
     elem = voxelize_point_cloud(cloud_out)
     publish_elem(elem)
+    # publish_simulated_mug()
     infer(elem)
-
 
     # msg = to_msg(vg)
     print("Made a cloud")
