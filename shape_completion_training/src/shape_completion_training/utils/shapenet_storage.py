@@ -10,25 +10,19 @@ Tools for storing and preprocessing augmented shapenet
 def write_shapenet_to_filelist(test_ratio, shape_ids="all"):
     all_files = get_all_shapenet_files(shape_ids)
     train_files, test_files = _split_train_and_test(all_files, test_ratio)
-    # train_data = _list_of_shapenet_records_to_dict(train_files)
-    # test_data = _list_of_shapenet_records_to_dict(test_files)
+
 
     # d = tf.data.Dataset.from_tensor_slices(utils.sequence_of_dicts_to_dict_of_sequences(test_files))
     write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(train_files),
                       shapenet_record_path / "train_filepaths.pkl")
     write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(test_files),
                       shapenet_record_path / "test_filepaths.pkl")
-    # write_to_tfrecord(tf.data.Dataset.from_tensor_slices(
-    #     utils.sequence_of_dicts_to_dict_of_sequences(test_files)),
-    #     shapenet_record_path / "test_filepaths.pkl")
 
 
 def get_all_shapenet_files(shape_ids):
     shapenet_records = []
     if shape_ids == "all":
         shape_ids = [f.name for f in shapenet_load_path.iterdir() if f.is_dir()]
-        # shape_ids = [f for f in os.listdir(shapenet_load_path)
-        #              if os.path.isdir(join(shapenet_load_path, f))]
         shape_ids.sort()
 
     for category in shape_ids:

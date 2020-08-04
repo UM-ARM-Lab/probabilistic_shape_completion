@@ -48,17 +48,6 @@ def compute_icp_fit_dict(metadata, params):
     return compute_partial_icp_fit_dict(ds, ds, num_shapes)
 
 
-# def compute_partial_icp_fit_dict(reference_metadata, other_metadata, params):
-#     best_fits = {}
-#     num_shapes = 0
-#     for i in reference_metadata:
-#         num_shapes += 1
-#
-#     reference_ds = data_tools.load_voxelgrids(reference_metadata)
-#     reference_ds = data_tools.preprocess_test_dataset(reference_ds, params)
-#
-#     other_ds = data_tools.load_voxelgrids(other_metadata)
-#     other_ds = data_tools.preprocess_test_dataset(reference_ds, params)
 def compute_partial_icp_fit_dict(reference_ds, other_ds, reference_ds_size=None, occlusion_mask=None):
     best_fits = {}
 
@@ -94,7 +83,7 @@ def compute_partial_icp_fit_dict(reference_ds, other_ds, reference_ds_size=None,
                 if oob > 10:
                     continue
                 best_fit_for_reference[(j.numpy(), other_name)] = {"T": T, "observation_probability": p,
-                                                           "out_of_range_count": oob}
+                                                                   "out_of_range_count": oob}
 
             best_fits[data_tools.get_unique_name(reference)] = best_fit_for_reference
     return best_fits
