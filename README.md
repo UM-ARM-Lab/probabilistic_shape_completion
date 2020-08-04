@@ -18,3 +18,17 @@ The code is developed and tested on
 ## Structure
  - `shape_completion_training`: Generating, training, evaluating the shape completion model and baselines
  - `shape_completion_visualization`: Scripts for viewing shape datasets and completions in RViz
+ 
+ Packages are structed as ROS packages. Scripts to be run (e.g. in a terminal) are located in the `scripts` folders.
+ 
+ Note, the PSSNet in the paper is named "NormalizingAE" is this code.
+ 
+ 
+ ## How to fully recreate paper results (Note, will take several days):
+ 1. Install all dependencies listed above
+ 2. Download `shapenet` (account needed) and YCB (`download_ycb.py`) and place in `./shape_completion_training/data
+ 3. Augment the datasets by rotating and computing voxelgrids using the scripts `augment_shapenet.py` and `augment_ycb.py`
+ 4. Preprocess datasets into tensorflow `TFDatasets`: `preprocess_shapenet.py` and `preprocess_ycb.py`
+ 5. Train networks using `./train.py --group [Trial Name]`, where `Trial Name`s can be found in `defaults.py` and specify the network, dataset, and other trial parameters. (e.g. `./train.py --group NormalizingAE`)
+ 6. Compute plausibe sets `./shapenet_plausibilities.py`, `ycb_plausibilities.py`. Note, both of these uses sharded datasets so they can be computed in parallel. If compting in parallel, combine by using the `--combine_shards` option
+ 7. Evaluate using `./evaluate`. You can edit the model names if not evaluating all models.
