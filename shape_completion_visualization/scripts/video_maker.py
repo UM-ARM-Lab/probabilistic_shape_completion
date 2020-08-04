@@ -34,7 +34,7 @@ def publish_display_count(publisher, count):
     m.type = m.TEXT_VIEW_FACING
     m.scale.z = 0.02
     m.pose.position.z = 0.3
-    m.pose.position.x = .6
+    m.pose.position.x = .9
     m.pose.position.y = -.6
 
     m.text = str(count)
@@ -66,10 +66,9 @@ if __name__ == "__main__":
                 exit(0)
 
             elem = utils.add_batch_to_dict(elem)
+            VG_PUB.publish_elem(elem)
             for i in range(5):
                 inference = model_runner.model(elem)
-                VG_PUB.publish_elem(elem)
-
                 if model_name is "GT_and_input":
                     inference['predicted_occ'] = inference['predicted_occ'] * 0
 

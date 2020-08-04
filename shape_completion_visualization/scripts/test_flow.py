@@ -14,8 +14,8 @@ from matplotlib import pyplot as plt
 
 
 def get_flow():
-    # flow_trial = "Flow/July_02_10-47-22_d8d84f5d65"
-    flow_trial = "FlowYCB/July_16_20-50-01_9d37e040d4"
+    flow_trial = "Flow/July_02_10-47-22_d8d84f5d65"
+    # flow_trial = "FlowYCB/July_16_20-50-01_9d37e040d4"
     mr = ModelRunner(training=False, trial_path=flow_trial)
 
     return mr.model.flow
@@ -30,7 +30,7 @@ def view_flow():
         bb = tf.reshape(bb_flat, (8, 3))
         print(bb.numpy())
         vg_pub.publish_bounding_box(bb)
-        rospy.sleep(1)
+        rospy.sleep(0.2)
 
     print("done")
 
@@ -58,14 +58,14 @@ def get_untrained_model():
 
 def view_inferred_bounding_box():
     vg_pub = voxelgrid_publisher.VoxelgridPublisher()
-    # mr = ModelRunner(training=False, trial_path="NormalizingAE/July_02_15-15-06_ede2472d34")
-    mr = ModelRunner(training=False, trial_path="NormalizingAE_YCB/July_16_21-36-14_4ec8969b2c")
+    mr = ModelRunner(training=False, trial_path="NormalizingAE/July_02_15-15-06_ede2472d34")
+    # mr = ModelRunner(training=False, trial_path="NormalizingAE_YCB/July_16_21-36-14_4ec8969b2c")
     ds = data_tools.get_addressible_dataset(dataset_name=mr.params['dataset'])
     # mr = get_untrained_model()
     flow = get_flow()
 
-    for i in range(0, 10000, 5):
-        elem = ds.get(ds.train_names[i], params=mr.params)
+    for i in range(72, 10000, 5):
+        elem = ds.get(ds.test_names[i], params=mr.params)
         elem = add_batch_to_dict(elem)
         vg_pub.publish_elem(elem)
         rospy.sleep(1)
@@ -190,8 +190,8 @@ def check_loss():
 
 if __name__ == "__main__":
     rospy.init_node("bounding_box_flow_publisher")
-    # view_flow()
-    view_inferred_bounding_box()
+    view_flow()
+    # view_inferred_bounding_box()
     # view_latent_space()
     # view_latent_space_as_movie()
     # check_loss()

@@ -55,9 +55,9 @@ def run_inference(elem):
     #     raw_input("Ready to publish final sample?")
     # sample_evaluation = model_evaluator.evaluate_element(elem, num_samples=10)
     if ARGS.publish_each_sample:
-        for particle in model_evaluator.sample_particles(model_runner.model, elem, 5):
+        for particle in model_evaluator.sample_particles(model_runner.model, elem, 100):
             VG_PUB.publish("predicted_occ", particle)
-            rospy.sleep(0.5)
+            rospy.sleep(0.1)
 
     # raw_input("Ready to display best?")
     inference = model_runner.model(elem)
@@ -180,8 +180,8 @@ def publish_selection(metadata, ind, str_msg):
         return elem, inference
 
     if ARGS.multistep:
-        for _ in range(5):
-            rospy.sleep(1)
+        for _ in range(20):
+            # rospy.sleep(1)
             elem, inference = multistep_error(elem, inference)
 
     metric = metrics.p_correct_geometric_mean(inference['predicted_occ'], elem['gt_occ'])

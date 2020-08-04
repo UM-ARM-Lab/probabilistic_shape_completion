@@ -26,7 +26,7 @@ scale = 0.003
 origin = (2.446 - scale * 32, -0.384 - scale * 32, 0.86 - scale * 32)
 x_bounds = (0, 64)
 # x_bounds = (20, 43)
-y_bounds = (20, 46)
+y_bounds = (17, 46)
 z_bounds = (0, 64)
 
 # YCB fitting
@@ -37,7 +37,8 @@ z_bounds = (0, 64)
 # z_bounds = (0, 64)
 
 
-trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
+# trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
+trial = "NormalizingAE_noise/August_03_13-44-05_8c8337b208"
 
 
 # trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
@@ -123,6 +124,7 @@ def voxelize_point_cloud(pts):
         kf[:, 0:x_bounds[0], :, 0] = 0
         kf[:, x_bounds[1]:, :, 0] = 0
 
+    elem['known_occ'] = ko
     elem['known_free'] = kf
     return elem
 
