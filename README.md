@@ -32,3 +32,7 @@ The code is developed and tested on
  5. Train networks using `./train.py --group [Trial Name]`, where `Trial Name`s can be found in `defaults.py` and specify the network, dataset, and other trial parameters. (e.g. `./train.py --group NormalizingAE`)
  6. Compute plausibe sets `./shapenet_plausibilities.py`, `ycb_plausibilities.py`. Note, both of these uses sharded datasets so they can be computed in parallel. If compting in parallel, combine by using the `--combine_shards` option
  7. Evaluate using `./evaluate`. You can edit the model names if not evaluating all models.
+ 
+ ## How to view results in RViz
+ 1. Open rviz with the `./shape_completion_visualization/shape_completion.rviz` config file (Note: Will need to build `catkin` packages first to have the necessary rviz plugins)
+ 2. run `./shape_completion_visualization/data_publisher.py` to view the data alone. Pass `--trial [Trial Path]` option to view completions using a network 
