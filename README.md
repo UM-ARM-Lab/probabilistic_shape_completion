@@ -2,6 +2,15 @@
 
 This package provides a neural network that takes in a grid of visible occupied voxels from a single view and outputs a grid of the estimated 3D voxels, thus "completing the shape". Running multiple inference passes with the same input will generate different, yet plausible completions. Depending on the ambiguity of the input the completions may all be quite similar, or vary noticably.
 
+## Structure
+ - `shape_completion_training`: Generating, training, evaluating the shape completion model and baselines
+ - `shape_completion_visualization`: Scripts for viewing shape datasets and completions in RViz
+ 
+ Packages are structed as ROS packages. Scripts to be run (e.g. in a terminal) are located in the `scripts` folders.
+ 
+ Note, the PSSNet in the paper is named "NormalizingAE" is this code.
+ 
+ You can view the code for the PSSNet neural network in `./shape_completion_training/src/shape_completion_training/model/normalizing_ae.py`. Baseline method implementations are in the `baselines` folder.
 
 ### Prerequisites
 The code is developed and tested on
@@ -12,16 +21,6 @@ The code is developed and tested on
 - [`numpy`](http://www.numpy.org/) 1.14.2
 - `ROS` [kinetic](http://wiki.ros.org/kinetic) or [melodic](http://wiki.ros.org/melodic)
 
-
-
-## Structure
- - `shape_completion_training`: Generating, training, evaluating the shape completion model and baselines
- - `shape_completion_visualization`: Scripts for viewing shape datasets and completions in RViz
- 
- Packages are structed as ROS packages. Scripts to be run (e.g. in a terminal) are located in the `scripts` folders.
- 
- Note, the PSSNet in the paper is named "NormalizingAE" is this code.
- 
  
  ## How to fully recreate paper results (Note, will take several days):
  1. Install all dependencies listed above
