@@ -2,6 +2,8 @@
 from __future__ import print_function
 
 import argparse
+import random
+
 import rospy
 import numpy as np
 
@@ -60,8 +62,10 @@ def run_inference(elem):
             rospy.sleep(0.1)
 
     # raw_input("Ready to display best?")
+
     inference = model_runner.model(elem)
-    VG_PUB.publish_inference(inference)
+    if not ARGS.publish_nearest_sample:
+        VG_PUB.publish_inference(inference)
 
     min_cd = np.inf
     best_fit = None
@@ -70,29 +74,54 @@ def run_inference(elem):
                                                               model_runner.params['dataset']):
             elem_name, T, p, oob = plausible
             sn = data_tools.get_addressible_dataset(dataset_name=model_runner.params['dataset'])
-            elem = sn.get(elem_name)
-            fitted = conversions.transform_voxelgrid(elem['gt_occ'], T, scale=0.01)
+            plausible_elem = sn.get(elem_name)
+            fitted = conversions.transform_voxelgrid(plausible_elem['gt_occ'], T, scale=0.01)
             VG_PUB.publish("plausible", fitted)
             cd = chamfer_distance(tf.cast(inference['predicted_occ'] > 0.5, tf.float32), fitted,
-                                 scale=0.01, downsample=4)
+                                  scale=0.01, downsample=4)
             print("Chamfer distance: {}".format(cd))
             if cd < min_cd:
                 min_cd = cd
                 best_fit = fitted
+
         VG_PUB.publish("plausible", best_fit)
         print("Best Fit CD: {}".format(min_cd))
 
+    if ARGS.publish_nearest_sample:
+        min_cd = np.inf
+        best_fit = None
+        plausibles = plausiblility.get_plausibilities_for(data_tools.get_unique_name(elem)[0],
+                                                          model_runner.params['dataset'])
+        plausible = random.choice(plausibles)
+        elem_name, T, p, oob = plausible
+        sn = data_tools.get_addressible_dataset(dataset_name=model_runner.params['dataset'])
+        plausible_elem = sn.get(elem_name)
+        fitted = conversions.transform_voxelgrid(plausible_elem['gt_occ'], T, scale=0.01)
+        VG_PUB.publish("plausible", fitted)
+        rospy.sleep(0.5)
 
+        for particle in model_evaluator.sample_particles(model_runner.model, elem, 20):
+            VG_PUB.publish("predicted_occ", particle)
+            rospy.sleep(0.1)
+            cd = chamfer_distance(tf.cast(particle > 0.5, tf.float32), fitted,
+                                  scale=0.01, downsample=4)
+            print("Chamfer distance: {}".format(cd))
+            if cd < min_cd:
+                min_cd = cd
+                best_fit = particle
+        VG_PUB.publish("predicted_occ", best_fit)
+        # VG_PUB.publish("plausible", best_fit)
+        print("Best Fit CD: {}".format(min_cd))
 
-            # for  in valid_fits:
-            #
-            #     VG_PUB.publish("plausible", fitted)
-            #     p = shape_completion_training.model.observation_model.observation_likelihood_geometric_mean(
-            #         reference['gt_occ'],
-            #         fitted,
-            #         std_dev_in_voxels=2)
-            #     print("Best fit for {}: p={}".format(data_tools.get_unique_name(elem), p))
-            #     rospy.sleep(0.1)
+        # for  in valid_fits:
+        #
+        #     VG_PUB.publish("plausible", fitted)
+        #     p = shape_completion_training.model.observation_model.observation_likelihood_geometric_mean(
+        #         reference['gt_occ'],
+        #         fitted,
+        #         std_dev_in_voxels=2)
+        #     print("Best fit for {}: p={}".format(data_tools.get_unique_name(elem), p))
+        #     rospy.sleep(0.1)
 
     # inference["predicted_occ"] = sample_evaluation.get_best_particle(
     #     metric=lambda a, b: -metrics.chamfer_distance(a, b, scale=0.01, downsample=2).numpy())
@@ -160,7 +189,7 @@ def publish_selection(metadata, ind, str_msg):
     elem = sampling_tools.prepare_for_sampling(elem)
 
     inference = run_inference(elem_raw)
-    VG_PUB.publish_inference(inference)
+    # VG_PUB.publish_inference(inference)
 
     # fit_to_particles(metadata)
 
@@ -250,6 +279,7 @@ def parse_command_line_args():
     parser.add_argument('--publish_each_sample', help='foo help', action='store_true')
     parser.add_argument('--fit_to_particles', help='foo help', action='store_true')
     parser.add_argument('--publish_nearest_plausible', help='foo help', action='store_true')
+    parser.add_argument('--publish_nearest_sample', help='foo help', action='store_true')
     parser.add_argument('--multistep', action='store_true')
     parser.add_argument('--trial')
 

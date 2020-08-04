@@ -7,11 +7,19 @@ from visualization_msgs.msg import Marker
 import rospy
 from time import time
 
-model_name_map = {"NormalizingAE/July_02_15-15-06_ede2472d34": "PSSNet (ours)",
-                  "VAE_GAN/July_20_23-46-36_8849b5bd57": "VAE-GAN",
-                  "3D_rec_gan/July_20_19-36-48_7ed486bdf5": "3D-rec-GAN",
-                  "VAE/July_07_12-09-24_7f65111254": "VAE",
+# model_name_map = {"NormalizingAE/July_02_15-15-06_ede2472d34": "PSSNet (ours)",
+#                   "VAE_GAN/July_20_23-46-36_8849b5bd57": "VAE-GAN",
+#                   "3D_rec_gan/July_20_19-36-48_7ed486bdf5": "3D-rec-GAN",
+#                   "VAE/July_07_12-09-24_7f65111254": "VAE",
+#                   "GT_and_input": "2.5D"}
+
+model_name_map = {"NormalizingAE_YCB/July_24_11-21-46_f2aea4d768": "PSSNet (ours)",
+                  "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3": "VAE-GAN",
+                  "3D_rec_gan_YCB/July_25_22-51-08_0f55a0f6b3": "3D-rec-GAN",
+                  "VAE_YCB/July_24_11-21-49_f2aea4d768": "VAE",
                   "GT_and_input": "2.5D"}
+slit_params = {'slit_start': 17,
+               'slit_width': 30}
 
 models = [k for k in model_name_map]
 
@@ -55,6 +63,8 @@ if __name__ == "__main__":
             model_runner = ModelRunner(training=False, trial_path=model_name)
         publish_name(name_pub, model_name)
         dataset_params = model_runner.params
+        dataset_params.update(slit_params)
+
         train_records, test_records = data_tools.load_dataset(dataset_name=dataset_params['dataset'],
                                                               metadata_only=True, shuffle=False)
         ds = data_tools.load_voxelgrids(test_records)

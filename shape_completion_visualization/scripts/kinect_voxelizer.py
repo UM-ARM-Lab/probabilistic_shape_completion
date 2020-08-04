@@ -103,7 +103,9 @@ def infer(elem):
     elem = utils.add_batch_to_dict(elem)
     elem = swap_y_z_elem(elem)
 
-    for i in range(5):
+    # return
+
+    for i in range(50):
         inference = model_runner.model(elem)
         inference = swap_y_z_inference(inference)
         VG_PUB.publish_elem_cautious(inference)
