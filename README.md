@@ -11,7 +11,6 @@ The code is developed and tested on
 - [`TensorFlow`](https://github.com/tensorflow/tensorflow) 2.1
 - [`numpy`](http://www.numpy.org/) 1.14.2
 - `ROS` [kinetic](http://wiki.ros.org/kinetic) or [melodic](http://wiki.ros.org/melodic)
-- For visualization in RViz: https://github.com/bsaund/rviz_text_selection_panel and https://github.com/bsaund/rviz_voxelgrid_visuals
 
 
 
@@ -34,5 +33,5 @@ The code is developed and tested on
  7. Evaluate using `./evaluate`. You can edit the model names if not evaluating all models.
  
  ## How to view results in RViz
- 1. Open rviz with the `./shape_completion_visualization/shape_completion.rviz` config file (Note: Will need to build `catkin` packages first to have the necessary rviz plugins)
+ 1. Open rviz with the `./shape_completion_visualization/shape_completion.rviz` config file (Note: Will need to build `catkin` packages (`rviz_text_selection_panel` and `rviz_voxelgrid_visuals`) first to have the necessary rviz plugins)
  2. run `./shape_completion_visualization/data_publisher.py` to view the data alone. Pass `--trial [Trial Path]` option to view completions using a network 
