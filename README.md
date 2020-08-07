@@ -34,3 +34,12 @@ The code is developed and tested on
  ## How to view results in RViz
  1. Open rviz with the `./shape_completion_visualization/shape_completion.rviz` config file (Note: Will need to build `catkin` packages (`rviz_text_selection_panel` and `rviz_voxelgrid_visuals`) first to have the necessary rviz plugins)
  2. run `./shape_completion_visualization/data_publisher.py` to view the data alone. Pass `--trial [Trial Path]` option to view completions using a network 
+ 
+ ## How to use a trained model
+ ```
+ from shape_completion_training.model.model_runner import ModelRunner
+ 
+ model_runner = ModelRunner(training=True, trials="path/to/trials")
+ output = model_runner.model(input)
+ ```
+ where `input` is the input voxel grid and `output` is the output dictionary. `output[predicted]` is the complete voxel grid. The thing to note is that input should be a 64*64*64 voxel grid.
