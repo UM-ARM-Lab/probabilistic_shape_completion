@@ -42,4 +42,4 @@ The code is developed and tested on
  model_runner = ModelRunner(training=True, trials="path/to/trials")
  output = model_runner.model(input)
  ```
- where `input` is the input voxel grid and `output` is the output dictionary. `output[predicted]` is the complete voxel grid. The thing to note is that input should be a 64*64*64 voxel grid.
+ where `input` is the input voxel grid and `output` is the output dictionary. `output['predicted_occ']` is the complete voxel grid. The thing to note is that input should be a 64*64*64 voxel grid.
