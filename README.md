@@ -43,3 +43,7 @@ The code is developed and tested on
  output = model_runner.model(input)
  ```
  where `input` is the input voxel grid and `output` is the output dictionary. `output['predicted_occ']` is the complete voxel grid. The thing to note is that input should be a 64*64*64 voxel grid.
+
+ ## NOTE in package
+ 1. `pyassimp` 3.3 (`pip install pyassimp=3.3`)
+ 2. `progressbar` 3.51.4 (`pip install progressbar2`)
