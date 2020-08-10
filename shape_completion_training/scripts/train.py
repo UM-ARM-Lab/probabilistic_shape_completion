@@ -7,6 +7,11 @@ from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.model import default_params
 
 
+import tensorflow as tf
+
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+
 # params = {
 #     'num_latent_layers': 200,
 #     'translation_pixel_range_x': 10,
