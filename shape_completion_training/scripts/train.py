@@ -6,11 +6,12 @@ from shape_completion_training.utils import data_tools
 from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.model import default_params
 
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
-import tensorflow as tf
-
-config = tf.compat.v1.ConfigProto()
+config = ConfigProto()
 config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 
 # params = {
 #     'num_latent_layers': 200,
