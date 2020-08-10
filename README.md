@@ -21,7 +21,19 @@ The code is developed and tested on
 - [`numpy`](http://www.numpy.org/) 1.14.2
 - `ROS` [kinetic](http://wiki.ros.org/kinetic) or [melodic](http://wiki.ros.org/melodic)
 
- 
+ ## Installation (in `conda` and `pip`)
+  ```
+  conda create -n CONDA_ENV python=2 cudatoolkit=10.2 numpy
+  pip install tensorflow==2.1.0
+  pip install pathlib
+  pip install colorama
+  pip install gitpython
+  pip install rospkg catkin_pkg
+  pip install tensorflow-probability==0.9.0
+  conda install -c conda-forge matplotlib
+  pip install progressbar2
+  ```
+
  ## How to fully recreate paper results (Note, will take several days):
  1. Install all dependencies listed above
  2. Download `shapenet` (account needed) and YCB (`download_ycb.py`) and place in `./shape_completion_training/data
