@@ -17,6 +17,9 @@ import progressbar
 import datetime
 import time
 
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+
 
 class ModelRunner:
     def __init__(self, training, group_name=None, trial_path=None, params=None, write_summary=True):
