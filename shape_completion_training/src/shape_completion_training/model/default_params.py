@@ -28,7 +28,7 @@ def get_default_params(group_name=None):
         "NormalizingAE":
             {
                 'num_latent_layers': 200,
-                'flow': 'Flow/July_02_10-47-22_d8d84f5d65',
+                'flow': 'Flow/August_09_14-36-09_1486a44186',
                 'network': 'NormalizingAE',
                 'use_flow_during_inference': False
             },
@@ -80,7 +80,7 @@ def get_default_params(group_name=None):
         "NormalizingAE_YCB":
             {
                 'num_latent_layers': 200,
-                'flow': 'FlowYCB/July_23_16-35-55_7d12d68bee',
+                'flow': 'FlowYCB/August_09_14-38-16_1486a44186',
                 'network': 'NormalizingAE',
                 'use_flow_during_inference': False,
                 'dataset': 'ycb',
@@ -129,7 +129,7 @@ def get_default_params(group_name=None):
         "NormalizingAE_YCB_noise":
             {
                 'num_latent_layers': 200,
-                'flow': 'FlowYCB/July_23_16-35-55_7d12d68bee',
+                'flow': 'FlowYCB/August_09_14-38-16_1486a44186',
                 'network': 'NormalizingAE',
                 'use_flow_during_inference': False,
                 'dataset': 'ycb',
@@ -142,7 +142,7 @@ def get_default_params(group_name=None):
         "NormalizingAE_noise":
             {
                 'num_latent_layers': 200,
-                'flow': 'Flow/July_02_10-47-22_d8d84f5d65',
+                'flow': 'Flow/August_09_14-36-09_1486a44186',
                 'network': 'NormalizingAE',
                 'use_flow_during_inference': False,
                 'apply_depth_sensor_noise': True,
