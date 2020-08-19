@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 from shape_completion_training.model import plausiblility
 from shape_completion_training.utils import data_tools
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 import argparse
 
 TOTAL_SHARDS = 8
@@ -24,6 +26,7 @@ def compute_plausibles_for_shard(shard):
 
 
     params = {'apply_slit_occlusion': True,
+              'apply_depth_sensor_noise': False,
               'slit_start': slit_start,
               'slit_width': slit_width}
 
@@ -74,6 +77,9 @@ def combine_shards():
 
 
 if __name__ == "__main__":
+    config = ConfigProto()
+    config.gpu_options.allow_growth = True
+    session = InteractiveSession(config=config)
     parser = argparse.ArgumentParser(description="Arguments for sharded plausibility computation")
     parser.add_argument('shard', type=int)
     parser.add_argument('--combine_shards',

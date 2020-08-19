@@ -28,6 +28,14 @@ class ModelRunner:
         @param params: 
         @param write_summary: 
         """
+
+        from tensorflow.compat.v1 import ConfigProto
+        from tensorflow.compat.v1 import InteractiveSession
+
+        config = ConfigProto()
+        config.gpu_options.allow_growth = True
+        session = InteractiveSession(config=config)
+
         self.side_length = 64
         self.num_voxels = self.side_length ** 3
         self.training = training

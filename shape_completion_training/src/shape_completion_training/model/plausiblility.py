@@ -44,7 +44,9 @@ def compute_icp_fit_dict(metadata, params):
     for i in metadata:
         num_shapes += 1
     ds = data_tools.load_voxelgrids(metadata)
-    ds = data_tools.preprocess_test_dataset(params)
+    print("dataset")
+    print(ds)
+    ds = data_tools.preprocess_test_dataset(ds, params)
     return compute_partial_icp_fit_dict(ds, ds, num_shapes)
 
 
