@@ -104,13 +104,23 @@ def main():
 					 [0.0, math.pi/2.0, 0.0],
 					 [0.0, 3.0*math.pi/2.0, 0.0]]
 
-	for num_cylinder in range(10):
-		x = random.random()*10.0 + 27.0
-		y = random.random()*10.0 + 27.0
-		z = random.random()*10.0 + 27.0
+	cylinder_info = np.zeros([1000, 5])
+	for num_cylinder in range(cylinder_info.shape[1]):
+		cylinder_info[num_cylinder, 0] = random.random()*10.0 + 27.0
+		cylinder_info[num_cylinder, 1] = random.random()*10.0 + 27.0
+		cylinder_info[num_cylinder, 2] = random.random()*10.0 + 27.0
+		cylinder_info[num_cylinder, 3] = random.random()*10.0 + 10.0
+		cylinder_info[num_cylinder, 4] = random.random()*4.0+4.0
+
+	np.savetxt("cylinder_info.txt", cylinder_info)
+
+	for num_cylinder in range(cylinder_info.shape[1]):
+		x = cylinder_info[num_cylinder, 0]
+		y = cylinder_info[num_cylinder, 1]
+		z = cylinder_info[num_cylinder, 2]
 		center = np.array([x, y, z])
-		height = random.random()*10.0 + 10.0
-		radius = random.random()*4.0+4.0
+		height = cylinder_info[num_cylinder, 3]
+		radius = cylinder_info[num_cylinder, 4]
 		for alpha_ind in range(len(alphas)):
 			alpha = alphas[alpha_ind]
 			if alpha_ind != 3:
@@ -120,31 +130,9 @@ def main():
 					gt_occ = generate_cylinder(center, orient, height, radius)
 					known_occ = generate_partial_cylinder(gt_occ)
 					zero_space = np.zeros(known_occ.shape)
-					for rot_angle in rot_zyx_angle:
-						gt_occ_rot = rot_zyx(gt_occ, rot_angle[0], rot_angle[1], rot_angle[2])
-						known_occ_rot = rot_zyx(known_occ, rot_angle[0], rot_angle[1], rot_angle[2])
-						pub_incomp.publish(conversions.vox_to_voxelgrid_stamped(known_occ_rot[:, :, :, 0], # Numpy or Tensorflow
-																	scale=scale, # Each voxel is a 1cm cube
-																	frame_id='world', # In frame "world", same as rviz fixed frame
-																	origin=origin)) # Bottom left corner
-						pub_comp.publish(conversions.vox_to_voxelgrid_stamped(gt_occ_rot[:, :, :, 0], # Numpy or Tensorflow
-																  scale=scale, # Each voxel is a 1cm cube
-																  frame_id='world', # In frame "world", same as rviz fixed frame
-																  origin=origin)) # Bottom left corner
-			
-						known_occ_list.append(known_occ_rot.astype('float32'))
-						gt_occ_list.append(gt_occ_rot.astype('float32'))
-						known_free_list.append(zero_space.astype('float32'))
-						gt_free_list.append((1.0 - gt_occ_rot).astype('float32'))
-			else:
-				beta = 0.0
-				orient = np.array([math.cos(alpha)*math.cos(beta), math.cos(alpha)*math.sin(beta), math.sin(alpha)])
-				gt_occ = generate_cylinder(center, orient, height, radius)
-				known_occ = generate_partial_cylinder(gt_occ)
-				zero_space = np.zeros(known_occ.shape)
-				for rot_angle in rot_zyx_angle:
-					gt_occ = rot_zyx(gt_occ, rot_angle[0], rot_angle[1], rot_angle[2])
-					known_occ = rot_zyx(known_occ, rot_angle[0], rot_angle[1], rot_angle[2])
+					# for rot_angle in rot_zyx_angle:
+						# gt_occ_rot = rot_zyx(gt_occ, rot_angle[0], rot_angle[1], rot_angle[2])
+						# known_occ_rot = rot_zyx(known_occ, rot_angle[0], rot_angle[1], rot_angle[2])
 					pub_incomp.publish(conversions.vox_to_voxelgrid_stamped(known_occ[:, :, :, 0], # Numpy or Tensorflow
 																	scale=scale, # Each voxel is a 1cm cube
 																	frame_id='world', # In frame "world", same as rviz fixed frame
@@ -158,11 +146,34 @@ def main():
 					gt_occ_list.append(gt_occ.astype('float32'))
 					known_free_list.append(zero_space.astype('float32'))
 					gt_free_list.append((1.0 - gt_occ).astype('float32'))
+			else:
+				beta = 0.0
+				orient = np.array([math.cos(alpha)*math.cos(beta), math.cos(alpha)*math.sin(beta), math.sin(alpha)])
+				gt_occ = generate_cylinder(center, orient, height, radius)
+				known_occ = generate_partial_cylinder(gt_occ)
+				zero_space = np.zeros(known_occ.shape)
+				# for rot_angle in rot_zyx_angle:
+				# 	gt_occ = rot_zyx(gt_occ, rot_angle[0], rot_angle[1], rot_angle[2])
+				# 	known_occ = rot_zyx(known_occ, rot_angle[0], rot_angle[1], rot_angle[2])
+				pub_incomp.publish(conversions.vox_to_voxelgrid_stamped(known_occ[:, :, :, 0], # Numpy or Tensorflow
+																	scale=scale, # Each voxel is a 1cm cube
+																	frame_id='world', # In frame "world", same as rviz fixed frame
+																	origin=origin)) # Bottom left corner
+				pub_comp.publish(conversions.vox_to_voxelgrid_stamped(gt_occ[:, :, :, 0], # Numpy or Tensorflow
+																  scale=scale, # Each voxel is a 1cm cube
+																  frame_id='world', # In frame "world", same as rviz fixed frame
+																  origin=origin)) # Bottom left corner
+			
+				known_occ_list.append(known_occ.astype('float32'))
+				gt_occ_list.append(gt_occ.astype('float32'))
+				known_free_list.append(zero_space.astype('float32'))
+				gt_free_list.append((1.0 - gt_occ).astype('float32'))
 
 	ds = tf.data.Dataset.from_tensor_slices({'known_occ': known_occ_list,
                                              'gt_occ': gt_occ_list,
                                              'known_free': known_free_list,
                                              'gt_free': gt_free_list})
+
 	print(ds)
 	params = {
         'batch_size': 4,
