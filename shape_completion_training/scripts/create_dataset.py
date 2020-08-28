@@ -121,7 +121,9 @@ def main():
 		cylinder_info[num_cylinder, 3] = random.random()*10.0 + 10.0
 		cylinder_info[num_cylinder, 4] = random.random()*4.0+4.0
 
-	np.savetxt("cylinder_info.txt", cylinder_info)
+	np.savetxt("../data/custom_ds/cylinder_info.txt", cylinder_info)
+
+	num_ds = 0
 
 	for num_cylinder in range(cylinder_info.shape[0]):
 		print(num_cylinder)
@@ -141,7 +143,10 @@ def main():
 					known_occ = generate_partial_cylinder(gt_occ)
 					zero_space = np.zeros(known_occ.shape)
 
-					reshape_and_save("test", known_occ)
+					reshape_and_save("../data/custom_ds/cylinder_known_occ_" + to_str(num_ds) + ".txt", known_occ)
+					reshape_and_save("../data/custom_ds/cylinder_gc_occ_" + to_str(num_ds) + ".txt", known_occ)
+					reshape_and_save("../data/custom_ds/cylinder_known_occ_" + to_str(num_ds) + ".txt", known_occ)
+					reshape_and_save("../data/custom_ds/cylinder_known_occ_" + to_str(num_ds) + ".txt", known_occ)
 					known_occ_load = reshape_and_load("test", known_occ.shape)
 
 					# for rot_angle in rot_zyx_angle:
@@ -182,29 +187,6 @@ def main():
 				gt_occ_list.append(gt_occ.astype('float32'))
 				known_free_list.append(zero_space.astype('float32'))
 				gt_free_list.append((1.0 - gt_occ).astype('float32'))
-
-	ds = tf.data.Dataset.from_tensor_slices({'known_occ': known_occ_list,
-                                             'gt_occ': gt_occ_list,
-                                             'known_free': known_free_list,
-                                             'gt_free': gt_free_list})
-
-	print(ds)
-	params = {
-        'batch_size': 4,
-        'dataset': 'shapenet',
-        'network': '3D_rec_gan',
-        "learning_rate": 0.0001,
-        "gan_learning_rate": 0.00005,
-        "num_latent_layers": 2000,
-        "is_u_connected": True,
-        'dataset': 'ycb',
-        'apply_slit_occlusion': True,
-        'translation_pixel_range_x': 15,
-        'translation_pixel_range_y': 10,
-        'translation_pixel_range_z': 10,
-	}
-	mr = ModelRunner(training=False, params=params, group_name='3D_rec_gan')
-	mr.train(ds)
 
 if __name__ == "__main__":
     main()

@@ -121,7 +121,7 @@ def get_default_params(group_name=None):
                 "num_latent_layers": 2000,
                 "is_u_connected": True,
                 'dataset': 'ycb',
-                'apply_slit_occlusion': True,
+                'apply_slit_occlusion': False,
                 'translation_pixel_range_x': 15,
                 'translation_pixel_range_y': 10,
                 'translation_pixel_range_z': 10,
