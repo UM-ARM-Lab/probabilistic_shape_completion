@@ -156,8 +156,8 @@ def write_to_filelist(dataset, record_file):
     #         features = tf.train.Features(feature=feature)
     #         example = tf.train.Example(features=features)
     #         writer.write(example.SerializeToString())
-    with open(record_file.as_posix(), "w") as f:
+    with open(record_file.as_posix(), "wb") as f:
         pickle.dump(dataset, f)
 
-    with open(record_file.as_posix()) as f:
+    with open(record_file.as_posix(), "rb") as f:
         ds = pickle.load(f)

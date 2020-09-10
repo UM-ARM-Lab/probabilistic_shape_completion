@@ -13,6 +13,8 @@ def write_shapenet_to_filelist(test_ratio, shape_ids="all"):
     # train_data = _list_of_shapenet_records_to_dict(train_files)
     # test_data = _list_of_shapenet_records_to_dict(test_files)
 
+    print("Split shapenet into {} training and {} test shapes".format(len(train_files), len(test_files)))
+
     # d = tf.data.Dataset.from_tensor_slices(utils.sequence_of_dicts_to_dict_of_sequences(test_files))
     write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(train_files),
                       shapenet_record_path / "train_filepaths.pkl")
