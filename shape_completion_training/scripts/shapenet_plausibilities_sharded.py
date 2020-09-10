@@ -17,7 +17,8 @@ def compute_plausibles_for_shard(shard):
     if shard > TOTAL_SHARDS:
         print ("Cannot process shard {}. Only {} total shards".format(shard, TOTAL_SHARDS))
 
-    params = {'apply_slit_occlusion': False}
+    params = {'apply_slit_occlusion': False,
+              'apply_depth_sensor_noise': False}
 
     train_ds, test_ds = data_tools.load_dataset("shapenet", shuffle=False, metadata_only=True)
     sharded_test_ds = test_ds.shard(TOTAL_SHARDS, shard)
