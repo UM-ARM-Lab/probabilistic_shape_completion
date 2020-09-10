@@ -311,8 +311,8 @@ def read_metadata_from_filelist(record_file, shuffle):
     #     raw_dataset = raw_dataset.shuffle(10000)
     #
     # parsed_dataset = raw_dataset.map(_parse_record_function)
-    with open(record_file.as_posix()) as f:
-        filelist = pickle.load(f)
+    with open(record_file.as_posix(), 'rb') as f:
+        filelist = pickle.load(f, encoding='latin1')
     ds = tf.data.Dataset.from_tensor_slices(filelist)
 
     if shuffle:
@@ -461,7 +461,7 @@ def get_unique_name(datum):
     @param datum:
     @return:
     """
-    return datum['id'].numpy() + datum['augmentation'].numpy()
+    return (datum['id'].numpy() + datum['augmentation'].numpy()).decode('UTF-8')
 
 
 if __name__ == "__main__":

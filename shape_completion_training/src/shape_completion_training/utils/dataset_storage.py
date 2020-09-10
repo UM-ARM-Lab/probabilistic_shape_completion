@@ -24,13 +24,13 @@ def _load_compressed(filepath, compression):
         filepath = package_path / filepath
     if compression == "bz2":
         with bz2.BZ2File(filepath.with_suffix(".pkl.bz2").as_posix()) as f:
-            return pickle.load(f)
+            return pickle.load(f, encoding='latin1')
     if compression == "gzip":
         with gzip.open(filepath.with_suffix(".pkl.gzip").as_posix()) as f:
-            return pickle.load(f)
+            return pickle.load(f, encoding='latin1')
 
-    with filepath.with_suffix(".pkl").open() as f:
-        return pickle.load(f)
+    with filepath.with_suffix(".pkl").open('rb') as f:
+        return pickle.load(f, encoding='latin1')
 
 
 def save_gt_voxels(filepath, gt, compression="gzip"):
@@ -85,7 +85,7 @@ def load_data_with_gt(filepath, compression="gzip"):
 
 
 def load_gt_only(filepath, compression="gzip"):
-    loaded = _load_compressed(pathlib.Path(filepath), compression)
+    loaded = _load_compressed(pathlib.Path(filepath.decode('UTF-8')), compression)
     return np.reshape(np.unpackbits(loaded['gt_occ_packed']), loaded['shape']).astype(np.float32)
 
 
