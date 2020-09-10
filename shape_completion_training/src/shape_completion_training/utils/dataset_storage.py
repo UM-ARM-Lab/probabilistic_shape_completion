@@ -2,6 +2,8 @@ import bz2
 import gzip
 import pickle
 from os.path import join
+import sys
+
 
 import numpy as np
 import pathlib
@@ -20,16 +22,24 @@ def _load_compressed(filepath, compression):
     @param compression:
     @return:
     """
+    is_python2 = sys.version_info < (3, 0)
+
     if not filepath.is_absolute():
         filepath = package_path / filepath
     if compression == "bz2":
         with bz2.BZ2File(filepath.with_suffix(".pkl.bz2").as_posix()) as f:
+            if is_python2:
+                return pickle.load(f)
             return pickle.load(f, encoding='latin1')
     if compression == "gzip":
         with gzip.open(filepath.with_suffix(".pkl.gzip").as_posix()) as f:
+            if is_python2:
+                return pickle.load(f)
             return pickle.load(f, encoding='latin1')
 
     with filepath.with_suffix(".pkl").open('rb') as f:
+        if is_python2:
+            return pickle.load(f)
         return pickle.load(f, encoding='latin1')
 
 
@@ -156,6 +166,8 @@ def write_to_filelist(dataset, record_file):
     #         features = tf.train.Features(feature=feature)
     #         example = tf.train.Example(features=features)
     #         writer.write(example.SerializeToString())
+
+
     with open(record_file.as_posix(), "wb") as f:
         pickle.dump(dataset, f)
 
