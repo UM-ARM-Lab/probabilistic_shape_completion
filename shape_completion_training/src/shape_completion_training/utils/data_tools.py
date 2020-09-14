@@ -460,12 +460,14 @@ def apply_fixed_slit_occlusion(dataset, slit_min, slit_width):
     return dataset.map(_apply_slit_occlusion)
 
 
-def get_unique_name(datum):
+def get_unique_name(datum, has_batch_dim=False):
     """
     Returns a unique name for the datum
     @param datum:
     @return:
     """
+    if has_batch_dim:
+        return (datum['id'].numpy() + datum['augmentation'].numpy())[0].decode('UTF-8')
     return (datum['id'].numpy() + datum['augmentation'].numpy()).decode('UTF-8')
 
 

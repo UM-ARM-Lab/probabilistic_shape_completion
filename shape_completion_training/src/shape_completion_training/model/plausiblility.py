@@ -1,3 +1,5 @@
+import sys
+
 import rospkg
 import pickle
 import tensorflow as tf
@@ -18,7 +20,12 @@ def _get_path(dataset_name, identifier=""):
 @memoize
 def load_plausibilities(dataset_name, identifier=""):
     with open(_get_path(dataset_name, identifier), "rb") as f:
-        return pickle.load(f)
+        is_python2 = sys.version_info < (3, 0)
+        if is_python2:
+            return pickle.load(f)
+        else:
+            return pickle.load(f, encoding='latin1')
+
 
 
 def save_plausibilities(plausibilities_dict, dataset_name, identifier=""):

@@ -70,7 +70,7 @@ def evaluate_model(model, test_set, test_set_size, dataset_name, num_particles=1
     with progressbar.ProgressBar(widgets=widgets, max_value=test_set_size) as bar:
         for i, elem in test_set.batch(1).enumerate():
             # print("Evaluating {}".format(data_tools.get_unique_name(elem)))
-            elem_name = data_tools.get_unique_name(elem)[0]
+            elem_name = data_tools.get_unique_name(elem, has_batch_dim=True)
             bar.update(i.numpy(), CurrentShape=elem_name)
 
             if tf.reduce_sum(elem['known_occ']) == 0.0:
