@@ -1,3 +1,5 @@
+import sys
+
 from shape_completion_training.voxelgrid import metrics
 from shape_completion_training.voxelgrid.metrics import best_match_value, chamfer_distance
 from shape_completion_training.voxelgrid import conversions
@@ -18,8 +20,12 @@ def _get_path(trial_path):
 
 
 def load_evaluation(trial_path):
+    is_python2 = sys.version_info < (3, 0)
+
     with open(_get_path(trial_path), "rb") as f:
-        return pickle.load(f)
+        if is_python2:
+            return pickle.load(f)
+        return pickle.load(f, encoding="latin1")
 
 
 def load_evaluations(trial_paths):

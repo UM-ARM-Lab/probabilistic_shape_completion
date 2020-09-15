@@ -56,6 +56,22 @@ def run_inference(elem):
     # if ARGS.publish_each_sample:
     #     raw_input("Ready to publish final sample?")
     # sample_evaluation = model_evaluator.evaluate_element(elem, num_samples=10)
+    if ARGS.publish_closest_train:
+        # Computes and publishes the closest element in the training set to the test shape
+        train_in_correct_augmentation = train_records.filter(lambda x: x['augmentation'] == elem['augmentation'][0])
+        train_in_correct_augmentation = data_tools.load_voxelgrids(train_in_correct_augmentation)
+        min_cd = np.inf
+        closest_train = None
+        for train_elem in train_in_correct_augmentation:
+            VG_PUB.publish("plausible", train_elem['gt_occ'])
+            cd = chamfer_distance(elem['gt_occ'], train_elem['gt_occ'],
+                                  scale=0.01, downsample=4)
+            if cd < min_cd:
+                min_cd = cd
+                closest_train = train_elem['gt_occ']
+            VG_PUB.publish("plausible", closest_train)
+
+
     if ARGS.publish_each_sample:
         for particle in model_evaluator.sample_particles(model_runner.model, elem, 100):
             VG_PUB.publish("predicted_occ", particle)
@@ -282,6 +298,7 @@ def parse_command_line_args():
     parser.add_argument('--publish_nearest_sample', help='foo help', action='store_true')
     parser.add_argument('--multistep', action='store_true')
     parser.add_argument('--trial')
+    parser.add_argument('--publish_closest_train', action='store_true')
 
     return parser.parse_args()
 

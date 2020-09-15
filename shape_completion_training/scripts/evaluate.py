@@ -20,8 +20,8 @@ import rospy
 
 MODELS_TO_EVALUATE = [
     "VAE/September_12_15-46-26_f87bdf38d4",
-    "NormalizingAE/July_02_15-15-06_ede2472d34",
-    "VAE_GAN/July_20_23-46-36_8849b5bd57",
+    "NormalizingAE/September_10_21-15-32_f87bdf38d4",
+    "VAE_GAN/September_12_15-08-29_f87bdf38d4",
     "3D_rec_gan/September_12_15-47-07_f87bdf38d4"
     # "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768",
     # "VAE_YCB/July_24_11-21-49_f2aea4d768",
