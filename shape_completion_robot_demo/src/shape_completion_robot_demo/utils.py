@@ -4,7 +4,27 @@ import rospy
 from sensor_msgs.msg import CameraInfo
 import image_geometry
 import struct
+from datetime import datetime
 
+
+def get_datetime_str():
+    now = datetime.now()  # current date and time
+
+    # year = now.strftime("%Y")
+    # print("year:", year)
+    #
+    # month = now.strftime("%m")
+    # print("month:", month)
+    #
+    # day = now.strftime("%d")
+    # print("day:", day)
+    #
+    # time = now.strftime("%H:%M:%S")
+    # print("time:", time)
+
+    date_time = now.strftime("%m_%d_%Y_%H_%M_%S")
+    return date_time
+    # print("date and time:", date_time)
 
 class CameraModel:
     def __init__(self, topic):
@@ -54,6 +74,7 @@ def convert_masked_depth_img_to_pointcloud(depth_img, img, mask, camera_model):
     constant_y = unit_scaling / camera_model.fy()
 
     matched_categories = [6, 13, 21, 14]
+    # matched_categories = [2]
     # inds =
     # for inds in matched_inds
     # inds = np.nonzero(mask[:, :, 0] == 21)
