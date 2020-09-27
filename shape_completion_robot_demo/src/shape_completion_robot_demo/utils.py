@@ -53,7 +53,7 @@ def convert_masked_depth_img_to_pointcloud(depth_img, img, mask, camera_model):
     constant_x = unit_scaling / camera_model.fx()
     constant_y = unit_scaling / camera_model.fy()
 
-    matched_categories = [13, 21]
+    matched_categories = [6, 13, 21, 14]
     # inds =
     # for inds in matched_inds
     # inds = np.nonzero(mask[:, :, 0] == 21)
@@ -61,7 +61,7 @@ def convert_masked_depth_img_to_pointcloud(depth_img, img, mask, camera_model):
     inds = (np.array([], np.int8), np.array([], np.int8))
     for cat in matched_categories:
         cat_inds = np.nonzero(mask[:, :, 0] == cat)
-        inds = (np.append(inds[0], cat_inds[0]), np.append(inds[0], cat_inds[1]))
+        inds = (np.append(inds[0], cat_inds[0]), np.append(inds[1], cat_inds[1]))
 
     if False:
         import matplotlib.pyplot as plt

@@ -11,6 +11,7 @@ from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
 from sensor_msgs.msg import CompressedImage, CameraInfo
 from sensor_msgs import point_cloud2
 from geometry_msgs.msg import Point
+from visualization_msgs.msg import Marker
 
 import tf2_ros
 import tf2_py as tf2
@@ -33,14 +34,13 @@ from amazon_ros_speech import talker
 
 from object_segmentation import object_segmentations as obseg
 
-
 # target_frame = "mocap_world"
 target_frame = "victor_root"
 
-talker.mute()
+# talker.mute()
 
 # Mug fitting
-scale = 0.0035
+scale = 0.003
 origin = (2.446 - scale * 32, -0.384 - scale * 32, 0.86 - scale * 32)
 x_bounds = (0, 64)
 # x_bounds = (20, 43)
@@ -57,8 +57,12 @@ z_bounds = (0, 64)
 # z_bounds = (0, 64)
 
 
+
 trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
 # trial = "NormalizingAE_noise/August_03_13-44-05_8c8337b208"
+# trial = "NormalizingAE/September_10_21-15-32_f87bdf38d4"
+# trial = "VAE_GAN/September_12_15-08-29_f87bdf38d4"
+# trial = "3D_rec_gan/September_12_15-47-07_f87bdf38d4"
 
 
 # trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
@@ -78,17 +82,40 @@ def grasp(point):
 
     talker.say("Confirm grasp?")
     rospy.sleep(0.5)
+
+    m = Marker()
+    m.ns = "Grasp Marker"
+    m.header.frame_id = "victor_root"
+    m.pose.position.x, m.pose.position.y, m.pose.position.z = point
+    # m.pose.position.z = point[2] + 0.42
+    m.type = Marker.SPHERE
+    m.color.a = 1
+    m.color.r = 0
+    m.color.g = 0
+    m.color.b = 0
+    m.scale.x = 0.1
+    m.scale.y = 0.1
+    m.scale.z = 0.1
+
+    grasp_marker_pub.publish(m)
+
     if "B" == xbox.wait_for_buttons(["A", "B"], message=False):
         talker.say("Skipping")
-        return
-    talker.say("Grasping")
+    else:
+        talker.say("Grasping")
+        rospy.sleep(0.5)
 
-    pt = Point()
-    pt.x, pt.y, pt.z = point
-    print("Grasping {}".format(pt))
-    grasp_pub.publish(pt)
+        pt = Point()
+        pt.x, pt.y, pt.z = point
+        print("Grasping {}".format(pt))
+        grasp_pub.publish(pt)
 
-    xbox.wait_for_buttons("A")
+        xbox.wait_for_buttons("A")
+
+    m.scale.x = 0.001
+    m.scale.y = 0.001
+    m.scale.z = 0.001
+    grasp_marker_pub.publish(m)
 
 
 # Networks were trained with a different axis, a different notion of "up"
@@ -150,7 +177,6 @@ def infer(elem):
     elem = utils.add_batch_to_dict(elem)
     elem = swap_y_z_elem(elem)
 
-
     # return
 
     # for i in range(50):
@@ -165,8 +191,6 @@ def infer(elem):
     VG_PUB.publish_elem_cautious(inference)
     return inference
 
-
-
     # rospy.sleep(0.2)
 
 
@@ -176,9 +200,9 @@ def voxelize_point_cloud(pts):
     xyz_array = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(pts)
 
     if len(xyz_array) == 0:
-        origin = (0,0,0)
+        origin = (0, 0, 0)
     else:
-        origin = np.mean(xyz_array, axis=0) - np.array([scale*32-.02, scale*32, scale*32])
+        origin = np.mean(xyz_array, axis=0) - np.array([scale * 32 - .04, scale * 32, scale * 32])
     VG_PUB.origin = origin
     vg = conversions.pointcloud_to_voxelgrid(xyz_array, scale=scale, origin=origin, add_trailing_dim=True,
                                              add_leading_dim=False)
@@ -186,7 +210,6 @@ def voxelize_point_cloud(pts):
     # vg = np.swapaxes(vg, 1,2)
     elem = {'known_occ': vg}
     ko, kf = data_tools.simulate_2_5D_input(vg)
-
 
     if "YCB" in trial:
         # ko, kf = data_tools.simulate_slit_occlusion(ko, kf, x_bounds[0], x_bounds[1])
@@ -251,7 +274,6 @@ def kinect_callback(img_mask_msg, img_rect_msg, depth_rect_msg):
 
     pt_msg = filter_pointcloud(img_mask_msg, img_rect_msg, depth_rect_msg)
 
-
     print("Published cloud")
 
     # return
@@ -277,14 +299,25 @@ def kinect_callback(img_mask_msg, img_rect_msg, depth_rect_msg):
     # publish_simulated_mug()
     inference = infer(elem)
 
-    pred_pts = conversions.voxelgrid_to_pointcloud(inference['predicted_occ'] > 0,
+
+    pred_pts = conversions.voxelgrid_to_pointcloud(inference['predicted_occ'] > 0.5,
                                                    scale=scale, origin=(0,0,0))
-    centroid = np.mean(pred_pts, axis=0) + VG_PUB.origin
 
-    grasp(centroid)
+    if not len(pred_pts) == 0:
 
-    # msg = to_msg(vg)
-    # print("Made a cloud")
+        offset = VG_PUB.origin
+        centroid = np.mean(pred_pts, axis=0) + offset
+        furthest_forward = pred_pts[np.argmin(pred_pts[:, 0]), :] + offset
+        furthest_back = pred_pts[np.argmax(pred_pts[:, 0]), :] + offset
+
+        # header = Header()
+        # header.frame_id = "victor_root"
+        # debug_cloud_pub.publish(point_cloud2.create_cloud_xyz32(header, pred_pts + VG_PUB.origin))
+
+        # grasp(centroid)
+        # grasp(furthest_forward)
+        grasp(furthest_back)
+
     ALREADY_PROCESSING = False
 
 
@@ -295,10 +328,14 @@ if __name__ == "__main__":
     # segmenter = obseg.Segmenter(gpu=None)
     # marked_pub = rospy.Publisher("/marked_image/compressed", CompressedImage, queue_size=1)
 
+    cloud_pub = rospy.Publisher("/republished_pointcloud", PointCloud2, queue_size=1)
+    debug_cloud_pub = rospy.Publisher("debug_pointcloud", PointCloud2, queue_size=1)
+
+
+    grasp_marker_pub = rospy.Publisher("grasp_marker", Marker, queue_size=1)
     grasp_pub = rospy.Publisher("/grasp_point_command", Point, queue_size=1)
     xbox = Xbox(xpad=False)
     talker.init()
-
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
@@ -317,12 +354,11 @@ if __name__ == "__main__":
     # image_sub = message_filters.Subscriber("/kinect2_victor_head/hd/image_color/compressed", CompressedImage)
     image_mask_sub = message_filters.Subscriber("/segmentation_mask/compressed", CompressedImage)
     image_rect_sub = message_filters.Subscriber("/kinect2_victor_head/qhd/image_color_rect/compressed", CompressedImage)
-    depth_image_sub = message_filters.Subscriber("/kinect2_victor_head/qhd/image_depth_rect/compressed", CompressedImage)
+    depth_image_sub = message_filters.Subscriber("/kinect2_victor_head/qhd/image_depth_rect/compressed",
+                                                 CompressedImage)
 
     time_sync = message_filters.TimeSynchronizer([image_mask_sub, image_rect_sub, depth_image_sub], 10)
     time_sync.registerCallback(kinect_callback)
-
-    cloud_pub = rospy.Publisher("/republished_pointcloud", PointCloud2, queue_size=1)
 
 
     VG_PUB = VoxelgridPublisher(frame=target_frame, scale=scale, origin=origin)
