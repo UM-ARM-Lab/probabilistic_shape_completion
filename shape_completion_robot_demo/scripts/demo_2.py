@@ -5,11 +5,9 @@ import rospy
 
 import tensorflow as tf
 
-from std_msgs.msg import Header
-from sensor_msgs.msg import PointCloud2, PointField
+from sensor_msgs.msg import PointCloud2
 from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
 from sensor_msgs.msg import CompressedImage, CameraInfo
-from sensor_msgs import point_cloud2
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker
 
@@ -43,7 +41,7 @@ target_frame = "victor_root"
 # Mug fitting
 scale = 0.007
 origin = (2.446 - scale * 32, -0.384 - scale * 32, 0.86 - scale * 32)
-x_bounds = (0, 35)
+x_bounds = (0, 64)
 # x_bounds = (20, 43)
 y_bounds = (0, 64)
 z_bounds = (0, 64)
@@ -65,9 +63,8 @@ z_bounds = (0, 64)
 # trial = "3D_rec_gan/September_12_15-47-07_f87bdf38d4"
 
 
-# trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
-trial = "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3"
-
+trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
+# trial = "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3"
 
 ALREADY_PROCESSING = False
 xbox = None
@@ -98,7 +95,7 @@ def is_grasp_point_valid(point):
 
 def publish_grasp_point(point, clear=False):
     if point is None:
-        point = [0,0,0]
+        point = [0, 0, 0]
 
     m = Marker()
     m.ns = "Grasp Marker"
@@ -120,6 +117,32 @@ def publish_grasp_point(point, clear=False):
         m.scale.x = 0.02
         m.scale.y = 0.05
         m.scale.z = 0.02
+
+    grasp_marker_pub.publish(m)
+
+
+def publish_grasp_pose(pose, clear=False):
+    m = Marker()
+    m.ns = "Grasp Marker"
+    m.header.frame_id = "victor_root"
+    m.pose.position.x, m.pose.position.y, m.pose.position.z = pose.position
+    # m.pose.position.z = point[2] + 0.42
+    m.type = Marker.MESH_RESOURCE
+    m.mesh_resource = "package://victor_description/meshes/robotiq_3_finger/palm_visual.stl"
+    m.color.a = 1
+    m.color.r = 0
+    # if not is_grasp_point_valid(point):
+    #     m.color.r = 1
+    m.color.g = 0
+    m.color.b = 0
+    if clear:
+        m.scale.x = 0.001
+        m.scale.y = 0.001
+        m.scale.z = 0.001
+    else:
+        m.scale.x = 1
+        m.scale.y = 1
+        m.scale.z = 1
 
     grasp_marker_pub.publish(m)
 
@@ -157,7 +180,6 @@ def grasp(elem):
             talker.say("selected")
             break
 
-
     if len(all_valid_grasp_points) == 0:
         talker.say("No valid grasp points")
         return
@@ -180,8 +202,6 @@ def execute_grasp(point):
     talker.say("Confirm grasp?")
     rospy.sleep(0.5)
 
-
-
     if "B" == xbox.wait_for_buttons(["A", "B"], message=False):
         talker.say("Skipping")
     else:
@@ -193,11 +213,9 @@ def execute_grasp(point):
         print("Grasping {}".format(pt))
         grasp_pub.publish(pt)
 
-
-
     publish_grasp_point(None, clear=True)
     xbox.wait_for_buttons("A")
-    req.record=False
+    req.record = False
     # video(req)
 
 
@@ -277,27 +295,35 @@ def infer(elem):
     # rospy.sleep(0.2)
 
 
-def voxelize_point_cloud(pts):
+def voxelize_point_cloud(pts, occluding_pts):
     global origin
     global VG_PUB
     xyz_array = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(pts)
+    occluding_xyz_array = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(occluding_pts)
 
     if len(xyz_array) == 0:
         origin = (0, 0, 0)
     else:
         origin = np.mean(xyz_array, axis=0) - np.array([scale * 32 - .04, scale * 32, scale * 32])
     VG_PUB.origin = origin
-    vg = conversions.pointcloud_to_voxelgrid(xyz_array, scale=scale, origin=origin, add_trailing_dim=True,
-                                             add_leading_dim=False)
+    vg = conversions.pointcloud_to_voxelgrid(xyz_array, scale=scale, origin=origin,
+                                             add_trailing_dim=True, add_leading_dim=False)
+
+    occluding_vg = conversions.pointcloud_to_voxelgrid(occluding_xyz_array, scale=scale, origin=origin,
+                                                       add_trailing_dim=True, add_leading_dim=False)
+
     vg = crop_vg(vg)
     # vg = np.swapaxes(vg, 1,2)
     elem = {'known_occ': vg}
     ko, kf = data_tools.simulate_2_5D_input(vg)
+    _, kf = data_tools.simulate_2_5D_input(occluding_vg)
 
     if "YCB" in trial:
         # ko, kf = data_tools.simulate_slit_occlusion(ko, kf, x_bounds[0], x_bounds[1])
-        kf[:, 0:x_bounds[0], :, 0] = 0
-        kf[:, x_bounds[1]:, :, 0] = 0
+        lb = min(np.nonzero(ko)[1])
+        ub = max(np.nonzero(ko)[1]) - 1
+        kf[:, 0:lb, :, 0] = 0
+        kf[:, ub:, :, 0] = 0
 
     elem['known_occ'] = ko
     elem['known_free'] = kf
@@ -326,25 +352,22 @@ def filter_pointcloud(img_mask_msg, img_rect_msg, depth_rect_msg):
     # img_rect_msg.data = obseg.compress_img(prediction)
     # marked_pub.publish(img_rect_msg)
 
+    cheezeit_box_categories = [3, 15]
+
     pts = demo_utils.convert_masked_depth_img_to_pointcloud(depth_rect, img_rect, img_mask,
-                                                            camera_model.camera_model)
+                                                            camera_model.camera_model,
+                                                            categories=cheezeit_box_categories)
 
-    # pts = demo_utils.convert_depth_img_to_pointcloud(depth_rect, img_rect,
-    #                                                  camera_model.camera_model)
-    # pt_msg = point_cloud2.create_cloud_xyz32(depth_rect_msg.header, pts)
-    fields = [PointField('x', 0, PointField.FLOAT32, 1),
-              PointField('y', 4, PointField.FLOAT32, 1),
-              PointField('z', 8, PointField.FLOAT32, 1),
-              # PointField('rgb', 12, PointField.UINT32, 1),
-              PointField('rgba', 12, PointField.UINT32, 1),
-              ]
-    header = Header()
-    header.frame_id = img_rect_msg.header.frame_id
-    pt_msg = point_cloud2.create_cloud(header, fields, pts)
+    # occluding_pts = demo_utils.convert_depth_img_to_pointcloud(depth_rect, img_rect, camera_model.camera_model,
+    #                                                            max_depth=1)
 
+    pt_msg = demo_utils.pts_to_ptmsg(pts, img_rect_msg.header.frame_id)
+    # occluding_pts_msg = demo_utils.pts_to_ptmsg(occluding_pts, img_rect_msg.header.frame_id)
     cloud_pub.publish(pt_msg)
+    # cloud_pub.publish(occluding_pts_msg)
 
-    return pt_msg
+    # return pt_msg, occluding_pts_msg
+    return pt_msg, pt_msg
 
 
 def kinect_callback(img_mask_msg, img_rect_msg, depth_rect_msg):
@@ -355,11 +378,9 @@ def kinect_callback(img_mask_msg, img_rect_msg, depth_rect_msg):
     # def kinect_callback(msg):
     print("Point cloud received")
 
-    pt_msg = filter_pointcloud(img_mask_msg, img_rect_msg, depth_rect_msg)
+    pt_msg, occluding_pts_msg = filter_pointcloud(img_mask_msg, img_rect_msg, depth_rect_msg)
 
     print("Published cloud")
-
-    # return
 
     timeout = 1.0
     try:
@@ -372,12 +393,8 @@ def kinect_callback(img_mask_msg, img_rect_msg, depth_rect_msg):
         rospy.logwarn(ex)
         return
     cloud_out = do_transform_cloud(pt_msg, trans)
-
-    points = []
-    # for point in sensor_msgs.point_cloud2.read_points(cloud_out, skip_nans=True):
-    #     points.append(point)
-
-    elem = voxelize_point_cloud(cloud_out)
+    occluding_cloud_out = do_transform_cloud(occluding_pts_msg, trans)
+    elem = voxelize_point_cloud(cloud_out, occluding_cloud_out)
     publish_elem(elem)
     # publish_simulated_mug()
     inference = infer(elem)
