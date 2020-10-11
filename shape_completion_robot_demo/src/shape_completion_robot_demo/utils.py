@@ -73,8 +73,8 @@ def convert_masked_depth_img_to_pointcloud(depth_img, img, mask, camera_model):
     constant_x = unit_scaling / camera_model.fx()
     constant_y = unit_scaling / camera_model.fy()
 
-    matched_categories = [6, 13, 21, 14]
-    # matched_categories = [2]
+    # matched_categories = [6, 13, 21, 14]
+    matched_categories = [2]
     # inds =
     # for inds in matched_inds
     # inds = np.nonzero(mask[:, :, 0] == 21)

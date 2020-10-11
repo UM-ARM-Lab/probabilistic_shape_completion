@@ -69,8 +69,24 @@ def pointcloud_to_voxelgrid(pointcloud, scale=1.0, origin=(0, 0, 0), shape=(64, 
     vg = np.zeros(shape)
     if tf.is_tensor(pointcloud):
         pointcloud = pointcloud.numpy()
+    s = ((pointcloud / scale + origin)).astype(int)
+    valid = np.logical_and(np.min(s, axis=1) >= 0, np.max(s, axis=1) < shape[0])
+    s = s[valid]
+    vg[s[:, 0], s[:, 1], s[:, 2]] = 1.0
+    return format_voxelgrid(vg, add_leading_dim, add_trailing_dim)
+
+
+def pointcloud_to_known_freespace_voxelgrid(pointcloud, scale=1.0, origin=(0, 0, 0), shape=(64, 64, 64),
+                                            add_leading_dim=False, add_trailing_dim=False):
+    """
+    Computes the binary known freespace voxelgrid from a set of points
+    NOTE! UNTESTED
+    """
+    vg = np.zeros(shape)
+    if tf.is_tensor(pointcloud):
+        pointcloud = pointcloud.numpy()
     s = ((pointcloud - origin) / scale).astype(int)
-    valid = np.logical_and(np.min(s, axis=1) > 0, np.max(s, axis=1) < shape[0])
+    valid = np.logical_and(np.min(s, axis=1) >= 0, np.max(s, axis=1) < shape[0])
     s = s[valid]
     vg[s[:, 0], s[:, 1], s[:, 2]] = 1.0
     return format_voxelgrid(vg, add_leading_dim, add_trailing_dim)

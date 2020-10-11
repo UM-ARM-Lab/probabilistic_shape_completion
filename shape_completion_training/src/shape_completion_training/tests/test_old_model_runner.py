@@ -25,6 +25,7 @@ params = {
     'turn_off_prob': 0.0,
     'loss': 'cross_entropy',
     'multistep_loss': False,
+    'batch_size': 1
 }
 
 

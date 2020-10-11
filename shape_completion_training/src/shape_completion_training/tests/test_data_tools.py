@@ -10,16 +10,15 @@ from shape_completion_training.voxelgrid import conversions
 
 class TestDatasetLoading(TestCase):
     def test_dataset_exists_and_can_be_loaded(self):
-        train_data_shapenet, test_data_shapenet = data_tools.load_shapenet([
-                                                                               shape_completion_training.utils.shapenet_storage.shape_map["mug"]])
+        train_data_shapenet, test_data_shapenet = data_tools.load_dataset('shapenet')
 
 
 class TestObservationModel(TestCase):
     def test_get_depth_map(self):
-        vg = np.zeros((3,3,3))
-        vg[1,1,1] = 1.0
-        vg[2,1,1] = 1.0
-        vg[1,1,0] = 1.0
+        vg = np.zeros((3, 3, 3))
+        vg[1, 1, 1] = 1.0
+        vg[2, 1, 1] = 1.0
+        vg[1, 1, 0] = 1.0
         vg = tf.cast(vg, tf.float32)
         img = data_tools.simulate_depth_image(vg)
         vg_2_5D, _ = data_tools.simulate_2_5D_input(conversions.format_voxelgrid(vg, False, True).numpy())
@@ -33,11 +32,11 @@ class TestSavingAndLoading(TestCase):
     Unittess are not setup to run like ROS
     the path name is meaningful now, so "/tmp" is not valid
     """
+
     def _test_save_and_reload_does_not_change_values(self):
-        gt = (np.random.random((64,64,64,1)) > 0.5).astype(float)
+        gt = (np.random.random((64, 64, 64, 1)) > 0.5).astype(float)
         self.assertEqual(1.0, np.max(gt))
         self.assertEqual(0.0, np.min(gt))
-
 
         shape_completion_training.utils.dataset_storage.save_gt_voxels("/tmp", "0", gt)
         reloaded = shape_completion_training.utils.dataset_storage.load_data_with_gt("/tmp", "0")

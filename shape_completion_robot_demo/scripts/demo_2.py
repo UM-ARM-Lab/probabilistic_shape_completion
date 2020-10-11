@@ -41,11 +41,11 @@ target_frame = "victor_root"
 # talker.mute()
 
 # Mug fitting
-scale = 0.003
+scale = 0.007
 origin = (2.446 - scale * 32, -0.384 - scale * 32, 0.86 - scale * 32)
-x_bounds = (0, 64)
+x_bounds = (0, 35)
 # x_bounds = (20, 43)
-y_bounds = (17, 46)
+y_bounds = (0, 64)
 z_bounds = (0, 64)
 
 # CAMERA_MODEL = None
@@ -58,7 +58,7 @@ z_bounds = (0, 64)
 # z_bounds = (0, 64)
 
 
-trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
+# trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
 # trial = "NormalizingAE_noise/August_03_13-44-05_8c8337b208"
 # trial = "NormalizingAE/September_10_21-15-32_f87bdf38d4"
 # trial = "VAE_GAN/September_12_15-08-29_f87bdf38d4"
@@ -66,6 +66,7 @@ trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
 
 
 # trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
+trial = "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3"
 
 
 ALREADY_PROCESSING = False
@@ -170,10 +171,10 @@ def execute_grasp(point):
     video = rospy.ServiceProxy("/video_recorder", TriggerVideoRecording)
     req = TriggerVideoRecordingRequest()
 
-    req.filename = "mug_grasp_{}.mp4".format(demo_utils.get_datetime_str())
+    req.filename = "cheeseit_{}.mp4".format(demo_utils.get_datetime_str())
     req.timeout_in_sec = 60.0
     req.record = True
-    video(req)
+    # video(req)
 
     publish_grasp_point(point)
     talker.say("Confirm grasp?")
@@ -197,7 +198,7 @@ def execute_grasp(point):
     publish_grasp_point(None, clear=True)
     xbox.wait_for_buttons("A")
     req.record=False
-    video(req)
+    # video(req)
 
 
 # Networks were trained with a different axis, a different notion of "up"
