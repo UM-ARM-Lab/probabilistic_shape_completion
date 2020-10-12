@@ -13,6 +13,7 @@ from visualization_msgs.msg import Marker
 
 import tf2_ros
 import tf2_py as tf2
+from tf.transformations import quaternion_from_euler
 from shape_completion_training.voxelgrid import conversions
 from rviz_voxelgrid_visuals import conversions as msg_conversions
 import ros_numpy
@@ -30,7 +31,8 @@ import shape_completion_robot_demo.utils as demo_utils
 from arc_utilities.ros_helpers import Xbox
 from amazon_ros_speech import talker
 from arm_video_recorder.srv import TriggerVideoRecording, TriggerVideoRecordingRequest
-from tf.transformations import quaternion_from_euler
+from window_recorder.recorder import WindowRecorder
+
 
 from object_segmentation import object_segmentations as obseg
 
@@ -99,7 +101,7 @@ def get_grasp_pose_helper(inference, q, min_z=0.0):
     centroid = np.mean(pred_pts, axis=0) + offset
     # furthest_forward = pred_pts[np.argmin(pred_pts[:, 0]), :] + offset
     grasp_point = np.mean(pred_pts, axis=0) + offset
-    print("Grasp point is {}".format(grasp_point))
+    # print("Grasp point is {}".format(grasp_point))
     sampled_grasp_pose = Pose()
     # sampled_grasp_pose.orientation.w = 1
     sampled_grasp_pose.orientation = Quaternion(q[0], q[1], q[2], q[3])
@@ -118,7 +120,7 @@ def get_top_grasp_pose(inference):
 def get_side_grasp_pose(inference):
     q = quaternion_from_euler(-np.pi/2+.3, -np.pi*3/4, np.pi * 4 / 4-.2)
     grasp_pose = get_grasp_pose_helper(inference, q)
-    return get_grasp_pose_helper(inference, q, min_z=.9)
+    return get_grasp_pose_helper(inference, q, min_z=1.26)
 
 
 def is_grasp_point_valid(point):
@@ -193,12 +195,18 @@ def publish_grasp_pose(pose, clear=False):
     t.transform.rotation.z = pose.orientation.z
     demo_utils.publish_gripper_offset_pose(tf_broadcaster)
     tf_broadcaster.sendTransform(t)
-    print("sending transform")
+    # print("sending transform")
 
 
 def grasp(elem):
     if not should_grasp_check():
         return
+
+    with WindowRecorder(["kinect_shape_completion.rviz* - RViz"], frame_rate=30.0, name_suffix="rviz_cheezeit"):
+        process_grasp(elem)
+
+
+def process_grasp(elem):
 
     talker.say("Here are the completions")
     inferences = []
@@ -224,18 +232,19 @@ def grasp(elem):
     rospy.sleep(1)
 
     talker.say("Select grasp")
-    # for inference in inferences:
-    #     VG_PUB.publish_elem_cautious(inference)
-    #     grasp_pose = get_top_grasp_pose(inference)
-    #     publish_grasp_pose(grasp_pose)
-    #     b = xbox.wait_for_buttons(["A", "B"])
-    #     rospy.sleep(0.2)
-    #     if b == "B":
-    #         talker.say("next")
-    #         continue
-    #     if b == "A":
-    #         talker.say("selected")
-    #         break
+    for inference in inferences:
+        VG_PUB.publish_elem_cautious(inference)
+        grasp_pose = get_top_grasp_pose(inference)
+        publish_grasp_pose(grasp_pose)
+        b = xbox.wait_for_buttons(["A", "B"])
+        rospy.sleep(0.2)
+        if b == "B":
+            talker.say("next")
+            continue
+        if b == "A":
+            talker.say("selected")
+            execute_grasp(grasp_pose, direction="Top")
+            return
 
     for inference in inferences:
         VG_PUB.publish_elem_cautious(inference)
@@ -248,19 +257,19 @@ def grasp(elem):
             continue
         if b == "A":
             talker.say("selected")
-            break
+            execute_grasp(grasp_pose, direction="Side")
+            return
 
-    execute_grasp(grasp_pose, direction="Side")
 
 
 def execute_grasp(pose, direction="Top"):
     video = rospy.ServiceProxy("/video_recorder", TriggerVideoRecording)
-    # req = TriggerVideoRecordingRequest()
-    #
-    # req.filename = "cheeseit_{}.mp4".format(demo_utils.get_datetime_str())
-    # req.timeout_in_sec = 60.0
-    # req.record = True
-    # video(req)
+    req = TriggerVideoRecordingRequest()
+
+    req.filename = "cheeseit_{}.mp4".format(demo_utils.get_datetime_str())
+    req.timeout_in_sec = 60.0
+    req.record = True
+    video(req)
 
     publish_grasp_pose(pose)
     talker.say("Confirm grasp?")
@@ -282,10 +291,9 @@ def execute_grasp(pose, direction="Top"):
         else:
             talker.say("Unknown direction: {}".format(direction))
 
-    # publish_grasp_po(None, clear=True)
     xbox.wait_for_buttons("A")
-    # req.record = False
-    # video(req)
+    req.record = False
+    video(req)
 
 
 # Networks were trained with a different axis, a different notion of "up"
@@ -389,8 +397,13 @@ def voxelize_point_cloud(pts, occluding_pts):
 
     if "YCB" in trial:
         # ko, kf = data_tools.simulate_slit_occlusion(ko, kf, x_bounds[0], x_bounds[1])
-        lb = min(np.nonzero(ko)[1])
-        ub = max(np.nonzero(ko)[1]) - 1
+        nz = np.nonzero(ko)
+        try:
+            lb = min(nz[1])
+            ub = max(nz[1]) - 1
+        except ValueError:
+            lb = 0
+            ub = 63
         kf[:, 0:lb, :, 0] = 0
         kf[:, ub:, :, 0] = 0
 
