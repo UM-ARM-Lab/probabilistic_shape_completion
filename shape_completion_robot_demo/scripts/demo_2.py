@@ -33,6 +33,8 @@ from amazon_ros_speech import talker
 from arm_video_recorder.srv import TriggerVideoRecording, TriggerVideoRecordingRequest
 from window_recorder.recorder import WindowRecorder
 
+RECORDING = True
+
 
 from object_segmentation import object_segmentations as obseg
 
@@ -202,7 +204,10 @@ def grasp(elem):
     if not should_grasp_check():
         return
 
-    with WindowRecorder(["kinect_shape_completion.rviz* - RViz"], frame_rate=30.0, name_suffix="rviz_cheezeit"):
+    if RECORDING:
+        with WindowRecorder(["kinect_shape_completion.rviz* - RViz"], frame_rate=30.0, name_suffix="rviz_cheezeit"):
+            process_grasp(elem)
+    else:
         process_grasp(elem)
 
 
@@ -210,8 +215,17 @@ def process_grasp(elem):
 
     talker.say("Here are the completions")
     inferences = []
+    total_volume = elem['known_occ'] * False
     for i in range(20):
-        inferences.append(infer(elem))
+        inferred = infer(elem)
+        inferences.append(inferred)
+        total_volume = tf.logical_or(total_volume, (inferred['predicted_occ'] > 0.5))
+
+    lb = tf.reduce_min(tf.where(total_volume), axis=0)
+    ub = tf.reduce_max(tf.where(total_volume), axis=0)
+
+    print("The combined dimensions of all shapes are")
+    print((ub - lb).numpy()[1:4])
 
     while not rospy.is_shutdown() and not xbox.get_button("A"):
         top_grasp_poses = []
@@ -263,13 +277,14 @@ def process_grasp(elem):
 
 
 def execute_grasp(pose, direction="Top"):
-    video = rospy.ServiceProxy("/video_recorder", TriggerVideoRecording)
-    req = TriggerVideoRecordingRequest()
+    if RECORDING:
+        video = rospy.ServiceProxy("/video_recorder", TriggerVideoRecording)
+        req = TriggerVideoRecordingRequest()
 
-    req.filename = "cheeseit_{}.mp4".format(demo_utils.get_datetime_str())
-    req.timeout_in_sec = 60.0
-    req.record = True
-    video(req)
+        req.filename = "cheeseit_{}.mp4".format(demo_utils.get_datetime_str())
+        req.timeout_in_sec = 60.0
+        req.record = True
+        video(req)
 
     publish_grasp_pose(pose)
     talker.say("Confirm grasp?")
@@ -292,8 +307,9 @@ def execute_grasp(pose, direction="Top"):
             talker.say("Unknown direction: {}".format(direction))
 
     xbox.wait_for_buttons("A")
-    req.record = False
-    video(req)
+    if RECORDING:
+        req.record = False
+        video(req)
 
 
 # Networks were trained with a different axis, a different notion of "up"
