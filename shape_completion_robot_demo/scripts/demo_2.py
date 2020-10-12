@@ -8,7 +8,7 @@ import tensorflow as tf
 from sensor_msgs.msg import PointCloud2
 from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
 from sensor_msgs.msg import CompressedImage, CameraInfo
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose, TransformStamped, Quaternion
 from visualization_msgs.msg import Marker
 
 import tf2_ros
@@ -30,6 +30,7 @@ import shape_completion_robot_demo.utils as demo_utils
 from arc_utilities.ros_helpers import Xbox
 from amazon_ros_speech import talker
 from arm_video_recorder.srv import TriggerVideoRecording, TriggerVideoRecordingRequest
+from tf.transformations import quaternion_from_euler
 
 from object_segmentation import object_segmentations as obseg
 
@@ -88,6 +89,38 @@ def get_grasp_point(inference):
     return furthest_back
 
 
+def get_grasp_pose_helper(inference, q, min_z=0.0):
+    pred_pts = conversions.voxelgrid_to_pointcloud(inference['predicted_occ'] > 0.5,
+                                                   scale=scale, origin=(0, 0, 0))
+    if len(pred_pts) == 0:
+        return None
+
+    offset = VG_PUB.origin
+    centroid = np.mean(pred_pts, axis=0) + offset
+    # furthest_forward = pred_pts[np.argmin(pred_pts[:, 0]), :] + offset
+    grasp_point = np.mean(pred_pts, axis=0) + offset
+    print("Grasp point is {}".format(grasp_point))
+    sampled_grasp_pose = Pose()
+    # sampled_grasp_pose.orientation.w = 1
+    sampled_grasp_pose.orientation = Quaternion(q[0], q[1], q[2], q[3])
+    sampled_grasp_pose.position.x = grasp_point[0]
+    sampled_grasp_pose.position.y = grasp_point[1]
+    sampled_grasp_pose.position.z = max(grasp_point[2], min_z)
+    return sampled_grasp_pose
+
+
+def get_top_grasp_pose(inference):
+    # q = quaternion_from_euler(-np.pi - .2, .2, np.pi * 3 / 4 - np.pi)
+    q = quaternion_from_euler(-np.pi, 0, np.pi * 5 / 4)
+    return get_grasp_pose_helper(inference, q)
+
+
+def get_side_grasp_pose(inference):
+    q = quaternion_from_euler(-np.pi/2+.3, -np.pi*3/4, np.pi * 4 / 4-.2)
+    grasp_pose = get_grasp_pose_helper(inference, q)
+    return get_grasp_pose_helper(inference, q, min_z=.9)
+
+
 def is_grasp_point_valid(point):
     # return point[1] > 0.228
     return point[0] > 0.6
@@ -125,11 +158,12 @@ def publish_grasp_pose(pose, clear=False):
     m = Marker()
     m.ns = "Grasp Marker"
     m.header.frame_id = "victor_root"
-    m.pose.position.x, m.pose.position.y, m.pose.position.z = pose.position
+    # m.pose.position.x, m.pose.position.y, m.pose.position.z = pose.position
     # m.pose.position.z = point[2] + 0.42
+    m.pose = pose
     m.type = Marker.MESH_RESOURCE
-    m.mesh_resource = "package://victor_description/meshes/robotiq_3_finger/palm_visual.stl"
-    m.color.a = 1
+    m.mesh_resource = "package://victor_description/meshes/robotiq_3finger/palm_visual.stl"
+    m.color.a = .5
     m.color.r = 0
     # if not is_grasp_point_valid(point):
     #     m.color.r = 1
@@ -144,78 +178,113 @@ def publish_grasp_pose(pose, clear=False):
         m.scale.y = 1
         m.scale.z = 1
 
-    grasp_marker_pub.publish(m)
+    # grasp_marker_pub.publish(m)
+
+    t = TransformStamped()
+    t.header.frame_id = "victor_root"
+    t.child_frame_id = "gripper_target"
+    t.header.stamp = rospy.get_rostime()
+    t.transform.translation.x = pose.position.x
+    t.transform.translation.y = pose.position.y
+    t.transform.translation.z = pose.position.z
+    t.transform.rotation.w = pose.orientation.w
+    t.transform.rotation.x = pose.orientation.x
+    t.transform.rotation.y = pose.orientation.y
+    t.transform.rotation.z = pose.orientation.z
+    demo_utils.publish_gripper_offset_pose(tf_broadcaster)
+    tf_broadcaster.sendTransform(t)
+    print("sending transform")
 
 
 def grasp(elem):
     if not should_grasp_check():
         return
 
+    talker.say("Here are the completions")
     inferences = []
     for i in range(20):
         inferences.append(infer(elem))
 
-    talker.say("Here are the completions")
     while not rospy.is_shutdown() and not xbox.get_button("A"):
-        all_valid_grasp_points = []
+        top_grasp_poses = []
+        side_grasp_poses = []
         for inference in inferences:
             VG_PUB.publish_elem_cautious(inference)
-            grasp_point = get_grasp_point(inference)
-            publish_grasp_point(grasp_point)
-            if is_grasp_point_valid(grasp_point):
-                all_valid_grasp_points.append(grasp_point)
+            top_grasp_pose = get_top_grasp_pose(inference)
+            publish_grasp_pose(top_grasp_pose)
+            top_grasp_poses.append(top_grasp_poses)
+            rospy.sleep(0.1)
+            side_grasp_pose = get_side_grasp_pose(inference)
+            publish_grasp_pose(side_grasp_pose)
+            side_grasp_poses.append(side_grasp_poses)
+            # if is_grasp_point_valid(grasp_pose):
+            #     all_valid_grasp_poses.append(grasp_pose)
             rospy.sleep(0.1)
         xbox.wait_for_buttons(["A", "B"])
     rospy.sleep(1)
 
+    talker.say("Select grasp")
+    # for inference in inferences:
+    #     VG_PUB.publish_elem_cautious(inference)
+    #     grasp_pose = get_top_grasp_pose(inference)
+    #     publish_grasp_pose(grasp_pose)
+    #     b = xbox.wait_for_buttons(["A", "B"])
+    #     rospy.sleep(0.2)
+    #     if b == "B":
+    #         talker.say("next")
+    #         continue
+    #     if b == "A":
+    #         talker.say("selected")
+    #         break
+
     for inference in inferences:
         VG_PUB.publish_elem_cautious(inference)
-        publish_grasp_point(get_grasp_point(inference))
+        grasp_pose = get_side_grasp_pose(inference)
+        publish_grasp_pose(grasp_pose)
         b = xbox.wait_for_buttons(["A", "B"])
         rospy.sleep(0.2)
         if b == "B":
-            talker.say("skipping")
+            talker.say("next")
             continue
         if b == "A":
             talker.say("selected")
             break
 
-    if len(all_valid_grasp_points) == 0:
-        talker.say("No valid grasp points")
-        return
-
-    grasp_point = np.mean(all_valid_grasp_points, axis=0)
-
-    execute_grasp(grasp_point)
+    execute_grasp(grasp_pose, direction="Side")
 
 
-def execute_grasp(point):
+def execute_grasp(pose, direction="Top"):
     video = rospy.ServiceProxy("/video_recorder", TriggerVideoRecording)
-    req = TriggerVideoRecordingRequest()
-
-    req.filename = "cheeseit_{}.mp4".format(demo_utils.get_datetime_str())
-    req.timeout_in_sec = 60.0
-    req.record = True
+    # req = TriggerVideoRecordingRequest()
+    #
+    # req.filename = "cheeseit_{}.mp4".format(demo_utils.get_datetime_str())
+    # req.timeout_in_sec = 60.0
+    # req.record = True
     # video(req)
 
-    publish_grasp_point(point)
+    publish_grasp_pose(pose)
     talker.say("Confirm grasp?")
     rospy.sleep(0.5)
 
     if "B" == xbox.wait_for_buttons(["A", "B"], message=False):
         talker.say("Skipping")
     else:
-        talker.say("Grasping")
+        talker.say("Grasping from {}".format(direction))
         rospy.sleep(0.5)
 
-        pt = Point()
-        pt.x, pt.y, pt.z = point
-        print("Grasping {}".format(pt))
-        grasp_pub.publish(pt)
+        # pt = Point()
+        # pt.x, pt.y, pt.z = point
+        print("Grasping")
+        if direction == "Top":
+            grasp_pub.publish(pose)
+        elif direction == "Side":
+            grasp_side_pub.publish(pose)
+        else:
+            talker.say("Unknown direction: {}".format(direction))
 
-    publish_grasp_point(None, clear=True)
+    # publish_grasp_po(None, clear=True)
     xbox.wait_for_buttons("A")
-    req.record = False
+    # req.record = False
     # video(req)
 
 
@@ -415,12 +484,15 @@ if __name__ == "__main__":
     debug_cloud_pub = rospy.Publisher("debug_pointcloud", PointCloud2, queue_size=1)
 
     grasp_marker_pub = rospy.Publisher("grasp_marker", Marker, queue_size=1)
-    grasp_pub = rospy.Publisher("/grasp_point_command", Point, queue_size=1)
+    grasp_pub = rospy.Publisher("/grasp_pose_command", Pose, queue_size=1)
+    grasp_side_pub = rospy.Publisher("/grasp_side_pose_command", Pose, queue_size=1)
     xbox = Xbox(xpad=False)
     talker.init()
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    tf_broadcaster = tf2_ros.TransformBroadcaster()
+    demo_utils.publish_gripper_offset_pose(tf_broadcaster)
 
     last_update = rospy.get_rostime()
     # camera_info_sub = rospy.Subscriber("/kinect2_victor_head/hd/camera_info", CameraInfo, camera_info_callback)

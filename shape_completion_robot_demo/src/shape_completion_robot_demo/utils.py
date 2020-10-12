@@ -8,6 +8,9 @@ from datetime import datetime
 from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
 from sensor_msgs import point_cloud2
+import tf2_ros
+from geometry_msgs.msg import Point, Pose, TransformStamped, Quaternion
+from tf.transformations import quaternion_from_euler
 
 
 def get_datetime_str():
@@ -171,3 +174,23 @@ def pts_to_ptmsg(pts, frame_id):
     header.frame_id = frame_id
     pt_msg = point_cloud2.create_cloud(header, fields, pts)
     return pt_msg
+
+
+def publish_gripper_offset_pose(br):
+    t = TransformStamped()
+    t.header.frame_id = "gripper_target"
+    t.child_frame_id = "gripper_root"
+    t.header.stamp = rospy.get_rostime()
+    t.transform.translation.x = 0
+    t.transform.translation.y = 0
+    t.transform.translation.z = -0.22
+    # t.transform.rotation = Quaternion(1,0,0,0)
+    q = quaternion_from_euler(0, 0, 0)
+    # q = quaternion_from_euler(-np.pi - .2, .2, np.pi * 3/4 - np.pi)
+    t.transform.rotation = Quaternion(q[0], q[1], q[2], q[3])
+    # t.transform.rotation.w = 1
+    # t.transform.rotation.x = 0
+    # t.transform.rotation.y = 0
+    # t.transform.rotation.z = 0
+
+    br.sendTransform(t)
