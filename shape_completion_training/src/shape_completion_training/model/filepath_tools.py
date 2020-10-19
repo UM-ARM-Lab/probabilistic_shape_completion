@@ -126,10 +126,10 @@ def _write_summary(full_trial_directory, group_name, unique_trial_subdirectory_n
         f.write("\nTrial trial_nickname: {}/{}\n".format(group_name, unique_trial_subdirectory_name))
 
         f.write("git show --summary:\n")
-        f.write(subprocess.check_output(['git', 'show', '--summary']))
+        f.write(subprocess.check_output(['git', 'show', '--summary']).decode('UTF-8'))
         f.write("git status:\n")
-        f.write(subprocess.check_output(['git', 'status']))
+        f.write(subprocess.check_output(['git', 'status']).decode('UTF-8'))
         f.write("git diff:\n")
-        f.write(subprocess.check_output(['git', 'diff']))
+        f.write(subprocess.check_output(['git', 'diff']).decode('UTF-8'))
 
 

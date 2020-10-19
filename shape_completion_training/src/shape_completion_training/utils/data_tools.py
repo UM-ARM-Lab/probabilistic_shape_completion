@@ -12,6 +12,7 @@ from shape_completion_training.voxelgrid import conversions
 from shape_completion_training.model.utils import memoize
 import numpy as np
 import pickle
+import sys
 
 
 def simulate_2_5D_input(gt):
@@ -311,8 +312,12 @@ def read_metadata_from_filelist(record_file, shuffle):
     #     raw_dataset = raw_dataset.shuffle(10000)
     #
     # parsed_dataset = raw_dataset.map(_parse_record_function)
+    is_python2 = sys.version_info < (3, 0)
     with open(record_file.as_posix(), 'rb') as f:
-        filelist = pickle.load(f, encoding='latin1')
+        if is_python2:
+            filelist = pickle.load(f)
+        else:
+            filelist = pickle.load(f, encoding='latin1')
     ds = tf.data.Dataset.from_tensor_slices(filelist)
 
     if shuffle:
@@ -455,12 +460,14 @@ def apply_fixed_slit_occlusion(dataset, slit_min, slit_width):
     return dataset.map(_apply_slit_occlusion)
 
 
-def get_unique_name(datum):
+def get_unique_name(datum, has_batch_dim=False):
     """
     Returns a unique name for the datum
     @param datum:
     @return:
     """
+    if has_batch_dim:
+        return (datum['id'].numpy() + datum['augmentation'].numpy())[0].decode('UTF-8')
     return (datum['id'].numpy() + datum['augmentation'].numpy()).decode('UTF-8')
 
 

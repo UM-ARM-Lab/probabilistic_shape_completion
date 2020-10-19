@@ -18,22 +18,21 @@ save_folder = filepath_tools.get_shape_completion_package_path() / "results"
 # data_names = ["model", "shape", "best_sample_gt", ""
 
 # Shapenet
-# sn = data_tools.get_addressible_dataset(use_train=False)
-# model_name_map = {"VAE/July_07_12-09-24_7f65111254": "VAE",
-#                   "3D_rec_gan/July_20_19-36-48_7ed486bdf5": " 3DrecGAN++",
-#                   "VAE_GAN/July_20_23-46-36_8849b5bd57": "VAE_GAN",
-#                   # "VAE/VAE_trial_1": "Baseline VAE",
-#                   # "Augmented_VAE/May_21_20-00-00_0000000000": "Our method",
-#                   "NormalizingAE/July_02_15-15-06_ede2472d34": "Ours",
-#                   }
+sn = data_tools.get_addressible_dataset(use_train=False)
+model_name_map = {"VAE/September_12_15-46-26_f87bdf38d4": "VAE",
+                  "NormalizingAE/September_10_21-15-32_f87bdf38d4": "Ours",
+                  "VAE_GAN/September_12_15-08-29_f87bdf38d4": "VAE_GAN",
+                  "3D_rec_gan/September_12_15-47-07_f87bdf38d4": "3DrecGAN++"
+                  }
 
-# YCB
-sn = data_tools.get_addressible_dataset(dataset_name="ycb")
-model_name_map = {"NormalizingAE_YCB/July_24_11-21-46_f2aea4d768": "Ours",
-                  "VAE_YCB/July_24_11-21-49_f2aea4d768": "VAE",
-                  "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3": "VAE_GAN",
-                  "3D_rec_gan_YCB/July_25_22-51-08_0f55a0f6b3": "3DrecGAN++"
-}
+
+# # YCB
+# sn = data_tools.get_addressible_dataset(dataset_name="ycb")
+# model_name_map = {"NormalizingAE_YCB/July_24_11-21-46_f2aea4d768": "Ours",
+#                   "VAE_YCB/July_24_11-21-49_f2aea4d768": "VAE",
+#                   "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3": "VAE_GAN",
+#                   "3D_rec_gan_YCB/July_25_22-51-08_0f55a0f6b3": "3DrecGAN++"
+# }
 
 def save_numerics(df):
     averages = df.groupby('model').mean()
@@ -64,7 +63,6 @@ def add_optimal_assignment(data, shape_name, model_name, particle_distances):
         data["assignment"].append(match_dist)
 
 
-
 def add_coverage(data, shape_name, model_name, particle_distances):
     angle = int(sn.get_metadata(shape_name)['augmentation'].numpy()[-3:])
     for closest_particle in list(np.min(particle_distances, axis=1)):
@@ -89,7 +87,6 @@ def add_plausibility(data, shape_name, model_name, particle_distances):
         data["accuracy"].append(None)
         data["hausdorff"].append(None)
         data["assignment"].append(None)
-
 
 
 def add_accuracy(data, shape_name, model_name, distance_to_gt):
@@ -126,8 +123,6 @@ def process_evaluation_into_dataframe(evaluation):
     for model_name, model_evaluation in evaluation.items():
         print("Processing data for {}".format(model_name))
         for shape_name, shape_evaluation in model_evaluation.items():
-            # if not 250 < angle < 290:
-            #     continue
             d = shape_evaluation['particle_distances']
             if np.array(d).shape[0] == 0:
                 print("No particle distances for {}".format(shape_name))
@@ -137,35 +132,47 @@ def process_evaluation_into_dataframe(evaluation):
             add_accuracy(data, shape_name, model_name, shape_evaluation['best_particle_chamfer'])
             add_hausdorff(data, shape_name, model_name, d)
             add_optimal_assignment(data, shape_name, model_name, d)
+    print("Finished processing all trials")
 
     return pd.DataFrame(data, columns=data.keys())
+
+
+def save_metrics_images(df, visualize=False):
+    sns.lineplot(x="shape", y="Chamfer Distance from each Plausible to closest Sample", data=df, hue="model")
+    if visualize:
+        plt.show()
+    plt.savefig((save_folder / "Coverage.png").as_posix())
+    plt.clf()
+
+    sns.lineplot(x="shape", y="Chamfer Distance from each Sample to closest Plausible", data=df, hue="model")
+    if visualize:
+        plt.show()
+    plt.savefig((save_folder / "Plausibility.png").as_posix())
+    plt.clf()
+
+    sns.lineplot(x="shape", y="accuracy", data=df, hue="model")
+    if visualize:
+        plt.show()
+    plt.savefig((save_folder / "Accuracy.png").as_posix())
+    plt.clf()
+
+    sns.lineplot(x="shape", y="hausdorff", data=df, hue="model")
+    if visualize:
+        plt.show()
+    plt.savefig((save_folder / "Hausdorff.png").as_posix())
+    plt.clf()
+
+    sns.lineplot(x="shape", y="assignment", data=df, hue="model")
+    if visualize:
+        plt.show()
+    plt.savefig((save_folder / "assignment.png").as_posix())
+    plt.clf()
 
 
 def display_histogram(df):
     sns.set(style="darkgrid")
 
-    sns.lineplot(x="shape", y="Chamfer Distance from each Plausible to closest Sample", data=df, hue="model")
-    # plt.show()
-    plt.savefig((save_folder / "Coverage.png").as_posix())
-    plt.clf()
-
-    sns.lineplot(x="shape", y="Chamfer Distance from each Sample to closest Plausible", data=df, hue="model")
-    # plt.show()
-    plt.savefig((save_folder / "Plausibility.png").as_posix())
-    plt.clf()
-
-    sns.lineplot(x="shape", y="accuracy", data=df, hue="model")
-    # plt.show()
-    plt.savefig((save_folder / "Accuracy.png").as_posix())
-    plt.clf()
-
-    sns.lineplot(x="shape", y="hausdorff", data=df, hue="model")
-    plt.savefig((save_folder / "Hausdorff.png").as_posix())
-    plt.clf()
-
-    sns.lineplot(x="shape", y="assignment", data=df, hue="model")
-    plt.savefig((save_folder / "assignment.png").as_posix())
-    plt.clf()
+    # save_metrics_images(df, visualize=False)
 
     for unique_shape in set([s[0:10] for s in list(df['shape'])]):
         print(unique_shape)

@@ -27,8 +27,9 @@ def create_tests_dataset():
 
 
 def load_test_files():
-    with open(test_dataset_filepath) as file:
-        single_mat = np.load(file)
+    # with open(test_dataset_filepath) as file:
+    #     single_mat = np.load(file, encoding='latin1')
+    single_mat = np.load(test_dataset_filepath, encoding='ASCII')
     return np.split(single_mat, single_mat.shape[0], axis=0)
 
 

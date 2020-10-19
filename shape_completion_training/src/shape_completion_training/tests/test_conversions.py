@@ -86,11 +86,12 @@ class TestTransforms(TestCase):
         T = make_transform(thetas=[0.0, 0, np.pi / 2], translation=[1, 2, 3])
         T_inv = np.linalg.inv(T)
         scale = 0.5
+        origin=(32,32,32)
         self.assertTrue((np.dot(T, T_inv) == np.eye(4)).all())
         vg_orig = load_test_files()[0]
-        vg_rot = transform_voxelgrid(vg_orig, T, scale=scale)
+        vg_rot = transform_voxelgrid(vg_orig, T, scale=scale, origin=origin)
         self.assertFalse((vg_orig == vg_rot).all())
-        vg_new = transform_voxelgrid(vg_rot, T_inv, scale=scale)
+        vg_new = transform_voxelgrid(vg_rot, T_inv, scale=scale, origin=origin)
         self.assertTrue((vg_orig == vg_new).all())
 
 

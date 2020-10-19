@@ -28,20 +28,6 @@ class FilePathToolsTest(unittest.TestCase):
                           trial_path=trial_path,
                           write_summary=False)
 
-    def test_get_trial_directory_load_existing(self):
-        expected_trial_path = pathlib.Path('.testing/new_trial/subdir')
-        params_filename = expected_trial_path / 'params.json'
-        expected_params = shape_completion_training.model.default_params.get_default_params()
-        expected_params['a'] = 2
-        with params_filename.open("w") as params_file:
-            json.dump(expected_params, params_file)
-        expected_trial_path.mkdir(parents=True, exist_ok=True)
-
-        trial_path, loaded_params = filepath_tools.create_or_load_trial(trial_path=expected_trial_path,
-                                                                        write_summary=False)
-        self.assertEqual(expected_trial_path, trial_path)
-        self.assertEqual(loaded_params, expected_params)
-
 
 if __name__ == '__main__':
     unittest.main()
