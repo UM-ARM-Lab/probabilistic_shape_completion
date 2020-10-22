@@ -7,7 +7,7 @@ This package provides a neural network that takes in a grid of visible occupied 
 The code is developed and tested on
 - [`CUDA`](https://developer.nvidia.com/cuda-toolkit) 10.2 
 - [`cuDNN`](https://developer.nvidia.com/rdp/cudnn-archive) 7.6
-- [`Python`](https://www.python.org) 2.7.12
+- [`Python`](https://www.python.org) 2.7.12 and 3.8.5
 - [`TensorFlow`](https://github.com/tensorflow/tensorflow) 2.1
 - [`numpy`](http://www.numpy.org/) 1.14.2
 - `ROS` [kinetic](http://wiki.ros.org/kinetic) or [melodic](http://wiki.ros.org/melodic)
