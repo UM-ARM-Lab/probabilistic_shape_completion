@@ -1,9 +1,8 @@
 #! /usr/bin/env python
 import rospy
-from shape_completion_training.model import model_evaluator
+from shape_completion_training.plausible_diversity import model_evaluator
 from shape_completion_visualization.voxelgrid_publisher import VoxelgridPublisher
-from shape_completion_training.utils import data_tools
-from shape_completion_training.model import utils
+from shape_completion_training.utils import data_tools, tf_utils
 from shape_completion_training.model.model_runner import ModelRunner
 import numpy as np
 import seaborn as sns
@@ -207,7 +206,7 @@ def display_voxelgrids(evaluation):
         elem = sn.get(shape_name)
         # e = {k: tf.expand_dims(v, axis=0) for k, v in elem.items()}
         print("Sampling particles for {}".format(shape_name))
-        particles = model_evaluator.sample_particles(model, utils.add_batch_to_dict(elem),
+        particles = model_evaluator.sample_particles(model, tf_utils.add_batch_to_dict(elem),
                                                      num_particles=len(shape_evaluation['particle_distances'][0]))
         VG_PUB.publish_elem(elem)
 
@@ -227,7 +226,7 @@ def display_evaluation_for_shape(model, shape_name, shape_evaluation):
     elem = sn.get(shape_name)
     # e = {k: tf.expand_dims(v, axis=0) for k, v in elem.items()}
     print("Sampling particles for {}".format(shape_name))
-    particles = model_evaluator.sample_particles(model, utils.add_batch_to_dict(elem),
+    particles = model_evaluator.sample_particles(model, tf_utils.add_batch_to_dict(elem),
                                                  num_particles=len(shape_evaluation['particle_distances'][0]))
     VG_PUB.publish_elem(elem)
 

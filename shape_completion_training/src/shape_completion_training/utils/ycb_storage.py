@@ -1,6 +1,6 @@
 from shape_completion_training.model import filepath_tools
-from shape_completion_training.model import utils
-from shape_completion_training.utils.dataset_storage import load_metadata, _split_train_and_test, write_to_filelist
+from shape_completion_training.utils import tf_utils
+from shape_completion_training.utils.dataset_storage import load_metadata, write_to_filelist
 
 ycb_load_path = filepath_tools.get_shape_completion_package_path() / "data" / "ycb"
 ycb_record_path = ycb_load_path / "tfrecords" / "filepath"
@@ -30,9 +30,9 @@ def write_ycb_to_filelist():
         if record["id"][0:3] in test_objects:
             test_files.append(record)
 
-    write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(all_files),
+    write_to_filelist(tf_utils.sequence_of_dicts_to_dict_of_sequences(all_files),
                       ycb_record_path / "train_filepaths.pkl")
-    write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(test_files),
+    write_to_filelist(tf_utils.sequence_of_dicts_to_dict_of_sequences(test_files),
                       ycb_record_path / "test_filepaths.pkl")
 
 

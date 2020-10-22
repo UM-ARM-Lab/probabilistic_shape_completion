@@ -1,18 +1,9 @@
-'''
+"""
 Utilities used by networks
-'''
+"""
 import tensorflow as tf
 
-
-@tf.function
-def p_x_given_y(x, y):
-    """
-    Returns the reduce p(x|y)
-    Clips x from 0 to one, then filters and normalizes by y
-    Assumes y is a tensor where every element is 0.0 or 1.0
-    """
-    clipped = tf.clip_by_value(x, 0.0, 1.0)
-    return tf.reduce_sum(clipped * y) / tf.reduce_sum(y)
+from shape_completion_training.utils.tf_utils import p_x_given_y
 
 
 class MaskedConv3D(tf.keras.layers.Layer):

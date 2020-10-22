@@ -1,7 +1,7 @@
-from shape_completion_training.model import utils
+from shape_completion_training.utils import tf_utils
 from shape_completion_training.model.pssnet import PSSNet
 
-utils.set_gpu_with_lowest_memory()
+tf_utils.set_gpu_with_lowest_memory()
 import tensorflow as tf
 from shape_completion_training.model import filepath_tools
 from shape_completion_training.model.other_model_architectures.auto_encoder import AutoEncoder

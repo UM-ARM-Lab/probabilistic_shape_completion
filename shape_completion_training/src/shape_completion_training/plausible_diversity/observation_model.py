@@ -1,8 +1,7 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from shape_completion_training.model import utils
-from shape_completion_training.utils import data_tools
+from shape_completion_training.utils import data_tools, tf_utils
 
 
 def observation_likelihood(observation, underlying_state, std_dev_in_voxels=1):
@@ -10,7 +9,7 @@ def observation_likelihood(observation, underlying_state, std_dev_in_voxels=1):
 
 
 def observation_likelihood_geometric_mean(observation, underlying_state, std_dev_in_voxels=1):
-    return utils.reduce_geometric_mean(_observation_model(observation, underlying_state, std_dev_in_voxels))
+    return tf_utils.reduce_geometric_mean(_observation_model(observation, underlying_state, std_dev_in_voxels))
 
 
 def mask_high_gradient(expected_depth, gradient_threshold=10, inflation=3):

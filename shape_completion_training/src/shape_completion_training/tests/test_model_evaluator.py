@@ -1,7 +1,7 @@
 from unittest import TestCase
 import numpy as np
 
-from shape_completion_training.model.observation_model import observation_likelihood
+from shape_completion_training.plausible_diversity.observation_model import observation_likelihood
 
 
 class TestObservationModel(TestCase):

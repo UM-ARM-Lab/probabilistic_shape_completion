@@ -2,7 +2,12 @@ import tensorflow as tf
 from shape_completion_training.model.mykerasmodel import MyKerasModel
 import tensorflow.keras.layers as tfl
 
-from shape_completion_training.model.utils import stack_known, log_normal_pdf
+from shape_completion_training.utils.tf_utils import stack_known, log_normal_pdf
+
+
+"""
+This implements PSSNet, as described in the CoRL paper
+"""
 
 
 def compute_vae_loss(z, mean, logvar, sample_logit, labels):

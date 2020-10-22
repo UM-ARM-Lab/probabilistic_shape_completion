@@ -7,8 +7,8 @@ import tensorflow as tf
 
 from sensor_msgs.msg import PointCloud2
 from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
-from sensor_msgs.msg import CompressedImage, CameraInfo
-from geometry_msgs.msg import Point, Pose, TransformStamped, Quaternion
+from sensor_msgs.msg import CompressedImage
+from geometry_msgs.msg import Pose, TransformStamped, Quaternion
 from visualization_msgs.msg import Marker
 
 import tf2_ros
@@ -19,14 +19,12 @@ from rviz_voxelgrid_visuals import conversions as msg_conversions
 import ros_numpy
 
 from shape_completion_training.model.model_runner import ModelRunner
-from shape_completion_training.utils import data_tools
-from shape_completion_training.model import utils
+from shape_completion_training.utils import data_tools, tf_utils
 from shape_completion_visualization.voxelgrid_publisher import VoxelgridPublisher
 import rospkg
 import pickle
 import numpy as np
 import message_filters
-import image_geometry
 import shape_completion_robot_demo.utils as demo_utils
 from arc_utilities.ros_helpers import Xbox
 from amazon_ros_speech import talker
@@ -34,9 +32,6 @@ from arm_video_recorder.srv import TriggerVideoRecording, TriggerVideoRecordingR
 from window_recorder.recorder import WindowRecorder
 
 RECORDING = True
-
-
-from object_segmentation import object_segmentations as obseg
 
 # target_frame = "mocap_world"
 target_frame = "victor_root"
@@ -368,7 +363,7 @@ def publish_simulated_mug():
 
 
 def infer(elem):
-    elem = utils.add_batch_to_dict(elem)
+    elem = tf_utils.add_batch_to_dict(elem)
     elem = swap_y_z_elem(elem)
 
     # return

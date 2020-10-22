@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from shape_completion_training.model import plausiblility
+from shape_completion_training.plausible_diversity import plausiblility
 from shape_completion_training.utils import data_tools
 
 if __name__ == "__main__":

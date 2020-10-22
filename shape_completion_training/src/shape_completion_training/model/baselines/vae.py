@@ -3,7 +3,7 @@ import tensorflow as tf
 import tensorflow.keras.layers as tfl
 
 import shape_completion_training.model.nn_tools as nn
-from shape_completion_training.model.utils import stack_known
+from shape_completion_training.utils.tf_utils import stack_known
 from shape_completion_training.model.mykerasmodel import MyKerasModel
 
 

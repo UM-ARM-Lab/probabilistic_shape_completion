@@ -3,7 +3,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import tensorflow.keras.layers as tfl
 import shape_completion_training.model.nn_tools as nn
-from shape_completion_training.model.nn_tools import MaskedConv3D, p_x_given_y
+from shape_completion_training.model.nn_tools import MaskedConv3D
+from shape_completion_training.utils.tf_utils import p_x_given_y
 
 import IPython
 

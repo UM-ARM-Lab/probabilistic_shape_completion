@@ -8,6 +8,10 @@ import numpy as np
 from time import time
 from shape_completion_training.model import mykerasmodel
 
+"""
+This implements a Normalizing Flow, used in PSSNet
+"""
+
 tfd = tfp.distributions
 tfb = tfp.bijectors
 

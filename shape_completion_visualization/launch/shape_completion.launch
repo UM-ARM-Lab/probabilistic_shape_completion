@@ -1,4 +1,7 @@
 <launch>
+    <arg name="launch_rviz" default="true"/>
     <node pkg="tf2_ros" type="static_transform_publisher" name="object_transform_publisher"
           args="0 0 0   0.70682518 0. 0. 0.70738827 world object" />
+    <node pkg="rviz" type="rviz" name="RViz" args="$(find shape_completion_visualization)/shape_completion.rviz"
+          if="$(arg launch_rviz)"/>
 </launch>

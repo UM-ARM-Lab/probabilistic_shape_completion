@@ -4,10 +4,10 @@ import rospkg
 import pickle
 import tensorflow as tf
 
-from shape_completion_training.model.observation_model import observation_likelihood_geometric_mean, out_of_range_count
+from shape_completion_training.plausible_diversity.observation_model import observation_likelihood_geometric_mean, out_of_range_count
 from shape_completion_training.utils import data_tools
 from shape_completion_training.voxelgrid import fit, conversions
-from shape_completion_training.model.utils import memoize
+from shape_completion_training.utils.tf_utils import memoize
 import progressbar
 
 

@@ -1,6 +1,10 @@
 from copy import deepcopy
 import tensorflow as tf
 
+"""
+Base model inherited by other shape completion networks
+"""
+
 
 class MyKerasModel(tf.keras.Model):
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import argparse
 
-from shape_completion_training.model import model_evaluator
+from shape_completion_training.plausible_diversity import model_evaluator
 from shape_completion_training.model.model_runner import ModelRunner
 from shape_completion_training.utils import data_tools
 import rospy

@@ -9,7 +9,7 @@ from shape_completion_training.utils.dataset_storage import load_gt_only
 from shape_completion_training.utils.exploratory_data_tools import simulate_partial_completion, \
     simulate_random_partial_completion
 from shape_completion_training.voxelgrid import conversions
-from shape_completion_training.model.utils import memoize
+from shape_completion_training.utils.tf_utils import memoize
 import numpy as np
 import pickle
 import sys

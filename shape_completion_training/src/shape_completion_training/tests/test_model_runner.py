@@ -2,8 +2,7 @@ import unittest
 
 import tensorflow as tf
 
-from shape_completion_training.model.utils import reduce_mean_dict
-from shape_completion_training.model.model_runner import ModelRunner
+from shape_completion_training.utils.tf_utils import reduce_mean_dict
 from shape_completion_training.model.mykerasmodel import MyKerasModel
 
 params = {

@@ -1,5 +1,5 @@
 from shape_completion_training.model import filepath_tools
-from shape_completion_training.model import utils
+from shape_completion_training.utils import tf_utils
 from shape_completion_training.utils.dataset_storage import load_metadata, _split_train_and_test, write_to_filelist
 
 """
@@ -16,9 +16,9 @@ def write_shapenet_to_filelist(test_ratio, shape_ids="all"):
     print("Split shapenet into {} training and {} test shapes".format(len(train_files), len(test_files)))
 
     # d = tf.data.Dataset.from_tensor_slices(utils.sequence_of_dicts_to_dict_of_sequences(test_files))
-    write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(train_files),
+    write_to_filelist(tf_utils.sequence_of_dicts_to_dict_of_sequences(train_files),
                       shapenet_record_path / "train_filepaths.pkl")
-    write_to_filelist(utils.sequence_of_dicts_to_dict_of_sequences(test_files),
+    write_to_filelist(tf_utils.sequence_of_dicts_to_dict_of_sequences(test_files),
                       shapenet_record_path / "test_filepaths.pkl")
     # write_to_tfrecord(tf.data.Dataset.from_tensor_slices(
     #     utils.sequence_of_dicts_to_dict_of_sequences(test_files)),
