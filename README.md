@@ -11,7 +11,7 @@ To view completions of the test dataset.
 1. `roslaunch shape_completion_visualization shape_completion.launch`
 2. `cd shape_completion_visualization/scripts`, `./data_publisher.py --trial PSSNet/September_10_21-15-32_f87bdf38d4`
 
-In RViz you can then cycle through the various shapes and increasing angles. Change the `--trial` arguments to explore the different networks
+In RViz you can then cycle through the various shapes and increasing angles. Change the `--trial` arguments to explore the different networks and the YCB vs shapenet datasets.
 
 
 
@@ -26,7 +26,12 @@ In RViz you can then cycle through the various shapes and increasing angles. Cha
 6. Download the pretrained model and preprocessed data: `./scripts/download_pretrained.py`
 
 
-
+# Retraining networks and recomputing the plausible set
+You do not have to use the pretrained models and preprocessed datasets. You can do all or any part of the following:
+1. Download shapenet or ycb and run `augment_{shapenet, ycb}.py`
+2. Compute the plausible set: `{shapenet, ycb}_plausibilities.py`
+3. train a network `train.py --group {PSSNet, or other}`. If using PSSNet, first `train_flow.py`
+4. evaluate a network compared to the plausible set. Edit and run `evaluate.py`
 
 
 ## Structure
