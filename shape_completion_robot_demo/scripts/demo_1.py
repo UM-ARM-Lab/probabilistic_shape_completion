@@ -58,14 +58,14 @@ z_bounds = (0, 64)
 # z_bounds = (0, 64)
 
 
-trial = "NormalizingAE/July_02_15-15-06_ede2472d34"
-# trial = "NormalizingAE_noise/August_03_13-44-05_8c8337b208"
-# trial = "NormalizingAE/September_10_21-15-32_f87bdf38d4"
+trial = "PSSNet/July_02_15-15-06_ede2472d34"
+# trial = "PSSNet_noise/August_03_13-44-05_8c8337b208"
+# trial = "PSSNet/September_10_21-15-32_f87bdf38d4"
 # trial = "VAE_GAN/September_12_15-08-29_f87bdf38d4"
 # trial = "3D_rec_gan/September_12_15-47-07_f87bdf38d4"
 
 
-# trial = "NormalizingAE_YCB/July_24_11-21-46_f2aea4d768"
+# trial = "PSSNet_YCB/July_24_11-21-46_f2aea4d768"
 
 
 ALREADY_PROCESSING = False

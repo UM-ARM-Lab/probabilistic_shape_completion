@@ -1,5 +1,5 @@
 from shape_completion_training.model import utils
-from shape_completion_training.model.normalizing_ae import NormalizingAE
+from shape_completion_training.model.pssnet import PSSNet
 
 utils.set_gpu_with_lowest_memory()
 import tensorflow as tf
@@ -61,8 +61,9 @@ class ModelRunner:
             self.model = AE_VCNN(self.params, batch_size=self.batch_size)
         elif self.params['network'] == "RealNVP":
             self.model = RealNVP(hparams=self.params, batch_size=self.batch_size, training=training)
-        elif self.params['network'] == "NormalizingAE":
-            self.model = NormalizingAE(self.params, batch_size=self.batch_size)
+        elif self.params['network'] == "PSSNet" or \
+                self.params['network'] == "NormalizingAE":  # NormalizingAE was legacy name
+            self.model = PSSNet(self.params, batch_size=self.batch_size)
             self.model.flow = ModelRunner(training=False, trial_path=self.params['flow']).model.flow
         elif self.params['network'] == "3D_rec_gan":
             self.model = ThreeD_rec_gan(self.params, batch_size=self.batch_size)

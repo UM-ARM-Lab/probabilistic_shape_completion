@@ -20,7 +20,7 @@ save_folder = filepath_tools.get_shape_completion_package_path() / "results"
 # Shapenet
 sn = data_tools.get_addressible_dataset(use_train=False)
 model_name_map = {"VAE/September_12_15-46-26_f87bdf38d4": "VAE",
-                  "NormalizingAE/September_10_21-15-32_f87bdf38d4": "Ours",
+                  "PSSNet/September_10_21-15-32_f87bdf38d4": "Ours",
                   "VAE_GAN/September_12_15-08-29_f87bdf38d4": "VAE_GAN",
                   "3D_rec_gan/September_12_15-47-07_f87bdf38d4": "3DrecGAN++"
                   }
@@ -28,7 +28,7 @@ model_name_map = {"VAE/September_12_15-46-26_f87bdf38d4": "VAE",
 
 # # YCB
 # sn = data_tools.get_addressible_dataset(dataset_name="ycb")
-# model_name_map = {"NormalizingAE_YCB/July_24_11-21-46_f2aea4d768": "Ours",
+# model_name_map = {"PSSNet_YCB/July_24_11-21-46_f2aea4d768": "Ours",
 #                   "VAE_YCB/July_24_11-21-49_f2aea4d768": "VAE",
 #                   "VAE_GAN_YCB/July_25_22-50-44_0f55a0f6b3": "VAE_GAN",
 #                   "3D_rec_gan_YCB/July_25_22-51-08_0f55a0f6b3": "3DrecGAN++"

@@ -22,9 +22,9 @@ def compute_box_loss(gt_latent_box, inferred_latent_box_mean, inferred_latent_bo
     return tf.reduce_mean(losses)
 
 
-class NormalizingAE(MyKerasModel):
+class PSSNet(MyKerasModel):
     def __init__(self, hparams, batch_size, *args, **kwargs):
-        super(NormalizingAE, self).__init__(hparams, batch_size, *args, **kwargs)
+        super(PSSNet, self).__init__(hparams, batch_size, *args, **kwargs)
         self.flow = None
         self.encoder = make_encoder(inp_shape=[64, 64, 64, 2], params=hparams)
         self.generator = make_generator(params=hparams)
