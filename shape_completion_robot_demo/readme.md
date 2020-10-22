@@ -1,5 +1,7 @@
 # Running on Victor
 
+Note: files in this directory are specifically for running demos using PSSNet on Victor, the armlab robot. They will not work without modification on any other robot.
+
 To run this on Victor (The armlab robot) you will need:
 
 1. Start victor's control interface
