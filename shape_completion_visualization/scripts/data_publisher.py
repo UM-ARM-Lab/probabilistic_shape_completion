@@ -39,24 +39,29 @@ default_translations = {
     'translation_pixel_range_z': 0,
 }
 
+def wip_enforce_contact(elem):
+    inference = model_runner.model(elem)
+    VG_PUB.publish_inference(inference)
+    pssnet = model_runner.model
+    latent = tf.Variable(pssnet.sample_latent(elem))
+    VG_PUB.publish('predicted_occ', pssnet.decode(latent, apply_sigmoid=True))
+    known_contact = tf.Variable(tf.zeros((1, 64, 64, 64, 1)))
+    known_contact = known_contact[0, 50, 32, 32, 0].assign(1)
+    VG_PUB.publish('aux', known_contact)
+
+    rospy.sleep(2)
+
+    for i in range(100):
+        pssnet.grad_step_towards_output(latent, known_contact)
+        VG_PUB.publish('predicted_occ', pssnet.decode(latent, apply_sigmoid=True))
+    return pssnet.decode(latent, apply_sigmoid=True)
+
 
 def run_inference(elem):
-    # if not ARGS.publish_each_sample and not ARGS.use_best_iou:
-    #     return model_runner.model(elem)
+    if ARGS.enforce_contact:
+        return wip_enforce_contact(elem)
 
-    # best_iou = 0.0
-    # best_inference = None
-    # for _ in range(300):
-    #     inference = model_runner.model(elem)
-    #     iou = metrics.iou(elem['gt_occ'], inference['predicted_occ'])
-    #     if ARGS.publish_each_sample:
-    #         VG_PUB.publish_inference(inference)
-    #     if iou > best_iou:
-    #         best_iou = iou
-    #         best_inference = inference
-    # if ARGS.publish_each_sample:
-    #     raw_input("Ready to publish final sample?")
-    # sample_evaluation = model_evaluator.evaluate_element(elem, num_samples=10)
+
     if ARGS.publish_closest_train:
         # Computes and publishes the closest element in the training set to the test shape
         train_in_correct_augmentation = train_records.filter(lambda x: x['augmentation'] == elem['augmentation'][0])
@@ -206,6 +211,9 @@ def publish_selection(metadata, ind, str_msg):
     elem = sampling_tools.prepare_for_sampling(elem)
 
     inference = run_inference(elem_raw)
+    if ARGS.enforce_contact:
+        return
+
     # VG_PUB.publish_inference(inference)
 
     # fit_to_particles(metadata)
@@ -300,6 +308,7 @@ def parse_command_line_args():
     parser.add_argument('--multistep', action='store_true')
     parser.add_argument('--trial')
     parser.add_argument('--publish_closest_train', action='store_true')
+    parser.add_argument('--enforce_contact', action='store_true')
 
     return parser.parse_args()
 

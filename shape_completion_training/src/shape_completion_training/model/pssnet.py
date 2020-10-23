@@ -4,7 +4,6 @@ import tensorflow.keras.layers as tfl
 
 from shape_completion_training.utils.tf_utils import stack_known, log_normal_pdf
 
-
 """
 This implements PSSNet, as described in the CoRL paper
 """
@@ -34,21 +33,22 @@ class PSSNet(MyKerasModel):
         self.encoder = make_encoder(inp_shape=[64, 64, 64, 2], params=hparams)
         self.generator = make_generator(params=hparams)
         self.box_latent_size = 24
+        self.contact_optimizer = tf.optimizers.SGD(learning_rate=0.01)
 
     def call(self, dataset_element, training=False, **kwargs):
         known = stack_known(dataset_element)
         mean, logvar = self.encode(known)
-        sampled_features = self.sample_latent(mean, logvar)
+        sampled_features = self.sample_gaussian(mean, logvar)
 
         if self.hparams['use_flow_during_inference']:
             sampled_features = self.apply_flow_to_latent_box(sampled_features)
 
-        predicted_occ=self.decode(sampled_features, apply_sigmoid=True)
+        predicted_occ = self.decode(sampled_features, apply_sigmoid=True)
         output = {'predicted_occ': predicted_occ, 'predicted_free': 1 - predicted_occ,
                   'latent_mean': mean, 'latent_logvar': logvar, 'sampled_latent': sampled_features}
         return output
 
-    def sample_latent(self, mean, logvar):
+    def sample_gaussian(self, mean, logvar):
         eps = tf.random.normal(shape=mean.shape)
         features = eps * tf.exp(logvar * 0.5) + mean
         return features
@@ -96,7 +96,7 @@ class PSSNet(MyKerasModel):
             # train_losses = self.compute_loss(gt_latent_box, train_outputs)
             known = stack_known(train_element)
             mean, logvar = self.encode(known)
-            sampled_latent = self.sample_latent(mean, logvar)
+            sampled_latent = self.sample_gaussian(mean, logvar)
             corrected_latent = self.replace_true_box(sampled_latent, gt_latent_box)
 
             if self.hparams['use_flow_during_inference']:
@@ -123,6 +123,29 @@ class PSSNet(MyKerasModel):
         metrics.update(other_metrics)
 
         return train_outputs, metrics
+
+    def sample_latent(self, elem):
+        known = stack_known(elem)
+        mean, logvar = self.encode(known)
+        sampled_features = self.sample_gaussian(mean, logvar)
+
+        if self.hparams['use_flow_during_inference']:
+            sampled_features = self.apply_flow_to_latent_box(sampled_features)
+        return sampled_features
+
+    def grad_step_towards_output(self, latent, known_output):
+
+        with tf.GradientTape() as tape:
+            # predicted_occ = self.decode(latent, apply_sigmoid=True)
+            # loss = tf.reduce_sum(known_output - known_output * predicted_occ)
+            # loss = tf.exp(loss)
+            predicted_occ = self.decode(latent)
+            loss = -tf.reduce_sum(known_output * predicted_occ)
+
+        print(f'loss: {loss}')
+        variables = [latent]
+        gradients = tape.gradient(loss, variables)
+        self.contact_optimizer.apply_gradients(zip(gradients, variables))
 
 
 def make_encoder(inp_shape, params):
