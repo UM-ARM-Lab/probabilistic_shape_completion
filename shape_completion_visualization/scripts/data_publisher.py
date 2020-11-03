@@ -79,7 +79,7 @@ def run_inference(elem):
 
 
     if ARGS.publish_each_sample:
-        for particle in model_evaluator.sample_particles(model_runner.model, elem, 100):
+        for particle in model_evaluator.sample_particles(model_runner.model, elem, 20):
             VG_PUB.publish("predicted_occ", particle)
             rospy.sleep(0.1)
 
@@ -92,7 +92,7 @@ def run_inference(elem):
     min_cd = np.inf
     best_fit = None
     if ARGS.publish_nearest_plausible:
-        for plausible in plausiblility.get_plausibilities_for(data_tools.get_unique_name(elem)[0],
+        for plausible in plausiblility.get_plausibilities_for(data_tools.get_unique_name(elem, has_batch_dim=True),
                                                               model_runner.params['dataset']):
             elem_name, T, p, oob = plausible
             sn = data_tools.get_addressible_dataset(dataset_name=model_runner.params['dataset'])
@@ -112,7 +112,7 @@ def run_inference(elem):
     if ARGS.publish_nearest_sample:
         min_cd = np.inf
         best_fit = None
-        plausibles = plausiblility.get_plausibilities_for(data_tools.get_unique_name(elem)[0],
+        plausibles = plausiblility.get_plausibilities_for(data_tools.get_unique_name(elem, has_batch_dim=True),
                                                           model_runner.params['dataset'])
         plausible = random.choice(plausibles)
         elem_name, T, p, oob = plausible
