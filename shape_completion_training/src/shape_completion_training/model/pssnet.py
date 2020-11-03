@@ -33,7 +33,7 @@ class PSSNet(MyKerasModel):
         self.encoder = make_encoder(inp_shape=[64, 64, 64, 2], params=hparams)
         self.generator = make_generator(params=hparams)
         self.box_latent_size = 24
-        self.contact_optimizer = tf.optimizers.SGD(learning_rate=0.01)
+        self.contact_optimizer = tf.optimizers.SGD(learning_rate=0.0001)
 
     def call(self, dataset_element, training=False, **kwargs):
         known = stack_known(dataset_element)
