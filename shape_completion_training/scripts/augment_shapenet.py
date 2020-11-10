@@ -48,11 +48,12 @@ Then run binvox with the -pb option
 if __name__ == "__main__":
     rospy.init_node("augment_shapenet_node")
     sn_path = shapenet_storage.shapenet_load_path
-    sn_path = sn_path / shape_completion_training.utils.shapenet_storage.shape_map['mug']
+    # sn_path = sn_path / shape_completion_training.utils.shapenet_storage.shape_map['mug']
+    sn_path = sn_path / shape_completion_training.utils.shapenet_storage.shape_map['table']
 
     start_time = datetime.datetime.now()
 
-    # augment_single(sn_path)
-    augment_category(sn_path)
+    # augment_category(sn_path)
+    augment_category(sn_path, shape_ids = ["fff7f07d1c4042f8a946c24c4f9fb58e"])
     print("")
     print("Augmenting with {} threads took {} seconds".format(NUM_THREADS, datetime.datetime.now() - start_time))

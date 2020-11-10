@@ -1,10 +1,13 @@
 from __future__ import print_function
-import Queue
+from queue import Queue
 import multiprocessing as mp
 import os
 import subprocess
 import sys
-from itertools import izip_longest
+try:
+    from itertools import zip_longest
+except ImportError:
+    from itertools import izip_longest as zip_longest
 
 from shape_completion_training.utils import dataset_storage, obj_tools
 
@@ -15,9 +18,9 @@ NUM_THREADS = NUM_THREADS_PER_CATEGORY * NUM_THREADS_PER_OBJECT
 
 
 def grouper(n, iterable, fillvalue=None):
-    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    """grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"""
     args = [iter(iterable)] * n
-    return izip_longest(fillvalue=fillvalue, *args)
+    return zip_longest(fillvalue=fillvalue, *args)
 
 
 def process_in_threads(target, args, num_threads):
@@ -66,11 +69,12 @@ def binvox_object_file_worker(queue):
         binvox_object_file(fp)
 
 
-def augment_category(object_path, models_dirname="models", obj_filename="model_normalized.obj"):
+def augment_category(object_path, models_dirname="models", obj_filename="model_normalized.obj", shape_ids=None):
     # shape_ids = ['a1d293f5cc20d01ad7f470ee20dce9e0']
     # shapes = ['214dbcace712e49de195a69ef7c885a4']
-    shape_ids = [f.name for f in object_path.iterdir() if f.stem != "tfrecords"]
-    shape_ids.sort()
+    if shape_ids is None:
+        shape_ids = [f.name for f in object_path.iterdir() if f.stem != "tfrecords"]
+        shape_ids.sort()
 
     q = mp.Queue()
     for elem in zip(range(1, len(shape_ids) + 1), shape_ids):
